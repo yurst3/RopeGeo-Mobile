@@ -3,6 +3,7 @@ import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionBut
 import { RequestToastNotifier } from "@/components/RequestToastNotifier";
 import { RouteMarkersLayer } from "@/components/RouteMarkersLayer";
 import type { RoutesGeoJSON } from "@/components/RouteMarkersLayer";
+import { RoutePreview } from "@/components/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import type { ComponentRef } from "react";
@@ -38,6 +39,7 @@ export default function ExploreScreen() {
     data: RoutesGeoJSON | null;
     errors: Error | null;
   }>({ loading: true, data: null, errors: null });
+  const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
 
   const defaultCenter = currentPosition ?? DEFAULT_CURRENT_POSITION;
   const isCompassVisible =
@@ -121,6 +123,7 @@ export default function ExploreScreen() {
   };
 
   const resetPosition = () => {
+    setFocusedRouteId(null);
     setFollowCurrentPosition(true);
     cameraRef.current?.setCamera({
       centerCoordinate: currentPosition ?? DEFAULT_CURRENT_POSITION,
@@ -156,6 +159,7 @@ export default function ExploreScreen() {
               scaleBarEnabled={false}
               logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
               attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
+              onPress={() => setFocusedRouteId(null)}
               onCameraChanged={(state) => {
                 const { pitch: p, heading: h, center, zoom } = state.properties;
                 setPitch(p);
@@ -186,8 +190,21 @@ export default function ExploreScreen() {
               <RouteMarkersLayer
                 onStateChange={setRoutesState}
                 cameraRef={cameraRef}
+                onRoutePress={(routeId) => {
+                  setFollowCurrentPosition(false);
+                  setFocusedRouteId(routeId);
+                }}
+                onRouteClusterPress={() => {
+                  setFollowCurrentPosition(false);
+                  setFocusedRouteId(null);
+                }}
               />
         </MapView>
+        {focusedRouteId != null && (
+          <View style={[styles.previewContainer, { paddingBottom: insets.bottom + 8 }]}>
+            <RoutePreview routeId={focusedRouteId} />
+          </View>
+        )}
         <ResetMapOrientationButton
           onPress={resetPitchAndHeading}
           visible={isCompassVisible}
@@ -218,5 +235,12 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     zIndex: 1,
+  },
+  previewContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
 });

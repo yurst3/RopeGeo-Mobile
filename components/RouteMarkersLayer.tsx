@@ -47,6 +47,10 @@ type RouteMarkersLayerProps = {
   onStateChange?: (state: RoutesState) => void;
   /** Ref to the map Camera so the layer can expand a cluster on tap (zoom to show all markers in the cluster). */
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
+  /** Called when the user taps an unclustered route marker. Receives the route id and the marker coordinates [lng, lat]. */
+  onRoutePress?: (routeId: string, coordinates: [number, number]) => void;
+  /** Called when the user taps a route cluster (before expanding the cluster). Use e.g. to clear focused route and stop follow mode. */
+  onRouteClusterPress?: () => void;
 };
 
 function RouteMarkersLayerContent({
@@ -55,9 +59,13 @@ function RouteMarkersLayerContent({
   errors,
   onStateChange,
   cameraRef,
+  onRoutePress,
+  onRouteClusterPress,
 }: RoutesState & {
   onStateChange?: (state: RoutesState) => void;
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
+  onRoutePress?: (routeId: string, coordinates: [number, number]) => void;
+  onRouteClusterPress?: () => void;
 }) {
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
@@ -67,30 +75,48 @@ function RouteMarkersLayerContent({
 
   const handlePress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
-    if (!features?.length || !cameraRef?.current || !shapeSourceRef.current) {
+    if (!features?.length || !cameraRef?.current) {
       return;
     }
     const feature = features[0];
-    const props = feature?.properties as { point_count?: number } | undefined;
-    if (props?.point_count == null) {
-      return;
-    }
+    const props = feature?.properties as {
+      point_count?: number;
+      id?: string;
+    } | undefined;
     const geometry = feature?.geometry;
     if (geometry?.type !== "Point" || !Array.isArray(geometry.coordinates)) {
       return;
     }
-    const [lng, lat] = geometry.coordinates;
-    try {
-      const zoom = await shapeSourceRef.current.getClusterExpansionZoom(
-        feature as GeoJSON.Feature<GeoJSON.Point>
-      );
+    const coords = geometry.coordinates as [number, number];
+    const [lng, lat] = coords;
+
+    const isCluster = props?.point_count != null;
+
+    if (isCluster && shapeSourceRef.current) {
+      onRouteClusterPress?.();
+      try {
+        const zoom = await shapeSourceRef.current.getClusterExpansionZoom(
+          feature as GeoJSON.Feature<GeoJSON.Point>
+        );
+        cameraRef.current.setCamera({
+          centerCoordinate: [lng, lat],
+          zoomLevel: zoom,
+          animationDuration: 300,
+        });
+      } catch {
+        // getClusterExpansionZoom can fail on some platforms; ignore
+      }
+      return;
+    }
+
+    // Single route marker pressed
+    const routeId = props?.id;
+    if (routeId) {
+      onRoutePress?.(routeId, coords);
       cameraRef.current.setCamera({
         centerCoordinate: [lng, lat],
-        zoomLevel: zoom,
         animationDuration: 300,
       });
-    } catch {
-      // getClusterExpansionZoom can fail on some platforms; ignore
     }
   };
 
@@ -174,6 +200,8 @@ function RouteMarkersLayerContent({
 export function RouteMarkersLayer({
   onStateChange,
   cameraRef,
+  onRoutePress,
+  onRouteClusterPress,
 }: RouteMarkersLayerProps) {
   return (
     <RopeGeoHttpRequest<RoutesGeoJSON>
@@ -188,6 +216,8 @@ export function RouteMarkersLayer({
           errors={errors}
           onStateChange={onStateChange}
           cameraRef={cameraRef}
+          onRoutePress={onRoutePress}
+          onRouteClusterPress={onRouteClusterPress}
         />
       )}
     </RopeGeoHttpRequest>
