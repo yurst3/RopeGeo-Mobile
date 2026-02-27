@@ -4,12 +4,7 @@ import {
   Service,
 } from "@/components/RopeGeoHttpRequest";
 import { FontAwesome5 } from "@expo/vector-icons";
-import {
-  useRef,
-  useState,
-  useEffect,
-} from "react";
-import React from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,42 +15,19 @@ import {
   Text,
   View,
 } from "react-native";
-import { ExtremeRiskBadge } from "@/components/badges/difficulty/ExtremeRiskBadge";
-import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
-import { FlowingWaterBadge } from "@/components/badges/difficulty/FlowingWaterBadge";
-import { FullDayBadge } from "@/components/badges/difficulty/FullDayBadge";
-import { HalfDayBadge } from "@/components/badges/difficulty/HalfDayBadge";
-import { HighRiskBadge } from "@/components/badges/difficulty/HighRiskBadge";
-import { LongDayBadge } from "@/components/badges/difficulty/LongDayBadge";
-import { MinimalWaterBadge } from "@/components/badges/difficulty/MinimalWaterBadge";
-import { ModerateRiskBadge } from "@/components/badges/difficulty/ModerateRiskBadge";
-import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBadge";
-import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadge";
-import { NotTechnicalBadge } from "@/components/badges/difficulty/NotTechnicalBadge";
-import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
-import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge";
-import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
-import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
-import { SwimmingWaterBadge } from "@/components/badges/difficulty/SwimmingWaterBadge";
-import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
-import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
-import { ClosedBadge } from "@/components/badges/permit/ClosedBadge";
-import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
-import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
-import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import {
   type Difficulty,
-  DifficultyRisk,
-  DifficultyTechnical,
-  DifficultyTime,
-  DifficultyWater,
+  type DifficultyRisk,
   type PagePreview,
-  PermitStatus,
+  RouteType,
 } from "ropegeo-common";
+import { BadgeRow } from "./BadgeRow";
 
-/** PagePreview with optional permit (when supported by API). */
-type PagePreviewWithPermit = PagePreview & { permit?: PermitStatus | null };
+/** PagePreview with optional routeType (when provided by caller, e.g. from map route). */
+type PagePreviewWithRouteType = PagePreview & {
+  routeType?: RouteType | null;
+};
 
 const CARD_BORDER_RADIUS = 12;
 const CARD_PADDING = 12;
@@ -68,87 +40,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_MARGIN_H = 16;
 const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
 
-const TECHNICAL_BADGES: Record<DifficultyTechnical, React.ComponentType> = {
-  [DifficultyTechnical.One]: NotTechnicalBadge,
-  [DifficultyTechnical.Two]: ScramblingBadge,
-  [DifficultyTechnical.Three]: TechnicalBadge,
-  [DifficultyTechnical.Four]: VeryTechnicalBadge,
-};
-const WATER_BADGES: Record<DifficultyWater, React.ComponentType> = {
-  [DifficultyWater.A]: MinimalWaterBadge,
-  [DifficultyWater.B]: SwimmingWaterBadge,
-  [DifficultyWater.C]: FlowingWaterBadge,
-  [DifficultyWater.C1]: FlowingWaterBadge,
-  [DifficultyWater.C2]: FlowingWaterBadge,
-  [DifficultyWater.C3]: FlowingWaterBadge,
-  [DifficultyWater.C4]: FlowingWaterBadge,
-};
-const TIME_BADGES: Record<DifficultyTime, React.ComponentType> = {
-  [DifficultyTime.I]: ShortBadge,
-  [DifficultyTime.II]: HalfDayBadge,
-  [DifficultyTime.III]: FullDayBadge,
-  [DifficultyTime.IV]: LongDayBadge,
-  [DifficultyTime.V]: OvernightBadge,
-  [DifficultyTime.VI]: MultipleDaysBadge,
-};
-const RISK_BADGES: Record<DifficultyRisk, React.ComponentType> = {
-  [DifficultyRisk.G]: MinimalRiskBadge,
-  [DifficultyRisk.PG]: SomeRiskBadge,
-  [DifficultyRisk.PG13]: ModerateRiskBadge,
-  [DifficultyRisk.R]: HighRiskBadge,
-  [DifficultyRisk.X]: VeryHighRiskBadge,
-  [DifficultyRisk.XX]: ExtremeRiskBadge,
-};
-
-const PERMIT_BADGES: Record<PermitStatus, React.ComponentType<{ showLabel?: boolean }>> = {
-  [PermitStatus.No]: NoPermitBadge,
-  [PermitStatus.Yes]: PermitRequiredBadge,
-  [PermitStatus.Restricted]: RestrictedBadge,
-  [PermitStatus.Closed]: ClosedBadge,
-};
-
-function Badges({
-  difficulty,
-  permit = null,
-  scale = 1,
-}: {
-  difficulty: Difficulty;
-  permit?: PermitStatus | null;
-  scale?: number;
-}) {
-  const badges: React.ReactNode[] = [];
-  if (difficulty.technical != null) {
-    const C = TECHNICAL_BADGES[difficulty.technical];
-    if (C) badges.push(React.createElement(C, { key: "technical" }));
-  }
-  if (difficulty.water != null) {
-    const C = WATER_BADGES[difficulty.water];
-    if (C) badges.push(React.createElement(C, { key: "water" }));
-  }
-  if (difficulty.time != null) {
-    const C = TIME_BADGES[difficulty.time];
-    if (C) badges.push(React.createElement(C, { key: "time" }));
-  }
-  if (difficulty.risk != null) {
-    const C = RISK_BADGES[difficulty.risk];
-    if (C) badges.push(React.createElement(C, { key: "risk" }));
-  }
-  if (permit != null && PERMIT_BADGES[permit] != null) {
-    badges.push(React.createElement(PERMIT_BADGES[permit], { key: "permit" }));
-  }
-  if (badges.length === 0) return null;
-  return (
-    <View
-      style={[
-        styles.difficultyBadgesRow,
-        { transform: [{ scale }], transformOrigin: "left center" },
-      ]}
-    >
-      {badges}
-    </View>
-  );
-}
-
 function hasDifficultyInfo(difficulty: Difficulty): boolean {
   return (
     difficulty.technical != null ||
@@ -158,8 +49,13 @@ function hasDifficultyInfo(difficulty: Difficulty): boolean {
   );
 }
 
-function hasPermitOrDifficulty(preview: PagePreviewWithPermit): boolean {
-  return preview.permit != null || hasDifficultyInfo(preview.difficulty);
+function showBadges(preview: PagePreviewWithRouteType): boolean {
+  return (
+    preview.permit != null ||
+    preview.routeType === RouteType.Cave ||
+    preview.routeType === RouteType.POI ||
+    hasDifficultyInfo(preview.difficulty)
+  );
 }
 
 function StarRating({
@@ -198,9 +94,9 @@ function SinglePreviewCard({
   badgeScale = 0.65,
   onPress,
 }: {
-  preview: PagePreviewWithPermit;
+  preview: PagePreviewWithRouteType;
   badgeScale?: number;
-  onPress?: (preview: PagePreviewWithPermit) => void;
+  onPress?: (preview: PagePreviewWithRouteType) => void;
 }) {
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const rating = preview.rating ?? 0;
@@ -208,8 +104,7 @@ function SinglePreviewCard({
   const location = preview.regions?.length
     ? preview.regions.slice(0, 3).join(" • ")
     : "";
-  const hasDifficulty = hasDifficultyInfo(preview.difficulty);
-  const hasBadges = hasPermitOrDifficulty(preview);
+  const hasBadges = showBadges(preview);
 
   const topContent = (
     <>
@@ -254,9 +149,10 @@ function SinglePreviewCard({
           {hasBadges ? (
             <>
               {topContent}
-              <Badges
+              <BadgeRow
                 difficulty={preview.difficulty}
                 permit={preview.permit}
+                routeType={preview.routeType}
                 scale={badgeScale}
               />
             </>
@@ -303,6 +199,8 @@ function CurrentPreviewNotifier({
 
 type RoutePreviewProps = {
   routeId: string;
+  /** Route type from map/list (e.g. Cave, POI) so the preview can show the correct badge. */
+  routeType?: RouteType | null;
   /** Called when the currently viewed preview page changes (initial load or swipe). Use to sync mapData for TrailsLayer. */
   onCurrentPreviewChange?: (preview: PagePreview | null) => void;
   /** Called when the user presses the preview card. Receives the effective risk for the tapped preview. */
@@ -311,7 +209,7 @@ type RoutePreviewProps = {
   badgeScale?: number;
 };
 
-export function RoutePreview({ routeId, onCurrentPreviewChange, onPreviewPress, badgeScale = 0.65 }: RoutePreviewProps) {
+export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange, onPreviewPress, badgeScale = 0.65 }: RoutePreviewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -374,7 +272,7 @@ export function RoutePreview({ routeId, onCurrentPreviewChange, onPreviewPress, 
           ) : data.length === 1 ? (
             <View style={styles.outer}>
               <SinglePreviewCard
-                preview={data[0]}
+                preview={{ ...data[0], routeType: routeType ?? undefined }}
                 badgeScale={badgeScale}
                 onPress={onPreviewPress != null ? (p) => onPreviewPress(p.difficulty.risk) : undefined}
               />
@@ -397,7 +295,7 @@ export function RoutePreview({ routeId, onCurrentPreviewChange, onPreviewPress, 
                 {data.map((preview) => (
                   <View key={preview.id} style={styles.page}>
                     <SinglePreviewCard
-                      preview={preview}
+                      preview={{ ...preview, routeType: routeType ?? undefined }}
                       badgeScale={badgeScale}
                       onPress={onPreviewPress != null ? (p) => onPreviewPress(p.difficulty.risk) : undefined}
                     />
@@ -541,12 +439,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginBottom: 2,
-  },
-  difficultyBadgesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 8,
   },
   dots: {
     flexDirection: "row",

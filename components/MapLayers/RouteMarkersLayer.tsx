@@ -6,30 +6,11 @@ import {
 import { Camera, Images, ShapeSource, SymbolLayer } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useRef } from "react";
-
-/**
- * GeoJSON FeatureCollection for route markers. Used for client-side clustering.
- * Backend should expose this (e.g. GET /routes) with the same data as the vector tiles.
- */
-export type RoutesGeoJSON = {
-  type: "FeatureCollection";
-  features: Array<{
-    type: "Feature";
-    geometry: {
-      type: "Point";
-      coordinates: [number, number];
-    };
-    properties: {
-      id: string;
-      name: string;
-      type: string;
-    };
-  }>;
-};
+import type { RoutesGeojson } from "ropegeo-common";
 
 export type RoutesState = {
   loading: boolean;
-  data: RoutesGeoJSON | null;
+  data: RoutesGeojson | null;
   errors: Error | null;
 };
 
@@ -209,7 +190,7 @@ export function RouteMarkersLayer({
   onRouteClusterPress,
 }: RouteMarkersLayerProps) {
   return (
-    <RopeGeoHttpRequest<RoutesGeoJSON>
+    <RopeGeoHttpRequest<RoutesGeojson>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/routes"

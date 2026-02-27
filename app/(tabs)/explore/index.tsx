@@ -1,13 +1,14 @@
 import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
 import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import {
-  RouteMarkersLayer,
-  type RoutesGeoJSON,
-} from "@/components/MapLayers/RouteMarkersLayer";
+import { RouteMarkersLayer } from "@/components/MapLayers/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/MapLayers/TrailsLayer";
 import { RequestToastNotifier } from "@/components/RequestToastNotifier";
-import type { DifficultyRisk, PagePreview } from "ropegeo-common";
-import { RoutePreview } from "@/components/RoutePreview";
+import type {
+  DifficultyRisk,
+  PagePreview,
+  RoutesGeojson,
+} from "ropegeo-common";
+import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -42,7 +43,7 @@ export default function ExploreScreen() {
   const [followCurrentPosition, setFollowCurrentPosition] = useState(true);
   const [routesState, setRoutesState] = useState<{
     loading: boolean;
-    data: RoutesGeoJSON | null;
+    data: RoutesGeojson | null;
     errors: Error | null;
   }>({ loading: true, data: null, errors: null });
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
@@ -220,6 +221,11 @@ export default function ExploreScreen() {
           <View style={[styles.previewContainer, { paddingBottom: insets.bottom + 8 }]}>
             <RoutePreview
               routeId={focusedRouteId}
+              routeType={
+                routesState.data?.features?.find(
+                  (f) => f.properties?.id === focusedRouteId
+                )?.properties?.type ?? null
+              }
               onCurrentPreviewChange={setCurrentPreview}
               onPreviewPress={(effectiveRisk: DifficultyRisk | null) => {
                 router.push({

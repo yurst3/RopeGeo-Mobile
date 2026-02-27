@@ -7,6 +7,8 @@ export const BadgeBackgroundColor = {
   Orange: "Orange",
   Red: "Red",
   Black: "Black",
+  Brown: "Brown",
+  Blue: "Blue",
 } as const;
 export type BadgeBackgroundColorType =
   (typeof BadgeBackgroundColor)[keyof typeof BadgeBackgroundColor];
@@ -17,6 +19,8 @@ const BACKGROUND_COLORS: Record<BadgeBackgroundColorType, string> = {
   Orange: "#f97316",
   Red: "#ef4444",
   Black: "#171717",
+  Brown: "#d4a574",
+  Blue: "#93c5fd",
 };
 
 const SUB_RATIO = 2 / 5; // sub circle width : main circle width
