@@ -6,10 +6,11 @@ import {
 } from "@/components/MapLayers/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/MapLayers/TrailsLayer";
 import { RequestToastNotifier } from "@/components/RequestToastNotifier";
-import type { PagePreview } from "@/components/RoutePreview";
+import type { DifficultyRisk, PagePreview } from "ropegeo-common";
 import { RoutePreview } from "@/components/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import type { ComponentRef } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -26,6 +27,7 @@ const DEFAULT_ZOOM = 12.1;
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const cameraRef = useRef<ComponentRef<typeof Camera>>(null);
   const hasCenteredOnLocationRef = useRef(false);
   const [currentPosition, setCurrentPosition] = useState<
@@ -211,7 +213,7 @@ export default function ExploreScreen() {
               />
               <TrailsLayer
                 focusedRouteId={focusedRouteId}
-                visibleTrailIds={currentPreview?.mapData ?? []}
+                visibleTrailIds={currentPreview?.mapData != null ? [currentPreview.mapData] : []}
               />
         </MapView>
         {focusedRouteId != null && (
@@ -219,6 +221,12 @@ export default function ExploreScreen() {
             <RoutePreview
               routeId={focusedRouteId}
               onCurrentPreviewChange={setCurrentPreview}
+              onPreviewPress={(effectiveRisk: DifficultyRisk | null) => {
+                router.push({
+                  pathname: "/explore/risk-info",
+                  params: effectiveRisk != null ? { highlightedRisk: effectiveRisk } : {},
+                });
+              }}
             />
           </View>
         )}

@@ -1,7 +1,7 @@
 {
   "name": "ropegeo",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -10,6 +10,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "ropegeo-common": "^1.0.4",
     "@expo/vector-icons": "^15.0.3",
     "@mapbox/vector-tile": "^2.0.4",
     "@react-navigation/bottom-tabs": "^7.4.0",

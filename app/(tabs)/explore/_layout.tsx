@@ -9,6 +9,13 @@ export default function ExploreLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="risk-info"
+        options={{
+          title: "Risk ratings",
+          headerBackTitle: "Back",
+        }}
+      />
     </Stack>
   );
 }

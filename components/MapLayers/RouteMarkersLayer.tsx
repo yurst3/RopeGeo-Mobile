@@ -142,6 +142,7 @@ function RouteMarkersLayerContent({
             ROUTE_ICON_SIZE_AT_ZOOM_22,
           ],
           iconAllowOverlap: true,
+          iconIgnorePlacement: true,
           iconAnchor: "bottom",
           textField: ["get", "name"],
           textSize: 12,
@@ -150,6 +151,8 @@ function RouteMarkersLayerContent({
           textHaloWidth: 1.5,
           textOffset: [0, 0.2],
           textAnchor: "top",
+          textAllowOverlap: true,
+          textIgnorePlacement: true,
         }}
       />
       <SymbolLayer
@@ -167,6 +170,7 @@ function RouteMarkersLayerContent({
             ROUTE_ICON_SIZE_AT_ZOOM_22,
           ],
           iconAllowOverlap: true,
+          iconIgnorePlacement: true,
           iconAnchor: "bottom",
           textField: [
             "concat",
@@ -180,6 +184,8 @@ function RouteMarkersLayerContent({
           textHaloWidth: 1.5,
           textOffset: [0, 0.2],
           textAnchor: "top",
+          textAllowOverlap: true,
+          textIgnorePlacement: true,
         }}
       />
       <Images

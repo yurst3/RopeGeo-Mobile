@@ -9,40 +9,158 @@ import {
   useState,
   useEffect,
 } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { ExtremeRiskBadge } from "@/components/badges/difficulty/ExtremeRiskBadge";
+import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
+import { FlowingWaterBadge } from "@/components/badges/difficulty/FlowingWaterBadge";
+import { FullDayBadge } from "@/components/badges/difficulty/FullDayBadge";
+import { HalfDayBadge } from "@/components/badges/difficulty/HalfDayBadge";
+import { HighRiskBadge } from "@/components/badges/difficulty/HighRiskBadge";
+import { LongDayBadge } from "@/components/badges/difficulty/LongDayBadge";
+import { MinimalWaterBadge } from "@/components/badges/difficulty/MinimalWaterBadge";
+import { ModerateRiskBadge } from "@/components/badges/difficulty/ModerateRiskBadge";
+import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBadge";
+import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadge";
+import { NotTechnicalBadge } from "@/components/badges/difficulty/NotTechnicalBadge";
+import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
+import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge";
+import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
+import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
+import { SwimmingWaterBadge } from "@/components/badges/difficulty/SwimmingWaterBadge";
+import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
+import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
+import { ClosedBadge } from "@/components/badges/permit/ClosedBadge";
+import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
+import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
+import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
+import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import {
+  type Difficulty,
+  DifficultyRisk,
+  DifficultyTechnical,
+  DifficultyTime,
+  DifficultyWater,
+  type PagePreview,
+  PermitStatus,
+} from "ropegeo-common";
 
-/**
- * Route preview from GET /route/:routeId/preview.
- * @see https://api.webscraper.ropegeo.com/docs/index.html#tag/routes/operation/getRoutePreview
- */
-export type PagePreview = {
-  id: string;
-  source: string;
-  imageUrl: string | null;
-  rating: number | null;
-  ratingCount: number | null;
-  title: string;
-  regions: string[];
-  difficulty: string | null;
-  /** Trail feature IDs to show on the map for this page. When present, TrailsLayer shows only these. */
-  mapData?: string[];
-};
+/** PagePreview with optional permit (when supported by API). */
+type PagePreviewWithPermit = PagePreview & { permit?: PermitStatus | null };
 
 const CARD_BORDER_RADIUS = 12;
 const CARD_PADDING = 12;
 const IMAGE_ASPECT = 3 / 4;
 const STAR_SIZE = 14;
+const EXTERNAL_LINK_BUTTON_GAP = 8;
+/** Minimum height so loading and loaded preview cards stay the same size. */
+const PREVIEW_CARD_MIN_HEIGHT = 140;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_MARGIN_H = 16;
 const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
+
+const TECHNICAL_BADGES: Record<DifficultyTechnical, React.ComponentType> = {
+  [DifficultyTechnical.One]: NotTechnicalBadge,
+  [DifficultyTechnical.Two]: ScramblingBadge,
+  [DifficultyTechnical.Three]: TechnicalBadge,
+  [DifficultyTechnical.Four]: VeryTechnicalBadge,
+};
+const WATER_BADGES: Record<DifficultyWater, React.ComponentType> = {
+  [DifficultyWater.A]: MinimalWaterBadge,
+  [DifficultyWater.B]: SwimmingWaterBadge,
+  [DifficultyWater.C]: FlowingWaterBadge,
+  [DifficultyWater.C1]: FlowingWaterBadge,
+  [DifficultyWater.C2]: FlowingWaterBadge,
+  [DifficultyWater.C3]: FlowingWaterBadge,
+  [DifficultyWater.C4]: FlowingWaterBadge,
+};
+const TIME_BADGES: Record<DifficultyTime, React.ComponentType> = {
+  [DifficultyTime.I]: ShortBadge,
+  [DifficultyTime.II]: HalfDayBadge,
+  [DifficultyTime.III]: FullDayBadge,
+  [DifficultyTime.IV]: LongDayBadge,
+  [DifficultyTime.V]: OvernightBadge,
+  [DifficultyTime.VI]: MultipleDaysBadge,
+};
+const RISK_BADGES: Record<DifficultyRisk, React.ComponentType> = {
+  [DifficultyRisk.G]: MinimalRiskBadge,
+  [DifficultyRisk.PG]: SomeRiskBadge,
+  [DifficultyRisk.PG13]: ModerateRiskBadge,
+  [DifficultyRisk.R]: HighRiskBadge,
+  [DifficultyRisk.X]: VeryHighRiskBadge,
+  [DifficultyRisk.XX]: ExtremeRiskBadge,
+};
+
+const PERMIT_BADGES: Record<PermitStatus, React.ComponentType<{ showLabel?: boolean }>> = {
+  [PermitStatus.No]: NoPermitBadge,
+  [PermitStatus.Yes]: PermitRequiredBadge,
+  [PermitStatus.Restricted]: RestrictedBadge,
+  [PermitStatus.Closed]: ClosedBadge,
+};
+
+function Badges({
+  difficulty,
+  permit = null,
+  scale = 1,
+}: {
+  difficulty: Difficulty;
+  permit?: PermitStatus | null;
+  scale?: number;
+}) {
+  const badges: React.ReactNode[] = [];
+  if (difficulty.technical != null) {
+    const C = TECHNICAL_BADGES[difficulty.technical];
+    if (C) badges.push(React.createElement(C, { key: "technical" }));
+  }
+  if (difficulty.water != null) {
+    const C = WATER_BADGES[difficulty.water];
+    if (C) badges.push(React.createElement(C, { key: "water" }));
+  }
+  if (difficulty.time != null) {
+    const C = TIME_BADGES[difficulty.time];
+    if (C) badges.push(React.createElement(C, { key: "time" }));
+  }
+  if (difficulty.risk != null) {
+    const C = RISK_BADGES[difficulty.risk];
+    if (C) badges.push(React.createElement(C, { key: "risk" }));
+  }
+  if (permit != null && PERMIT_BADGES[permit] != null) {
+    badges.push(React.createElement(PERMIT_BADGES[permit], { key: "permit" }));
+  }
+  if (badges.length === 0) return null;
+  return (
+    <View
+      style={[
+        styles.difficultyBadgesRow,
+        { transform: [{ scale }], transformOrigin: "left center" },
+      ]}
+    >
+      {badges}
+    </View>
+  );
+}
+
+function hasDifficultyInfo(difficulty: Difficulty): boolean {
+  return (
+    difficulty.technical != null ||
+    difficulty.water != null ||
+    difficulty.time != null ||
+    difficulty.risk != null
+  );
+}
+
+function hasPermitOrDifficulty(preview: PagePreviewWithPermit): boolean {
+  return preview.permit != null || hasDifficultyInfo(preview.difficulty);
+}
 
 function StarRating({
   rating,
@@ -51,20 +169,23 @@ function StarRating({
   rating: number;
   count: number;
 }) {
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
+  const stars = Array.from({ length: 5 }, (_, i) => {
+    const fill = Math.min(1, Math.max(0, rating - i));
+    return (
+      <View key={i} style={styles.starCell}>
+        <FontAwesome5 name="star" size={STAR_SIZE} color="#999" />
+        <View
+          style={[styles.starFillClip, { width: `${fill * 100}%` }]}
+          pointerEvents="none"
+        >
+          <FontAwesome5 name="star" size={STAR_SIZE} color="#333" solid />
+        </View>
+      </View>
+    );
+  });
   return (
     <View style={styles.starRow}>
-      {Array.from({ length: full }, (_, i) => (
-        <FontAwesome5 key={`f-${i}`} name="star" size={STAR_SIZE} color="#333" solid />
-      ))}
-      {half > 0 && (
-        <FontAwesome5 name="star-half-alt" size={STAR_SIZE} color="#333" solid />
-      )}
-      {Array.from({ length: empty }, (_, i) => (
-        <FontAwesome5 key={`e-${i}`} name="star" size={STAR_SIZE} color="#999" />
-      ))}
+      {stars}
       <Text style={styles.ratingText}>
         {rating.toFixed(1)} ({count})
       </Text>
@@ -72,15 +193,39 @@ function StarRating({
   );
 }
 
-function SinglePreviewCard({ preview }: { preview: PagePreview }) {
+function SinglePreviewCard({
+  preview,
+  badgeScale = 0.65,
+  onPress,
+}: {
+  preview: PagePreviewWithPermit;
+  badgeScale?: number;
+  onPress?: (preview: PagePreviewWithPermit) => void;
+}) {
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const rating = preview.rating ?? 0;
   const ratingCount = preview.ratingCount ?? 0;
   const location = preview.regions?.length
-    ? preview.regions.join(" • ")
+    ? preview.regions.slice(0, 3).join(" • ")
     : "";
+  const hasDifficulty = hasDifficultyInfo(preview.difficulty);
+  const hasBadges = hasPermitOrDifficulty(preview);
 
-  return (
+  const topContent = (
+    <>
+      <StarRating rating={rating} count={ratingCount} />
+      <Text style={styles.title} numberOfLines={2}>
+        {preview.title}
+      </Text>
+      {location ? (
+        <Text style={styles.regions} numberOfLines={2}>
+          {location}
+        </Text>
+      ) : null}
+    </>
+  );
+
+  const cardContent = (
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <View style={styles.imageContainer}>
@@ -105,34 +250,32 @@ function SinglePreviewCard({ preview }: { preview: PagePreview }) {
             </View>
           )}
         </View>
-        <View style={styles.info}>
-          <StarRating rating={rating} count={ratingCount} />
-          <Text style={styles.title} numberOfLines={2}>
-            {preview.title}
-          </Text>
-          {location ? (
-            <Text style={styles.regions} numberOfLines={2}>
-              {location}
-            </Text>
-          ) : null}
-          {preview.difficulty != null && preview.difficulty !== "" ? (
-            <Text style={styles.difficulty}>
-              Difficulty: {preview.difficulty}
-            </Text>
-          ) : null}
-          {preview.source === "ropewiki" && (
-            <View style={styles.sourceLogo}>
-              <Image
-                source={require("@/assets/images/ropewiki.png")}
-                style={styles.ropewikiImage}
-                resizeMode="contain"
+        <View style={[styles.info, !hasBadges && styles.infoCentered]}>
+          {hasBadges ? (
+            <>
+              {topContent}
+              <Badges
+                difficulty={preview.difficulty}
+                permit={preview.permit}
+                scale={badgeScale}
               />
-            </View>
+            </>
+          ) : (
+            <View style={styles.infoCenterWrap}>{topContent}</View>
           )}
         </View>
       </View>
     </View>
   );
+
+  if (onPress != null) {
+    return (
+      <Pressable onPress={() => onPress(preview)} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}>
+        {cardContent}
+      </Pressable>
+    );
+  }
+  return cardContent;
 }
 
 function CurrentPreviewNotifier({
@@ -162,9 +305,13 @@ type RoutePreviewProps = {
   routeId: string;
   /** Called when the currently viewed preview page changes (initial load or swipe). Use to sync mapData for TrailsLayer. */
   onCurrentPreviewChange?: (preview: PagePreview | null) => void;
+  /** Called when the user presses the preview card. Receives the effective risk for the tapped preview. */
+  onPreviewPress?: (effectiveRisk: DifficultyRisk | null) => void;
+  /** Scale factor for difficulty badges (e.g. 0.65 for 65%). Default 0.65. */
+  badgeScale?: number;
 };
 
-export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewProps) {
+export function RoutePreview({ routeId, onCurrentPreviewChange, onPreviewPress, badgeScale = 0.65 }: RoutePreviewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -176,14 +323,33 @@ export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewPr
       pathParams={{ routeId }}
     >
       {({ loading, data, errors }) => {
+        const currentPreview =
+          data && data.length > 0
+            ? data.length === 1
+              ? data[0]
+              : data[Math.min(currentIndex, data.length - 1)] ?? data[0]
+            : null;
+        const showExternalLink =
+          currentPreview?.source === "ropewiki" &&
+          currentPreview?.externalLink != null;
+
         return (
-          <>
+          <View style={styles.previewWrapper}>
             <CurrentPreviewNotifier
               loading={!!loading}
               data={data ?? null}
               currentIndex={currentIndex}
               onCurrentPreviewChange={onCurrentPreviewChange}
             />
+            {showExternalLink && currentPreview.externalLink != null && (
+              <View style={styles.externalLinkButtonWrap}>
+                <ExternalLinkButton
+                  icon={require("@/assets/images/ropewiki.png")}
+                  link={currentPreview.externalLink}
+                  accessibilityLabel="Open on RopeWiki"
+                />
+              </View>
+            )}
             {loading ? (
             <View style={styles.outer}>
               <View style={[styles.card, styles.placeholderCard]}>
@@ -207,7 +373,11 @@ export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewPr
             </View>
           ) : data.length === 1 ? (
             <View style={styles.outer}>
-              <SinglePreviewCard preview={data[0]} />
+              <SinglePreviewCard
+                preview={data[0]}
+                badgeScale={badgeScale}
+                onPress={onPreviewPress != null ? (p) => onPreviewPress(p.difficulty.risk) : undefined}
+              />
             </View>
           ) : (
             <View style={styles.outer}>
@@ -226,7 +396,11 @@ export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewPr
               >
                 {data.map((preview) => (
                   <View key={preview.id} style={styles.page}>
-                    <SinglePreviewCard preview={preview} />
+                    <SinglePreviewCard
+                      preview={preview}
+                      badgeScale={badgeScale}
+                      onPress={onPreviewPress != null ? (p) => onPreviewPress(p.difficulty.risk) : undefined}
+                    />
                   </View>
                 ))}
               </ScrollView>
@@ -243,7 +417,7 @@ export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewPr
               </View>
             </View>
           )}
-          </>
+          </View>
         );
       }}
     </RopeGeoHttpRequest>
@@ -251,6 +425,15 @@ export function RoutePreview({ routeId, onCurrentPreviewChange }: RoutePreviewPr
 }
 
 const styles = StyleSheet.create({
+  previewWrapper: {
+    position: "relative",
+  },
+  externalLinkButtonWrap: {
+    position: "absolute",
+    top: -(48 + EXTERNAL_LINK_BUTTON_GAP),
+    right: CARD_MARGIN_H,
+    zIndex: 1,
+  },
   outer: {
     paddingHorizontal: CARD_MARGIN_H,
     marginBottom: 8,
@@ -263,15 +446,15 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   card: {
+    minHeight: PREVIEW_CARD_MIN_HEIGHT,
     backgroundColor: "#fff",
     borderRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
-    padding: CARD_PADDING,
   },
   placeholderCard: {
-    minHeight: 120,
     justifyContent: "center",
     alignItems: "center",
+    padding: CARD_PADDING,
   },
   placeholderText: {
     color: "#666",
@@ -296,8 +479,9 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: CARD_WIDTH * 0.35,
-    aspectRatio: 1 / IMAGE_ASPECT,
-    borderRadius: 8,
+    alignSelf: "stretch",
+    borderTopLeftRadius: CARD_BORDER_RADIUS,
+    borderBottomLeftRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
     backgroundColor: "#eee",
   },
@@ -313,14 +497,34 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    marginLeft: CARD_PADDING,
+    minHeight: PREVIEW_CARD_MIN_HEIGHT,
+    padding: CARD_PADDING,
     justifyContent: "flex-start",
+  },
+  infoCentered: {
+    justifyContent: "center",
+  },
+  infoCenterWrap: {
+    flex: 1,
+    justifyContent: "center",
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
     gap: 2,
+  },
+  starCell: {
+    width: STAR_SIZE,
+    height: STAR_SIZE,
+    position: "relative",
+  },
+  starFillClip: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: STAR_SIZE,
+    overflow: "hidden",
   },
   ratingText: {
     marginLeft: 6,
@@ -338,18 +542,11 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 2,
   },
-  difficulty: {
-    fontSize: 12,
-    color: "#444",
-  },
-  sourceLogo: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-  },
-  ropewikiImage: {
-    width: 72,
-    height: 24,
+  difficultyBadgesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 8,
   },
   dots: {
     flexDirection: "row",
