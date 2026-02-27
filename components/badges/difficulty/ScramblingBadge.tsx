@@ -4,6 +4,7 @@ export function ScramblingBadge({ showLabel }: { showLabel?: boolean } = {}) {
   return (
     <Badge
       icon={require("@/assets/images/badgeIcons/difficulty/technical/scrambling.png")}
+      iconScale={0.9}
       backgroundColor={BadgeBackgroundColor.Yellow}
       subIcon={require("@/assets/images/badgeIcons/difficulty/technical/2.png")}
       label={showLabel ? "Scrambling" : undefined}

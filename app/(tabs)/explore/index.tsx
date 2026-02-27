@@ -224,7 +224,7 @@ export default function ExploreScreen() {
               }
               onCurrentPreviewChange={setCurrentPreview}
               onPreviewPress={() => {
-                router.push("/explore/time-info");
+                router.push("/explore/technical-info");
               }}
             />
           </View>
