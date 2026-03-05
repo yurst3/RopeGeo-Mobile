@@ -129,7 +129,8 @@ function PageContent({
     );
   }, [bannerUrl, aspectRatioSv]);
 
-  const location = regionNames.join(" • ");
+  const displayRegions =
+    regionNames.length > 0 ? regionNames.slice(0, -1) : [];
   const rating = data.quality ?? 0;
   const ratingCount = data.userVotes ?? 0;
   const technicalRating = data.difficulty?.technical ?? null;
@@ -142,8 +143,6 @@ function PageContent({
       scrollY.value = e.contentOffset.y;
     },
   });
-
-  const aspectRatio = bannerAspectRatio ?? FALLBACK_BANNER_ASPECT_RATIO;
 
   const bottomPadding = insets.bottom + 16;
   const paddingTop =
@@ -240,9 +239,35 @@ function PageContent({
               ]}
             >
               <Text style={styles.title}>{data.name}</Text>
-            {location ? (
-              <Text style={styles.regions} numberOfLines={2}>
-                {location}
+            {data.aka != null && data.aka.length > 0 ? (
+              <Text style={styles.aka}>
+                <Text style={styles.akaLabel}>AKA: </Text>
+                {data.aka.join(", ")}
+              </Text>
+            ) : null}
+            {displayRegions.length > 0 ? (
+              <Text
+                style={[
+                  styles.regionsContainer,
+                  data.aka?.length ? styles.regionsAfterAka : undefined,
+                ]}
+                numberOfLines={2}
+              >
+                {displayRegions.flatMap((name, i) => [
+                  <Text key={`region-${i}`} style={styles.regionLink}>
+                    {name}
+                  </Text>,
+                  ...(i < displayRegions.length - 1
+                    ? [
+                        <Text
+                          key={`sep-${i}`}
+                          style={styles.regionSeparator}
+                        >
+                          {" "}•{" "}
+                        </Text>,
+                      ]
+                    : []),
+                ])}
               </Text>
             ) : null}
             <StarRating
@@ -425,10 +450,28 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 6,
   },
-  regions: {
+  aka: {
     fontSize: 14,
     color: "#6b7280",
+    marginBottom: 4,
+    marginLeft: 8,
+  },
+  akaLabel: {
+    fontWeight: "700",
+  },
+  regionsContainer: {
+    fontSize: 16,
     marginBottom: 10,
+  },
+  regionLink: {
+    color: "#3b82f6",
+    textDecorationLine: "underline",
+  },
+  regionSeparator: {
+    color: "#6b7280",
+  },
+  regionsAfterAka: {
+    marginTop: 4,
   },
   starRatingRow: {
     alignSelf: "center",
