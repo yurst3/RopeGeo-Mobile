@@ -123,6 +123,12 @@ export default function ExploreLayout() {
         }}
       />
       <Stack.Screen
+        name="[id]/region"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="search"
         options={{
           headerShown: false,

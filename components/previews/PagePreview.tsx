@@ -12,7 +12,7 @@ import {
 import {
   type Difficulty,
   PageDataSource,
-  type PagePreview,
+  type PagePreview as PagePreviewData,
   RouteType,
 } from "ropegeo-common";
 
@@ -37,10 +37,10 @@ function sourceIcon(source: PageDataSource): number | null {
 }
 
 type Props = {
-  preview: PagePreview;
+  preview: PagePreviewData;
 };
 
-export function SearchPagePreview({ preview }: Props) {
+export function PagePreview({ preview }: Props) {
   const router = useRouter();
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const difficultyText = formatPageDifficulty(preview.difficulty);

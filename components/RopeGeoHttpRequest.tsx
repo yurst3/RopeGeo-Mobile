@@ -111,13 +111,23 @@ export function RopeGeoHttpRequest<T = unknown>({
         }
         try {
           setData(JSON.parse(text) as T);
-        } catch {
+        } catch (parseError) {
+          console.error("[RopeGeoHttpRequest] Invalid JSON response", {
+            url,
+            status: res.status,
+            responseText: text.slice(0, 500),
+            parseError: parseError instanceof Error ? parseError.message : String(parseError),
+          });
           setErrors(new Error("Invalid JSON response"));
           setData(null);
         }
       })
       .catch((err) => {
         if (!cancelled) {
+          console.error("[RopeGeoHttpRequest] Request failed", {
+            url,
+            error: err instanceof Error ? err.message : String(err),
+          });
           setErrors(err instanceof Error ? err : new Error(String(err)));
           setData(null);
         }

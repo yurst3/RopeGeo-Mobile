@@ -31,7 +31,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import type { RopewikiPageView } from "ropegeo-common";
+import { PageDataSource, type RopewikiPageView } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
@@ -104,7 +104,9 @@ function PageContent({
   const [bannerAspectRatio, setBannerAspectRatio] = useState<number | null>(null);
   const [bannerImageLoading, setBannerImageLoading] = useState(true);
   const bannerUrl = data.bannerImage?.url ?? null;
-  const regionNames = data.regions?.map((r) => r.name) ?? [];
+  const displayRegions = (data.regions?.length ?? 0) > 0
+    ? (data.regions ?? []).slice(0, -1)
+    : [];
 
   const scrollY = useSharedValue(0);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
@@ -129,14 +131,19 @@ function PageContent({
     );
   }, [bannerUrl, aspectRatioSv]);
 
-  const displayRegions =
-    regionNames.length > 0 ? regionNames.slice(0, -1) : [];
   const rating = data.quality ?? 0;
   const ratingCount = data.userVotes ?? 0;
   const technicalRating = data.difficulty?.technical ?? null;
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
+
+  const onRegionPress = (regionId: string) => {
+    router.push({
+      pathname: "/explore/[id]/region",
+      params: { id: regionId, source: PageDataSource.Ropewiki },
+    } as unknown as Parameters<typeof router.push>[0]);
+  };
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -257,9 +264,13 @@ function PageContent({
                 ]}
                 numberOfLines={2}
               >
-                {displayRegions.flatMap((name, i) => [
-                  <Text key={`region-${i}`} style={styles.regionLink}>
-                    {name}
+                {displayRegions.flatMap((region, i) => [
+                  <Text
+                    key={`region-${region.id}`}
+                    style={styles.regionLink}
+                    onPress={() => onRegionPress(region.id)}
+                  >
+                    {region.name}
                   </Text>,
                   ...(i < displayRegions.length - 1
                     ? [

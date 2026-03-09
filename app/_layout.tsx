@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StyleSheet } from "react-native";
 import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   return (
-    <>
+    <GestureHandlerRootView style={styles.root}>
       <Stack>
         <Stack.Screen
           name="(tabs)"
@@ -19,6 +21,10 @@ export default function RootLayout() {
         />
       </Stack>
       <Toast />
-    </>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

@@ -1,8 +1,7 @@
+import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import {
   Method,
-  RopeGeoHttpRequest,
   Service,
-  SERVICE_BASE_URL,
 } from "@/components/RopeGeoHttpRequest";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -17,47 +16,21 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PagePreview } from "@/components/previews/PagePreview";
+import { RegionPreview } from "@/components/previews/RegionPreview";
 import { Preview, SearchParams, SearchResults } from "ropegeo-common";
-import { SearchPagePreview } from "./SearchPagePreview";
-import { SearchRegionPreview } from "./SearchRegionPreview";
 
 const HEADER_BUTTON_SIZE = 44;
-
-/** Ensure search result objects have Preview prototype so instance methods work. */
-function asPreview<T extends { previewType: string }>(r: T): T & Preview {
-  Object.setPrototypeOf(r, Preview.prototype);
-  return r as T & Preview;
-}
-
 const HEADER_BUTTON_GAP = 8;
 const SEARCH_LIMIT = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 const LOAD_MORE_THRESHOLD = 100;
-
-type SearchResultItem = Preview;
-
-function SyncSearchData({
-  data,
-  onData,
-}: {
-  data: SearchResults | null;
-  onData: (data: SearchResults) => void;
-}) {
-  useEffect(() => {
-    if (data) onData(data);
-  }, [data, onData]);
-  return null;
-}
 
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
   const searchInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -66,11 +39,6 @@ export function SearchScreen() {
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query]);
-
-  useEffect(() => {
-    setResults([]);
-    setNextCursor(null);
-  }, [debouncedQuery]);
 
   const searchParams = useMemo(() => {
     if (debouncedQuery.length === 0) return null;
@@ -82,76 +50,31 @@ export function SearchScreen() {
       true,
       null,
       "quality",
-      SEARCH_LIMIT,
-      null
+      SEARCH_LIMIT
     );
   }, [debouncedQuery]);
 
-  const queryParams = useMemo(
-    () => searchParams?.toQueryStringParams() ?? {},
-    [searchParams]
-  );
-
-  const syncInitialData = useCallback((data: SearchResults) => {
-    setResults(data.results.map(asPreview));
-    setNextCursor(data.nextCursor);
-  }, []);
-
-  const loadMore = useCallback(async () => {
-    // Only load the next page when we have a cursor and we're not already loading.
-    if (nextCursor == null || debouncedQuery.length === 0) return;
-    if (loadingMore || loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    // Use base query params and append cursor as-is. Avoid SearchParams with cursor
-    // so we never decode it in the app (Buffer/base64url can fail in React Native).
-    const paramsWithCursor = { ...queryParams, cursor: nextCursor };
-    const url = `${SERVICE_BASE_URL[Service.WEBSCRAPER]}/search?${new URLSearchParams(
-      paramsWithCursor
-    ).toString()}`;
-    try {
-      const res = await fetch(url);
-      const text = await res.text();
-      if (!res.ok) {
-        return;
-      }
-      const raw = JSON.parse(text) as
-        | { results?: SearchResultItem[]; nextCursor?: string | null }
-        | { data?: { results?: SearchResultItem[]; nextCursor?: string | null } };
-      const data = (raw && "data" in raw && raw.data != null ? raw.data : raw) as {
-        results?: SearchResultItem[];
-        nextCursor?: string | null;
-      };
-      const nextResults = Array.isArray(data.results) ? data.results.map(asPreview) : [];
-      const newNextCursor = data.nextCursor ?? null;
-      setResults((prev) => [...prev, ...nextResults]);
-      setNextCursor(newNextCursor);
-    } catch {
-      // ignore; nextCursor unchanged so user can scroll to retry
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [debouncedQuery, nextCursor, loadingMore, queryParams]);
-
   const handleScroll = useCallback(
-    (e: { nativeEvent: { contentOffset: { y: number }; contentSize: { height: number }; layoutMeasurement: { height: number } } }) => {
+    (e: {
+      nativeEvent: {
+        contentOffset: { y: number };
+        contentSize: { height: number };
+        layoutMeasurement: { height: number };
+      };
+    }) => {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
       const canScroll = contentSize.height > layoutMeasurement.height;
       const isNearBottom =
         contentOffset.y + layoutMeasurement.height >=
         contentSize.height - LOAD_MORE_THRESHOLD;
-      if (
-        canScroll &&
-        isNearBottom &&
-        nextCursor != null &&
-        !loadingMore
-      ) {
-        loadMore();
+      if (canScroll && isNearBottom) {
+        loadMoreRef.current();
       }
     },
-    [nextCursor, loadingMore, loadMore]
+    []
   );
+
+  const loadMoreRef = useRef<() => void>(() => {});
 
   useFocusEffect(
     useCallback(() => {
@@ -173,7 +96,12 @@ export function SearchScreen() {
           },
         ]}
       >
-        <View style={[styles.headerButtonWrap, { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP }]}>
+        <View
+          style={[
+            styles.headerButtonWrap,
+            { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
+          ]}
+        >
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [
@@ -200,7 +128,12 @@ export function SearchScreen() {
             returnKeyType="search"
           />
         </View>
-        <View style={[styles.headerButtonWrap, { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP }]}>
+        <View
+          style={[
+            styles.headerButtonWrap,
+            { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
+          ]}
+        >
           <Pressable
             onPress={() => {}}
             style={({ pressed }) => [
@@ -218,60 +151,90 @@ export function SearchScreen() {
         style={styles.content}
         onPress={() => searchInputRef.current?.blur()}
       >
-      {searchParams == null ? (
-        <View style={[styles.centered, { paddingTop: searchBarTop + searchBarHeight + 12 }]}>
-          <Text style={styles.hint}>Type a search term to query the API.</Text>
-        </View>
-      ) : (
-        <RopeGeoHttpRequest<SearchResults>
-          service={Service.WEBSCRAPER}
-          method={Method.GET}
-          path="/search"
-          queryParams={queryParams}
-        >
-          {({ loading, data, errors }) => (
-            <>
-              <SyncSearchData data={data} onData={syncInitialData} />
-              {loading && results.length === 0 && (
-                <View style={[styles.centered, { paddingTop: searchBarTop + searchBarHeight + 12 }]}>
-                  <ActivityIndicator size="large" />
-                </View>
-              )}
-              {errors != null && !loading && results.length === 0 && (
-                <View style={[styles.centered, { paddingTop: searchBarTop + searchBarHeight + 12 }]}>
-                  <Text style={styles.errorText}>{errors.message}</Text>
-                </View>
-              )}
-              {!loading && errors == null && data != null && (
-                <ScrollView
-                  style={styles.scroll}
-                  contentContainerStyle={[
-                    styles.scrollContent,
-                    { paddingTop: searchBarTop + searchBarHeight + 12 },
-                  ]}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  onScroll={handleScroll}
-                  scrollEventThrottle={16}
-                >
-                  {results.map((item, index) =>
-                    item.isPagePreview() ? (
-                      <SearchPagePreview key={`page-${item.id}-${index}`} preview={item} />
-                    ) : item.isRegionPreview() ? (
-                      <SearchRegionPreview key={`region-${item.id}-${index}`} preview={item} />
-                    ) : null
-                  )}
-                  {loadingMore ? (
-                    <View style={styles.loadMoreIndicator}>
-                      <ActivityIndicator size="small" />
+        {searchParams == null ? (
+          <View
+            style={[
+              styles.centered,
+              { paddingTop: searchBarTop + searchBarHeight + 12 },
+            ]}
+          >
+            <Text style={styles.hint}>
+              Type a search term to query the API.
+            </Text>
+          </View>
+        ) : (
+          <RopeGeoCursorPaginationHttpRequest<Preview>
+            service={Service.WEBSCRAPER}
+            method={Method.GET}
+            path="/search"
+            queryParams={searchParams}
+          >
+            {({ loading, loadingMore, data, errors, loadMore, hasMore }) => {
+              loadMoreRef.current = loadMore;
+              const items = data;
+              return (
+                <>
+                  {loading && items.length === 0 && (
+                    <View
+                      style={[
+                        styles.centered,
+                        {
+                          paddingTop: searchBarTop + searchBarHeight + 12,
+                        },
+                      ]}
+                    >
+                      <ActivityIndicator size="large" />
                     </View>
-                  ) : null}
-                </ScrollView>
-              )}
-            </>
-          )}
-        </RopeGeoHttpRequest>
-      )}
+                  )}
+                  {errors != null && !loading && items.length === 0 && (
+                    <View
+                      style={[
+                        styles.centered,
+                        {
+                          paddingTop: searchBarTop + searchBarHeight + 12,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.errorText}>{errors.message}</Text>
+                    </View>
+                  )}
+                  {!loading && errors == null && (
+                    <ScrollView
+                      style={styles.scroll}
+                      contentContainerStyle={[
+                        styles.scrollContent,
+                        { paddingTop: searchBarTop + searchBarHeight + 12 },
+                      ]}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="on-drag"
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                    >
+                      {items.map((item, index) =>
+                        item.isPagePreview() ? (
+                          <PagePreview
+                            key={`page-${item.id}-${index}`}
+                            preview={item}
+                          />
+                        ) : item.isRegionPreview() ? (
+                          <RegionPreview
+                            key={`region-${item.id}-${index}`}
+                            preview={item}
+                          />
+                        ) : null
+                      )}
+                      {loadingMore ? (
+                        <View style={styles.loadMoreIndicator}>
+                          <ActivityIndicator size="small" />
+                        </View>
+                      ) : null}
+                    </ScrollView>
+                  )}
+                </>
+              );
+            }}
+          </RopeGeoCursorPaginationHttpRequest>
+        )}
       </Pressable>
     </View>
   );

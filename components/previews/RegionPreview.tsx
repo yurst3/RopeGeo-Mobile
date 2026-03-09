@@ -1,8 +1,10 @@
-import { PageDataSource, type RegionPreview } from "ropegeo-common";
+import { useRouter } from "expo-router";
+import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common";
 import { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -30,10 +32,11 @@ function formatCounts(pageCount: number, regionCount: number): string {
 }
 
 type Props = {
-  preview: RegionPreview;
+  preview: RegionPreviewData;
 };
 
-export function SearchRegionPreview({ preview }: Props) {
+export function RegionPreview({ preview }: Props) {
+  const router = useRouter();
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const regionLine =
     preview.parents?.length > 0
@@ -42,8 +45,18 @@ export function SearchRegionPreview({ preview }: Props) {
   const countsText = formatCounts(preview.pageCount, preview.regionCount);
   const icon = sourceIcon(preview.source);
 
+  const onPress = () => {
+    router.push({
+      pathname: "/explore/[id]/region",
+      params: { id: preview.id, source: preview.source },
+    } as unknown as Parameters<typeof router.push>[0]);
+  };
+
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+    >
       <View style={styles.imageWrap}>
         {preview.imageUrl ? (
           <>
@@ -91,7 +104,7 @@ export function SearchRegionPreview({ preview }: Props) {
       {icon != null ? (
         <Image source={icon} style={styles.sourceIcon} resizeMode="contain" />
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -103,6 +116,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 3,
     marginBottom: 6,
+  },
+  cardPressed: {
+    opacity: 0.9,
   },
   imageWrap: {
     width: IMAGE_SIZE,
@@ -143,7 +159,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 3,
+    zIndex: 2,
   },
   regionIcon: {
     width: 18,

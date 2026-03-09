@@ -1,0 +1,230 @@
+import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
+import { Service } from "@/components/RopeGeoHttpRequest";
+import { PagePreview } from "@/components/previews/PagePreview";
+import { RegionPreview } from "@/components/previews/RegionPreview";
+import React, { useCallback, useMemo, useRef } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Animated, {
+  type SharedValue,
+  runOnJS,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated";
+import { Preview, RopewikiRegionPreviewsParams } from "ropegeo-common";
+
+const PREVIEWS_PAGE_LIMIT = 10;
+const LOAD_MORE_THRESHOLD = 100;
+const CARD_BORDER_RADIUS = 24;
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const INITIAL_LOADING_MIN_HEIGHT = SCREEN_HEIGHT * 0.5;
+
+export type RegionContentProps = {
+  regionId: string;
+  name: string;
+  countsText: string;
+  url: string | null;
+  insets: { bottom: number };
+  scrollY: SharedValue<number>;
+  paddingTop: number;
+  onCardHeightLayout: (height: number) => void;
+};
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
+export function RegionContent({
+  regionId,
+  name,
+  countsText,
+  url,
+  insets,
+  scrollY,
+  paddingTop,
+  onCardHeightLayout,
+}: RegionContentProps) {
+  const loadMoreRef = useRef<() => void>(() => {});
+
+  const queryParams = useMemo(
+    () => new RopewikiRegionPreviewsParams(PREVIEWS_PAGE_LIMIT),
+    []
+  );
+
+  const pathParams = useMemo(() => ({ regionId }), [regionId]);
+
+  const checkLoadMore = useCallback(
+    (contentOffsetY: number, contentHeight: number, layoutHeight: number) => {
+      const canScroll = contentHeight > layoutHeight;
+      const isNearBottom =
+        contentOffsetY + layoutHeight >= contentHeight - LOAD_MORE_THRESHOLD;
+      if (canScroll && isNearBottom) {
+        loadMoreRef.current();
+      }
+    },
+    []
+  );
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      runOnJS(checkLoadMore)(
+        event.contentOffset.y,
+        event.contentSize.height,
+        event.layoutMeasurement.height
+      );
+    },
+  });
+
+  return (
+    <RopeGeoCursorPaginationHttpRequest<Preview>
+      service={Service.WEBSCRAPER}
+      path="/ropewiki/region/:regionId/previews"
+      pathParams={pathParams}
+      queryParams={queryParams}
+    >
+      {({ loading, loadingMore, data, loadMore }) => {
+        loadMoreRef.current = loadMore;
+        const items = data;
+        return (
+          <AnimatedScrollView
+            style={styles.scrollView}
+            contentContainerStyle={{
+              paddingTop,
+              paddingBottom: 0,
+              flexGrow: 1,
+            }}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            overScrollMode="never"
+          >
+            <View
+              style={[
+                styles.cardWrapper,
+                { marginTop: -CARD_BORDER_RADIUS },
+                loading && items.length === 0 && {
+                  minHeight: INITIAL_LOADING_MIN_HEIGHT,
+                },
+              ]}
+              onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
+            >
+              {url ? (
+                <View style={[styles.externalLinkWrap, { top: -64, left: 16 }]}>
+                  <ExternalLinkButton
+                    icon={require("@/assets/images/ropewiki.png")}
+                    link={url}
+                    accessibilityLabel="Open on RopeWiki"
+                  />
+                </View>
+              ) : null}
+              <View style={styles.cardWrap}>
+                <View
+                  style={[
+                    styles.cardInner,
+                    {
+                      paddingTop: 20,
+                      paddingBottom: 16,
+                    },
+                  ]}
+                >
+                  <Text style={styles.title}>{name}</Text>
+                  <Text style={styles.counts}>{countsText}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.previewsSection,
+                    { paddingBottom: insets.bottom + 16 },
+                  ]}
+                >
+                  {loading && items.length === 0 ? (
+                    <View
+                      style={[
+                        styles.previewsLoading,
+                        { minHeight: INITIAL_LOADING_MIN_HEIGHT - 120 },
+                      ]}
+                    >
+                      <ActivityIndicator size="small" />
+                    </View>
+                  ) : (
+                    <>
+                      {items.map((item, index) =>
+                        item.isPagePreview() ? (
+                          <PagePreview
+                            key={`page-${item.id}-${index}`}
+                            preview={item}
+                          />
+                        ) : item.isRegionPreview() ? (
+                          <RegionPreview
+                            key={`region-${item.id}-${index}`}
+                            preview={item}
+                          />
+                        ) : null
+                      )}
+                      {loadingMore ? (
+                        <View style={styles.loadMoreIndicator}>
+                          <ActivityIndicator size="small" />
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              </View>
+            </View>
+          </AnimatedScrollView>
+        );
+      }}
+    </RopeGeoCursorPaginationHttpRequest>
+  );
+}
+
+const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    zIndex: 1000,
+  },
+  cardWrapper: {
+    position: "relative",
+  },
+  externalLinkWrap: {
+    position: "absolute",
+  },
+  cardWrap: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: CARD_BORDER_RADIUS,
+    borderTopRightRadius: CARD_BORDER_RADIUS,
+    overflow: "hidden",
+  },
+  cardInner: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 6,
+  },
+  counts: {
+    fontSize: 16,
+    color: "#6b7280",
+  },
+  previewsSection: {
+    paddingHorizontal: 20,
+  },
+  previewsLoading: {
+    paddingVertical: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreIndicator: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
