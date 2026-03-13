@@ -4,10 +4,10 @@ import {
   Service,
 } from "@/components/RopeGeoHttpRequest";
 import { useRef, useState, useEffect } from "react";
+import { Image } from "expo-image";
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -108,9 +108,9 @@ function SinglePreviewCard({
                 </View>
               )}
               <Image
-                source={{ uri: preview.imageUrl }}
+                source={preview.imageUrl}
                 style={styles.image}
-                resizeMode="cover"
+                contentFit="cover"
                 onLoadStart={() => setImageLoading(true)}
                 onLoadEnd={() => setImageLoading(false)}
               />
@@ -120,7 +120,7 @@ function SinglePreviewCard({
               <Image
                 source={require("@/assets/images/noImage.png")}
                 style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
-                resizeMode="contain"
+                contentFit="contain"
               />
             </View>
           )}

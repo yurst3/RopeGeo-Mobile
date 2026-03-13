@@ -5,10 +5,10 @@ import {
   RopewikiRegionImageView,
 } from "ropegeo-common";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Image } from "expo-image";
 import {
   ActivityIndicator,
   Animated as RNAnimated,
-  Image,
   StyleSheet,
   View,
 } from "react-native";
@@ -133,9 +133,8 @@ function RegionBannerCarousel({
   }, [currentIndex, images.length, containerWidth, slideOutX, slideInX]);
 
   useEffect(() => {
-    images.forEach((uri) => {
-      if (uri) Image.prefetch(uri).catch(() => {});
-    });
+    const urls = images.filter((uri): uri is string => Boolean(uri));
+    if (urls.length > 0) Image.prefetch(urls).catch(() => {});
   }, [images]);
 
   const markImageLoaded = useCallback((index: number) => {
@@ -192,7 +191,7 @@ function RegionBannerCarousel({
             <Image
               source={require("@/assets/images/noImage.png")}
               style={styles.bannerNoImageIcon}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </View>
         ) : showTwoSlides ? (
@@ -204,9 +203,9 @@ function RegionBannerCarousel({
               ]}
             >
               <Image
-                source={{ uri: outgoingImageUri }}
+                source={outgoingImageUri}
                 style={StyleSheet.absoluteFill}
-                resizeMode="cover"
+                contentFit="cover"
               />
             </RNAnimated.View>
             <RNAnimated.View
@@ -216,9 +215,9 @@ function RegionBannerCarousel({
               ]}
             >
               <Image
-                source={{ uri: incomingImageUri }}
+                source={incomingImageUri}
                 style={StyleSheet.absoluteFill}
-                resizeMode="cover"
+                contentFit="cover"
                 onLoadEnd={() => markImageLoaded(currentSlideIndex)}
               />
               {currentImageLoading ? (
@@ -235,9 +234,9 @@ function RegionBannerCarousel({
           <View style={styles.currentImageWrap}>
             <Image
               key={currentImageUri}
-              source={{ uri: currentImageUri }}
+              source={currentImageUri}
               style={StyleSheet.absoluteFill}
-              resizeMode="cover"
+              contentFit="cover"
               onLoadEnd={() => markImageLoaded(currentSlideIndex)}
             />
             {currentImageLoading ? (

@@ -18,30 +18,13 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { RopewikiRegionView } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
 const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
 const BACK_BUTTON_SIZE = 44;
-
-/** Minimal shape for /ropewiki/region/:id response. */
-type RopewikiRegionView = {
-  name?: string;
-  pageCount?: number;
-  regionCount?: number;
-  url?: string | null;
-  [key: string]: unknown;
-};
-
-function formatCounts(pageCount: number, regionCount: number): string {
-  if (regionCount === 0) {
-    return `(${pageCount} ${pageCount === 1 ? "page" : "pages"})`;
-  }
-  const pages = `${pageCount} ${pageCount === 1 ? "page" : "pages"}`;
-  const regions = `${regionCount} ${regionCount === 1 ? "region" : "regions"}`;
-  return `(${pages} and ${regions})`;
-}
 
 function ErrorEffect({ error }: { error: Error }) {
   const router = useRouter();
@@ -95,21 +78,13 @@ function RegionScreenBody({
     };
   });
 
-  const name = data.name ?? "Region";
-  const pageCount = data.pageCount ?? 0;
-  const regionCount = data.regionCount ?? 0;
-  const countsText = formatCounts(pageCount, regionCount);
-  const url = data.url ?? null;
-
   return (
     <View style={styles.container}>
       <RegionBanner regionId={regionId} style={bannerAnimatedStyle} />
 
       <RegionContent
         regionId={regionId}
-        name={name}
-        countsText={countsText}
-        url={url}
+        region={data}
         insets={insets}
         scrollY={scrollY}
         paddingTop={paddingTop}
@@ -136,7 +111,7 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
   const router = useRouter();
 
   return (
-    <RopeGeoHttpRequest<RopewikiRegionView>
+    <RopeGeoHttpRequest<unknown>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/ropewiki/region/:id"
@@ -165,7 +140,21 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
         if (data == null) {
           return null;
         }
-        return <RegionScreenBody data={data} regionId={regionId} />;
+        try {
+          const view = RopewikiRegionView.fromResponseBody(data);
+          return <RegionScreenBody data={view} regionId={regionId} />;
+        } catch (parseError) {
+          console.error(parseError)
+          return (
+            <ErrorEffect
+              error={
+                parseError instanceof Error
+                  ? parseError
+                  : new Error(String(parseError))
+              }
+            />
+          );
+        }
       }}
     </RopeGeoHttpRequest>
   );

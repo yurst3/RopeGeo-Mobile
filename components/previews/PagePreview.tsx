@@ -1,9 +1,9 @@
 import { StarRating } from "@/components/StarRating";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { Image } from "expo-image";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -79,9 +79,9 @@ export function PagePreview({ preview }: Props) {
               </View>
             )}
             <Image
-              source={{ uri: preview.imageUrl }}
+              source={preview.imageUrl}
               style={styles.image}
-              resizeMode="cover"
+              contentFit="cover"
               onLoadStart={() => setImageLoading(true)}
               onLoadEnd={() => setImageLoading(false)}
             />
@@ -91,7 +91,7 @@ export function PagePreview({ preview }: Props) {
             <Image
               source={require("@/assets/images/noImage.png")}
               style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </View>
         )}
@@ -128,7 +128,7 @@ export function PagePreview({ preview }: Props) {
         />
       </View>
       {icon != null ? (
-        <Image source={icon} style={styles.sourceIcon} resizeMode="contain" />
+        <Image source={icon} style={styles.sourceIcon} contentFit="contain" />
       ) : null}
     </Pressable>
   );

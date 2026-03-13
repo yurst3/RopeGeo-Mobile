@@ -1,5 +1,6 @@
+import { Image } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
-import { Image, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 
 const SIZE = 48;
@@ -29,7 +30,7 @@ export function ExternalLinkButton({
       onPress={handlePress}
       accessibilityLabel={accessibilityLabel}
     >
-      <Image source={icon} style={styles.icon} resizeMode="contain" />
+      <Image source={icon} style={styles.icon} contentFit="contain" />
     </Pressable>
   );
 }

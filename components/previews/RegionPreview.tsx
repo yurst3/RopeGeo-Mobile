@@ -1,9 +1,9 @@
 import { useRouter } from "expo-router";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common";
 import { useState } from "react";
+import { Image } from "expo-image";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -66,9 +66,9 @@ export function RegionPreview({ preview }: Props) {
               </View>
             )}
             <Image
-              source={{ uri: preview.imageUrl }}
+              source={preview.imageUrl}
               style={styles.image}
-              resizeMode="cover"
+              contentFit="cover"
               onLoadStart={() => setImageLoading(true)}
               onLoadEnd={() => setImageLoading(false)}
             />
@@ -78,7 +78,7 @@ export function RegionPreview({ preview }: Props) {
             <Image
               source={require("@/assets/images/noImage.png")}
               style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </View>
         )}
@@ -86,7 +86,7 @@ export function RegionPreview({ preview }: Props) {
           <Image
             source={require("@/assets/images/region.png")}
             style={styles.regionIcon}
-            resizeMode="contain"
+            contentFit="contain"
           />
         </View>
       </View>
@@ -102,7 +102,7 @@ export function RegionPreview({ preview }: Props) {
         <Text style={styles.counts}>{countsText}</Text>
       </View>
       {icon != null ? (
-        <Image source={icon} style={styles.sourceIcon} resizeMode="contain" />
+        <Image source={icon} style={styles.sourceIcon} contentFit="contain" />
       ) : null}
     </Pressable>
   );

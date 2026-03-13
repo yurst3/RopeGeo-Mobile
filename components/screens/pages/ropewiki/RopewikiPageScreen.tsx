@@ -1,4 +1,5 @@
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { RegionLinks } from "@/components/RegionLinks";
 import { RappelInfoRow } from "@/components/RappelInfoRow";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -9,15 +10,15 @@ import {
 import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
 import { PageBadges } from "./PageBadges";
-import { RopewikiPageBetaSection } from "./RopewikiPageBetaSection";
+import { BetaSection } from "../../../betaSection/BetaSection";
 import { TimeEstimates } from "./TimeEstimates";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -120,15 +121,13 @@ function PageContent({
       return;
     }
     setBannerImageLoading(true);
-    Image.getSize(
-      bannerUrl,
-      (width, height) => {
-        const ratio = width / height;
+    Image.loadAsync(bannerUrl)
+      .then((ref) => {
+        const ratio = ref.width / ref.height;
         setBannerAspectRatio(ratio);
         aspectRatioSv.value = ratio;
-      },
-      () => setBannerAspectRatio(null)
-    );
+      })
+      .catch(() => setBannerAspectRatio(null));
   }, [bannerUrl, aspectRatioSv]);
 
   const rating = data.quality ?? 0;
@@ -137,13 +136,6 @@ function PageContent({
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
-
-  const onRegionPress = (regionId: string) => {
-    router.push({
-      pathname: "/explore/[id]/region",
-      params: { id: regionId, source: PageDataSource.Ropewiki },
-    } as unknown as Parameters<typeof router.push>[0]);
-  };
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -184,10 +176,9 @@ function PageContent({
         {bannerUrl ? (
           <>
             <Image
-              source={{ uri: bannerUrl }}
+              source={bannerUrl}
               style={styles.bannerImage}
-              resizeMode="contain"
-              onLoadStart={() => setBannerImageLoading(true)}
+              contentFit="contain"
               onLoadEnd={() => setBannerImageLoading(false)}
             />
             {bannerImageLoading && (
@@ -201,7 +192,7 @@ function PageContent({
             <Image
               source={require("@/assets/images/noImage.png")}
               style={styles.bannerNoImageIcon}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </View>
         )}
@@ -256,35 +247,12 @@ function PageContent({
                 {data.aka.join(", ")}
               </Text>
             ) : null}
-            {displayRegions.length > 0 ? (
-              <Text
-                style={[
-                  styles.regionsContainer,
-                  data.aka?.length ? styles.regionsAfterAka : undefined,
-                ]}
-                numberOfLines={2}
-              >
-                {displayRegions.flatMap((region, i) => [
-                  <Text
-                    key={`region-${region.id}`}
-                    style={styles.regionLink}
-                    onPress={() => onRegionPress(region.id)}
-                  >
-                    {region.name}
-                  </Text>,
-                  ...(i < displayRegions.length - 1
-                    ? [
-                        <Text
-                          key={`sep-${i}`}
-                          style={styles.regionSeparator}
-                        >
-                          {" "}•{" "}
-                        </Text>,
-                      ]
-                    : []),
-                ])}
-              </Text>
-            ) : null}
+            <RegionLinks
+              source={PageDataSource.Ropewiki}
+              regions={displayRegions}
+              containerStyle={data.aka?.length ? styles.regionsAfterAka : undefined}
+              numberOfLines={2}
+            />
             <StarRating
                 rating={rating}
                 count={ratingCount}
@@ -321,7 +289,7 @@ function PageContent({
               .slice()
               .sort((a, b) => a.order - b.order)
               .map((section) => (
-                <RopewikiPageBetaSection key={section.order} section={section} />
+                <BetaSection key={section.order} section={section} />
               ))}
             {data.latestRevisionDate != null ? (
               <Text style={styles.lastUpdated}>
@@ -480,17 +448,6 @@ const styles = StyleSheet.create({
   },
   akaLabel: {
     fontWeight: "700",
-  },
-  regionsContainer: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  regionLink: {
-    color: "#3b82f6",
-    textDecorationLine: "underline",
-  },
-  regionSeparator: {
-    color: "#6b7280",
   },
   regionsAfterAka: {
     marginTop: 4,

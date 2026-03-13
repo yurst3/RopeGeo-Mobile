@@ -1,4 +1,6 @@
+import { BetaSection } from "@/components/betaSection/BetaSection";
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { RegionLinks } from "@/components/RegionLinks";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import { Service } from "@/components/RopeGeoHttpRequest";
 import { PagePreview } from "@/components/previews/PagePreview";
@@ -17,7 +19,8 @@ import Animated, {
   runOnJS,
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
-import { Preview, RopewikiRegionPreviewsParams } from "ropegeo-common";
+import type { RopewikiRegionView } from "ropegeo-common";
+import { PageDataSource, Preview, RopewikiRegionPreviewsParams } from "ropegeo-common";
 
 const PREVIEWS_PAGE_LIMIT = 10;
 const LOAD_MORE_THRESHOLD = 100;
@@ -26,11 +29,18 @@ const CARD_BORDER_RADIUS = 24;
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const INITIAL_LOADING_MIN_HEIGHT = SCREEN_HEIGHT * 0.5;
 
+function formatCounts(pageCount: number, regionCount: number): string {
+  if (regionCount === 0) {
+    return `(${pageCount} ${pageCount === 1 ? "page" : "pages"})`;
+  }
+  const pages = `${pageCount} ${pageCount === 1 ? "page" : "pages"}`;
+  const regions = `${regionCount} ${regionCount === 1 ? "region" : "regions"}`;
+  return `(${pages} and ${regions})`;
+}
+
 export type RegionContentProps = {
   regionId: string;
-  name: string;
-  countsText: string;
-  url: string | null;
+  region: RopewikiRegionView;
   insets: { bottom: number };
   scrollY: SharedValue<number>;
   paddingTop: number;
@@ -41,15 +51,16 @@ const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export function RegionContent({
   regionId,
-  name,
-  countsText,
-  url,
+  region,
   insets,
   scrollY,
   paddingTop,
   onCardHeightLayout,
 }: RegionContentProps) {
   const loadMoreRef = useRef<() => void>(() => {});
+  const countsText = formatCounts(region.pageCount, region.regionCount);
+  const url = region.externalLink ?? null;
+  const regions = region.regions ?? [];
 
   const queryParams = useMemo(
     () => new RopewikiRegionPreviewsParams(PREVIEWS_PAGE_LIMIT),
@@ -133,8 +144,15 @@ export function RegionContent({
                     },
                   ]}
                 >
-                  <Text style={styles.title}>{name}</Text>
+                  <Text style={styles.title}>{region.name}</Text>
+                  <RegionLinks
+                    source={PageDataSource.Ropewiki}
+                    regions={regions}
+                  />
                   <Text style={styles.counts}>{countsText}</Text>
+                  {region.overview != null ? (
+                    <BetaSection section={region.overview} />
+                  ) : null}
                 </View>
                 <View
                   style={[

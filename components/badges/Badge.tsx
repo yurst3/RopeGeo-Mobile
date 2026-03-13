@@ -1,5 +1,6 @@
 import type { ImageSourcePropType } from "react-native";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { StyleSheet, Text, View } from "react-native";
 
 export const BadgeBackgroundColor = {
   Green: "Green",
@@ -83,8 +84,9 @@ export function Badge({
     >
       <Image
         source={icon}
-        style={[styles.mainIcon, { width: iconSize, height: iconSize, tintColor: iconColor }]}
-        resizeMode="contain"
+        style={[styles.mainIcon, { width: iconSize, height: iconSize }]}
+        contentFit="contain"
+        tintColor={iconColor}
       />
       {subIcon != null && (
         <View
@@ -102,7 +104,8 @@ export function Badge({
           <Image
             source={subIcon}
             style={[styles.subIcon, { width: subIconSize, height: subIconSize }]}
-            resizeMode="contain"
+            contentFit="contain"
+            tintColor="#000"
           />
         </View>
       )}

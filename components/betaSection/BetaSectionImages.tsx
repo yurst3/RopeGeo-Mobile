@@ -1,24 +1,20 @@
 import { FontAwesome5 } from "@expo/vector-icons";
 import React, { useState } from "react";
+import { Image } from "expo-image";
 import {
   Dimensions,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
-import type {
-  RopewikiBetaSectionView,
-  RopewikiImageView,
-} from "ropegeo-common";
+import type { BetaSectionImage } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
 const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
-const TEXT_MAX_HEIGHT = 150;
 const IMAGE_HEIGHT = 220;
 const IMAGE_INDICATOR_HEIGHT = 28;
 
@@ -38,11 +34,11 @@ const HTML_TAGS_STYLES = {
   },
 };
 
-export type RopewikiPageBetaSectionProps = {
-  section: RopewikiBetaSectionView;
+export type BetaSectionImagesProps = {
+  images: BetaSectionImage[];
 };
 
-function BetaSectionImages({ images }: { images: RopewikiImageView[] }) {
+export function BetaSectionImages({ images }: BetaSectionImagesProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const sortedImages = [...images].sort((a, b) => a.order - b.order);
 
@@ -71,9 +67,9 @@ function BetaSectionImages({ images }: { images: RopewikiImageView[] }) {
           <View style={styles.imageSlide}>
             <View style={styles.imageContainer}>
               <Image
-                source={{ uri: item.url }}
+                source={item.url}
                 style={styles.image}
-                resizeMode="cover"
+                contentFit="cover"
               />
               <Pressable
                 style={styles.expandButton}
@@ -107,96 +103,7 @@ function BetaSectionImages({ images }: { images: RopewikiImageView[] }) {
   );
 }
 
-export function RopewikiPageBetaSection({ section }: RopewikiPageBetaSectionProps) {
-  const [textExpanded, setTextExpanded] = useState(false);
-  const [showExpandButton, setShowExpandButton] = useState(false);
-  const hasImages = section.images != null && section.images.length > 0;
-  const sortedImages = hasImages
-    ? [...section.images].sort((a, b) => a.order - b.order)
-    : [];
-
-  const htmlSource = { html: section.text || "" };
-
-  const handleTextLayout = (e: { nativeEvent: { layout: { height: number } } }) => {
-    if (textExpanded) return;
-    const { height } = e.nativeEvent.layout;
-    setShowExpandButton(height >= TEXT_MAX_HEIGHT);
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{section.title}</Text>
-
-      {section.text ? (
-        <View style={styles.textBlock}>
-          <View
-            style={[
-              styles.textContent,
-              !textExpanded && styles.textContentCollapsed,
-            ]}
-            onLayout={handleTextLayout}
-          >
-            <RenderHtml
-              contentWidth={CONTENT_WIDTH}
-              source={htmlSource}
-              baseStyle={styles.htmlBase}
-              tagsStyles={HTML_TAGS_STYLES}
-            />
-          </View>
-          {(showExpandButton || textExpanded) && (
-            <Pressable
-              onPress={() => setTextExpanded((e) => !e)}
-              style={styles.showMoreButton}
-              accessibilityLabel={textExpanded ? "Show less" : "Show more"}
-            >
-              <Text style={styles.showMoreText}>
-                {textExpanded ? "Show less" : "Show more"}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      ) : null}
-
-      {hasImages && sortedImages.length > 0 && (
-        <BetaSectionImages images={sortedImages} />
-      )}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000",
-    marginBottom: 12,
-  },
-  textBlock: {
-    marginBottom: 16,
-  },
-  textContent: {
-    overflow: "hidden",
-  },
-  textContentCollapsed: {
-    maxHeight: TEXT_MAX_HEIGHT,
-  },
-  htmlBase: {
-    fontSize: 15,
-    color: "#374151",
-    lineHeight: 22,
-  },
-  showMoreButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-  },
-  showMoreText: {
-    fontSize: 15,
-    color: "#3b82f6",
-    fontWeight: "500",
-  },
   imagesWrap: {
     position: "relative",
     marginLeft: -CARD_PADDING_HORIZONTAL,
