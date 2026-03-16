@@ -18,16 +18,10 @@ import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { StarRating } from "@/components/StarRating";
 import {
   type Difficulty,
-  type DifficultyWater,
   type PagePreview,
   RouteType,
 } from "ropegeo-common";
 import { BadgeRow } from "./BadgeRow";
-
-/** PagePreview with optional routeType (when provided by caller, e.g. from map route). */
-type PagePreviewWithRouteType = PagePreview & {
-  routeType?: RouteType | null;
-};
 
 const CARD_BORDER_RADIUS = 12;
 const CARD_PADDING = 12;
@@ -49,23 +43,28 @@ function hasDifficultyInfo(difficulty: Difficulty): boolean {
   );
 }
 
-function showBadges(preview: PagePreviewWithRouteType): boolean {
+function showBadges(
+  preview: PagePreview,
+  routeType?: RouteType | null,
+): boolean {
   return (
     preview.permit != null ||
-    preview.routeType === RouteType.Cave ||
-    preview.routeType === RouteType.POI ||
+    routeType === RouteType.Cave ||
+    routeType === RouteType.POI ||
     hasDifficultyInfo(preview.difficulty)
   );
 }
 
 function SinglePreviewCard({
   preview,
+  routeType = null,
   badgeScale = 0.65,
   onPress,
 }: {
-  preview: PagePreviewWithRouteType;
+  preview: PagePreview;
+  routeType?: RouteType | null;
   badgeScale?: number;
-  onPress?: (preview: PagePreviewWithRouteType) => void;
+  onPress?: (preview: PagePreview) => void;
 }) {
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const rating = preview.rating ?? 0;
@@ -73,7 +72,7 @@ function SinglePreviewCard({
   const location = preview.regions?.length
     ? preview.regions.slice(0, 3).join(" • ")
     : "";
-  const hasBadges = showBadges(preview);
+  const hasBadges = showBadges(preview, routeType);
 
   const topContent = (
     <>
@@ -132,7 +131,7 @@ function SinglePreviewCard({
               <BadgeRow
                 difficulty={preview.difficulty}
                 permit={preview.permit}
-                routeType={preview.routeType}
+                routeType={routeType}
                 scale={badgeScale}
               />
             </>
@@ -184,7 +183,7 @@ type RoutePreviewProps = {
   /** Called when the currently viewed preview page changes (initial load or swipe). Use to sync mapData for TrailsLayer. */
   onCurrentPreviewChange?: (preview: PagePreview | null) => void;
   /** Called when the user presses the preview card. Receives the tapped preview. */
-  onPreviewPress?: (preview: PagePreviewWithRouteType) => void;
+  onPreviewPress?: (preview: PagePreview) => void;
   /** Scale factor for difficulty badges (e.g. 0.65 for 65%). Default 0.65. */
   badgeScale?: number;
 };
@@ -252,9 +251,10 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
           ) : data.length === 1 ? (
             <View style={styles.outer}>
               <SinglePreviewCard
-                preview={{ ...data[0], routeType: routeType ?? undefined }}
+                preview={data[0]}
+                routeType={routeType}
                 badgeScale={badgeScale}
-                onPress={onPreviewPress != null ? (p) => onPreviewPress(p) : undefined}
+                onPress={onPreviewPress ?? undefined}
               />
             </View>
           ) : (
@@ -275,9 +275,10 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
                 {data.map((preview) => (
                   <View key={preview.id} style={styles.page}>
                     <SinglePreviewCard
-                      preview={{ ...preview, routeType: routeType ?? undefined }}
+                      preview={preview}
+                      routeType={routeType}
                       badgeScale={badgeScale}
-                      onPress={onPreviewPress != null ? (p) => onPreviewPress(p) : undefined}
+                      onPress={onPreviewPress ?? undefined}
                     />
                   </View>
                 ))}

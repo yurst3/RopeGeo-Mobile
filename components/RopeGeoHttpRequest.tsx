@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { Result } from "ropegeo-common";
 
 export const Service = {
   WEBSCRAPER: "WEBSCRAPER",
@@ -58,6 +59,10 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
   pathParams?: Record<string, string>;
   queryParams?: Record<string, string | number | boolean | undefined>;
   body?: object;
+  /**
+   * Response body is parsed via Result.fromResponseBody (must include resultType and result).
+   * Children receive the validated result.result as data (typed by T).
+   */
   children: (args: {
     loading: boolean;
     data: T | null;
@@ -110,16 +115,25 @@ export function RopeGeoHttpRequest<T = unknown>({
           return;
         }
         try {
-          setData(JSON.parse(text) as T);
+          const raw = JSON.parse(text) as unknown;
+          const parsed = Result.fromResponseBody(raw);
+          if (!cancelled) {
+            setData(parsed.result as T);
+            setErrors(null);
+          }
         } catch (parseError) {
-          console.error("[RopeGeoHttpRequest] Invalid JSON response", {
-            url,
-            status: res.status,
-            responseText: text.slice(0, 500),
-            parseError: parseError instanceof Error ? parseError.message : String(parseError),
-          });
-          setErrors(new Error("Invalid JSON response"));
-          setData(null);
+          if (!cancelled) {
+            console.error("[RopeGeoHttpRequest] Invalid JSON response", {
+              url,
+              status: res.status,
+              responseText: text.slice(0, 500),
+              parseError: parseError instanceof Error ? parseError.message : String(parseError),
+            });
+            setErrors(
+              parseError instanceof Error ? parseError : new Error("Invalid JSON response")
+            );
+            setData(null);
+          }
         }
       })
       .catch((err) => {

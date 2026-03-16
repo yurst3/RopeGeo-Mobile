@@ -111,7 +111,7 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
   const router = useRouter();
 
   return (
-    <RopeGeoHttpRequest<unknown>
+    <RopeGeoHttpRequest<RopewikiRegionView>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/ropewiki/region/:id"
@@ -140,21 +140,7 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
         if (data == null) {
           return null;
         }
-        try {
-          const view = RopewikiRegionView.fromResponseBody(data);
-          return <RegionScreenBody data={view} regionId={regionId} />;
-        } catch (parseError) {
-          console.error(parseError)
-          return (
-            <ErrorEffect
-              error={
-                parseError instanceof Error
-                  ? parseError
-                  : new Error(String(parseError))
-              }
-            />
-          );
-        }
+        return <RegionScreenBody data={data} regionId={regionId} />;
       }}
     </RopeGeoHttpRequest>
   );

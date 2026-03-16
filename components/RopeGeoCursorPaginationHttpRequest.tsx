@@ -50,7 +50,7 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
   queryParams: CursorPaginationParams;
   /**
    * Response body is parsed via CursorPaginationResults.fromResponseBody (must include resultType).
-   * Parsed shape is CursorPaginationResponseParsed; children receive result.results as data.
+   * Parsed shape is ValidatedCursorPaginationResponse; children receive result.results as data.
    */
   children: (args: {
     loading: boolean;
