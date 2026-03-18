@@ -5,7 +5,7 @@ import { LineLayer, VectorSource } from "@rnmapbox/maps";
  * Each feature has an "id" property; layer shows only features whose id is in visibleTrailIds when a route is focused.
  */
 const TRAILS_TILE_URL_TEMPLATES = [
-  "https://api.webscraper.ropegeo.com/mapdata/trails/{z}/{x}/{y}.pbf",
+  "https://api.webscraper.ropegeo.com/mapdata/tiles/trails/{z}/{x}/{y}.pbf",
 ];
 
 /**

@@ -1,11 +1,12 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { MiniMapView } from "@/components/minimap/MiniMapView";
 import { RegionLinks } from "@/components/RegionLinks";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import { Service } from "@/components/RopeGeoHttpRequest";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -18,6 +19,7 @@ import Animated, {
   type SharedValue,
   runOnJS,
   useAnimatedScrollHandler,
+  useSharedValue,
 } from "react-native-reanimated";
 import type { RopewikiRegionView } from "ropegeo-common";
 import { PageDataSource, Preview, RopewikiRegionPreviewsParams } from "ropegeo-common";
@@ -41,7 +43,7 @@ function formatCounts(pageCount: number, regionCount: number): string {
 export type RegionContentProps = {
   regionId: string;
   region: RopewikiRegionView;
-  insets: { bottom: number };
+  insets: { top: number; bottom: number };
   scrollY: SharedValue<number>;
   paddingTop: number;
   onCardHeightLayout: (height: number) => void;
@@ -58,9 +60,48 @@ export function RegionContent({
   onCardHeightLayout,
 }: RegionContentProps) {
   const loadMoreRef = useRef<() => void>(() => {});
+  const miniMapGateRef = useRef<View>(null);
+  const miniMapUnlockedRef = useRef(false);
+  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+  const hasMiniMapSv = useSharedValue(0);
+  const miniMapScrollTick = useSharedValue(0);
+
   const countsText = formatCounts(region.pageCount, region.regionCount);
   const url = region.externalLink ?? null;
   const regions = region.regions ?? [];
+  const hasMiniMap = region.miniMap != null;
+
+  useEffect(() => {
+    hasMiniMapSv.value = hasMiniMap ? 1 : 0;
+  }, [hasMiniMap, hasMiniMapSv]);
+
+  useEffect(() => {
+    miniMapUnlockedRef.current = false;
+    setMountMiniMapNative(false);
+  }, [regionId]);
+
+  const checkMiniMapInView = useCallback(() => {
+    if (miniMapUnlockedRef.current || !hasMiniMap) return;
+    const node = miniMapGateRef.current;
+    if (node == null) return;
+    node.measureInWindow((_, y, __, h) => {
+      const winH = Dimensions.get("window").height;
+      const visTop = insets.top + 8;
+      const visBottom = winH - insets.bottom - 72;
+      const intersects = y + h > visTop && y < visBottom;
+      if (intersects) {
+        miniMapUnlockedRef.current = true;
+        setMountMiniMapNative(true);
+      }
+    });
+  }, [hasMiniMap, insets.bottom, insets.top]);
+
+  const checkMiniMapInViewRef = useRef(checkMiniMapInView);
+  checkMiniMapInViewRef.current = checkMiniMapInView;
+
+  const runMiniMapVisibilityCheck = useCallback(() => {
+    checkMiniMapInViewRef.current();
+  }, []);
 
   const queryParams = useMemo(
     () => new RopewikiRegionPreviewsParams(PREVIEWS_PAGE_LIMIT),
@@ -89,6 +130,11 @@ export function RegionContent({
         event.contentSize.height,
         event.layoutMeasurement.height
       );
+      if (hasMiniMapSv.value !== 1) return;
+      miniMapScrollTick.value += 1;
+      if (miniMapScrollTick.value % 6 === 0) {
+        runOnJS(runMiniMapVisibilityCheck)();
+      }
     },
   });
 
@@ -152,6 +198,20 @@ export function RegionContent({
                   <Text style={styles.counts}>{countsText}</Text>
                   {region.overview != null ? (
                     <BetaSection section={region.overview} />
+                  ) : null}
+                  {hasMiniMap ? (
+                    <View
+                      ref={miniMapGateRef}
+                      style={styles.miniMapWrap}
+                      onLayout={() => {
+                        requestAnimationFrame(() => checkMiniMapInView());
+                      }}
+                    >
+                      <MiniMapView
+                        miniMap={region.miniMap!}
+                        mountNativeMap={mountMiniMapNative}
+                      />
+                    </View>
                   ) : null}
                 </View>
                 <View
@@ -231,6 +291,9 @@ const styles = StyleSheet.create({
   counts: {
     fontSize: 16,
     color: "#6b7280",
+  },
+  miniMapWrap: {
+    marginTop: 16,
   },
   previewsSection: {
     paddingHorizontal: 20,

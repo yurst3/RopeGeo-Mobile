@@ -9,12 +9,13 @@ import {
 } from "@/components/RopeGeoHttpRequest";
 import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
+import { MiniMapView } from "@/components/minimap/MiniMapView";
 import { PageBadges } from "./PageBadges";
 import { BetaSection } from "../../../betaSection/BetaSection";
 import { TimeEstimates } from "./TimeEstimates";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
@@ -26,6 +27,7 @@ import {
   View,
 } from "react-native";
 import Animated, {
+  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -94,9 +96,11 @@ function formatLastUpdated(revisionDate: Date | string): string {
 }
 
 function PageContent({
+  pageId,
   data,
   routeType,
 }: {
+  pageId: string;
   data: RopewikiPageView;
   routeType?: string | null;
 }) {
@@ -112,7 +116,57 @@ function PageContent({
   const scrollY = useSharedValue(0);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
+  const scrollCheckTick = useSharedValue(0);
+  const hasMiniMapSv = useSharedValue(0);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
+  const miniMapGateRef = useRef<View>(null);
+  const miniMapUnlockedRef = useRef(false);
+  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+
+  const hasMiniMap = data.miniMap != null;
+
+  useEffect(() => {
+    hasMiniMapSv.value = hasMiniMap ? 1 : 0;
+  }, [hasMiniMap, hasMiniMapSv]);
+
+  useEffect(() => {
+    miniMapUnlockedRef.current = false;
+    setMountMiniMapNative(false);
+  }, [pageId]);
+
+  const checkMiniMapInView = useCallback(() => {
+    if (miniMapUnlockedRef.current || !hasMiniMap) return;
+    const node = miniMapGateRef.current;
+    if (node == null) return;
+    node.measureInWindow((_, y, __, h) => {
+      const winH = Dimensions.get("window").height;
+      const visTop = insets.top + 8;
+      const visBottom = winH - insets.bottom - 72;
+      const intersects = y + h > visTop && y < visBottom;
+      if (intersects) {
+        miniMapUnlockedRef.current = true;
+        setMountMiniMapNative(true);
+      }
+    });
+  }, [hasMiniMap, insets.bottom, insets.top]);
+
+  const checkMiniMapInViewRef = useRef(checkMiniMapInView);
+  checkMiniMapInViewRef.current = checkMiniMapInView;
+
+  const runMiniMapVisibilityCheck = useCallback(() => {
+    checkMiniMapInViewRef.current();
+  }, []);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+      if (hasMiniMapSv.value !== 1) return;
+      scrollCheckTick.value += 1;
+      if (scrollCheckTick.value % 6 === 0) {
+        runOnJS(runMiniMapVisibilityCheck)();
+      }
+    },
+  });
 
   useEffect(() => {
     if (!bannerUrl) {
@@ -136,12 +190,6 @@ function PageContent({
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      scrollY.value = e.contentOffset.y;
-    },
-  });
 
   const bottomPadding = insets.bottom + 16;
   const paddingTop =
@@ -209,6 +257,8 @@ function PageContent({
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
+        onScrollEndDrag={checkMiniMapInView}
+        onMomentumScrollEnd={checkMiniMapInView}
       >
         {/* Card wrapper: button floats above card, card overlaps banner */}
         <View
@@ -285,6 +335,20 @@ function PageContent({
                 descentElevGain={data.descentElevGain}
                 exitElevGain={data.exitElevGain}
               />
+            {hasMiniMap ? (
+              <View
+                ref={miniMapGateRef}
+                style={styles.miniMapWrap}
+                onLayout={() => {
+                  requestAnimationFrame(() => checkMiniMapInView());
+                }}
+              >
+                <MiniMapView
+                  miniMap={data.miniMap!}
+                  mountNativeMap={mountMiniMapNative}
+                />
+              </View>
+            ) : null}
             {(data.betaSections ?? [])
               .slice()
               .sort((a, b) => a.order - b.order)
@@ -349,7 +413,9 @@ export function RopewikiPageScreen({
         if (data == null) {
           return null;
         }
-        return <PageContent data={data} routeType={routeType} />;
+        return (
+          <PageContent pageId={pageId} data={data} routeType={routeType} />
+        );
       }}
     </RopeGeoHttpRequest>
   );
@@ -454,6 +520,10 @@ const styles = StyleSheet.create({
   },
   starRatingRow: {
     alignSelf: "center",
+  },
+  miniMapWrap: {
+    marginTop: 16,
+    marginBottom: 0,
   },
   lastUpdated: {
     marginTop: 24,
