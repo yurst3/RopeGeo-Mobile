@@ -1,8 +1,15 @@
 import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
 import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import { RouteMarkersLayer } from "@/components/MapLayers/RouteMarkersLayer";
-import { TrailsLayer } from "@/components/MapLayers/TrailsLayer";
-import { RequestToastNotifier } from "@/components/RequestToastNotifier";
+import {
+  HEADER_BUTTON_GAP,
+  HEADER_BUTTON_SIZE,
+  HEADER_SIDE_SLOT_WIDTH,
+  MAP_BUTTON_GAP,
+  MAP_BUTTON_SIZE,
+  MAP_BUTTON_TOP_OFFSET,
+} from "@/components/minimap/fullScreenMapLayout";
+import { RouteMarkersLayer } from "./RouteMarkersLayer";
+import { TrailsLayer } from "./TrailsLayer";
 import { PageDataSource, type PagePreview, type RoutesGeojson, RouteType } from "ropegeo-common";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
@@ -25,15 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const DEFAULT_CURRENT_POSITION: [number, number] = [-109.5508, 38.5733];
 const DEFAULT_ZOOM = 12.1;
 
-/** Matches search screen: button size and gap. */
-const HEADER_BUTTON_SIZE = 44;
-const HEADER_BUTTON_GAP = 8;
-const SEARCH_BAR_SIDE_WIDTH = HEADER_BUTTON_SIZE + HEADER_BUTTON_GAP;
-
-/** Vertical offset for the first map button: below search bar row (8 + 44) + gap (8). */
-const MAP_BUTTON_TOP_OFFSET = 8 + HEADER_BUTTON_SIZE + 8;
-const MAP_BUTTON_SIZE = 48;
-const MAP_BUTTON_GAP = 8;
+const SEARCH_BAR_SIDE_WIDTH = HEADER_SIDE_SLOT_WIDTH;
 
 export function ExploreScreen() {
   const insets = useSafeAreaInsets();
@@ -151,15 +150,6 @@ export function ExploreScreen() {
 
   return (
     <>
-      <RequestToastNotifier
-        loading={routesState.loading}
-        data={routesState.data}
-        errors={routesState.errors}
-        successMessage={(data) =>
-          `Successfully loaded ${data.features.length} routes.`
-        }
-        topOffset={insets.top}
-      />
       <View style={styles.container}>
         <View
           style={[styles.searchBarRow, { top: insets.top + 8 }]}
@@ -175,7 +165,12 @@ export function ExploreScreen() {
             <FontAwesome5 name="search" size={16} color="#6b7280" />
             <Text style={styles.searchBarPlaceholder}>Search</Text>
           </Pressable>
-          <View style={[styles.headerButtonWrap, { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP }]}>
+          <View
+            style={[
+              styles.headerButtonWrap,
+              { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
+            ]}
+          >
             <Pressable
               onPress={() => {}}
               style={({ pressed }) => [

@@ -30,7 +30,7 @@ Route components must **not** contain screen UI or business logic; that stays in
 ## Example
 
 ```tsx
-// app/(tabs)/explore/[id]/page.tsx — Route component
+// app/(tabs)/explore/[id]/page/index.tsx — Route component
 export default function PageRoute() {
   const params = useLocalSearchParams<{ id: string; source: string; routeType: string }>();
   const id = typeof params.id === "string" ? params.id : "";

@@ -28,6 +28,8 @@ type RouteMarkersLayerProps = {
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
   onRoutePress?: (routeId: string, coordinates: [number, number]) => void;
   onRouteClusterPress?: () => void;
+  /** Optional GET /routes query string params (e.g. region-scoped routes). */
+  routesQueryParams?: Record<string, string | number | boolean | undefined>;
 };
 
 function RouteMarkersLayerContent({
@@ -188,12 +190,14 @@ export function RouteMarkersLayer({
   cameraRef,
   onRoutePress,
   onRouteClusterPress,
+  routesQueryParams,
 }: RouteMarkersLayerProps) {
   return (
     <RopeGeoHttpRequest<RoutesGeojson>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/routes"
+      queryParams={routesQueryParams}
     >
       {({ loading, data, errors }) => (
         <RouteMarkersLayerContent

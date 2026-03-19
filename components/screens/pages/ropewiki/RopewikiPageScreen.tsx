@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/buttons/BackButton";
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { RegionLinks } from "@/components/RegionLinks";
 import { RappelInfoRow } from "@/components/RappelInfoRow";
@@ -9,16 +10,17 @@ import {
 } from "@/components/RopeGeoHttpRequest";
 import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
-import { MiniMapView } from "@/components/minimap/MiniMapView";
+import { minimapStyles } from "@/components/minimap/minimapShared";
+import { PageMiniMap } from "./PageMiniMap";
 import { PageBadges } from "./PageBadges";
 import { BetaSection } from "../../../betaSection/BetaSection";
 import { TimeEstimates } from "./TimeEstimates";
-import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   Pressable,
   ScrollView,
@@ -26,15 +28,10 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, {
-  runOnJS,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated";
+import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { PageDataSource, type RopewikiPageView } from "ropegeo-common";
+import { MiniMapType, PageDataSource, type PageMiniMap as PageMiniMapConfig, type RopewikiPageView } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
@@ -43,7 +40,7 @@ const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 /** Fallback when image dimensions are not yet available (e.g. no image or before load). */
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
 const CARD_BORDER_RADIUS = 24;
-const BACK_BUTTON_SIZE = 44;
+
 
 export type RopewikiPageScreenProps = {
   pageId: string;
@@ -114,57 +111,75 @@ function PageContent({
     : [];
 
   const scrollY = useSharedValue(0);
+  const baseScrollYRef = useRef(0);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
-  const scrollCheckTick = useSharedValue(0);
-  const hasMiniMapSv = useSharedValue(0);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
   const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
+  const [miniMapAnchorRect, setMiniMapAnchorRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const hasMiniMap = data.miniMap != null;
 
   useEffect(() => {
-    hasMiniMapSv.value = hasMiniMap ? 1 : 0;
-  }, [hasMiniMap, hasMiniMapSv]);
-
-  useEffect(() => {
     miniMapUnlockedRef.current = false;
     setMountMiniMapNative(false);
+    setMiniMapAnchorRect(null);
   }, [pageId]);
 
   const checkMiniMapInView = useCallback(() => {
-    if (miniMapUnlockedRef.current || !hasMiniMap) return;
+    if (!hasMiniMap) return;
     const node = miniMapGateRef.current;
     if (node == null) return;
-    node.measureInWindow((_, y, __, h) => {
+    node.measureInWindow((x, y, width, h) => {
+      setMiniMapAnchorRect({ x, y, width, height: h });
+      baseScrollYRef.current = scrollY.value;
       const winH = Dimensions.get("window").height;
       const visTop = insets.top + 8;
       const visBottom = winH - insets.bottom - 72;
       const intersects = y + h > visTop && y < visBottom;
-      if (intersects) {
+      if (intersects && !miniMapUnlockedRef.current) {
         miniMapUnlockedRef.current = true;
         setMountMiniMapNative(true);
       }
     });
-  }, [hasMiniMap, insets.bottom, insets.top]);
+  }, [hasMiniMap, insets.bottom, insets.top, scrollY]);
 
-  const checkMiniMapInViewRef = useRef(checkMiniMapInView);
-  checkMiniMapInViewRef.current = checkMiniMapInView;
+  useEffect(() => {
+    if (!hasMiniMap) return;
+    const t = setTimeout(() => {
+      checkMiniMapInView();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [hasMiniMap, checkMiniMapInView]);
 
-  const runMiniMapVisibilityCheck = useCallback(() => {
-    checkMiniMapInViewRef.current();
+  const openPageFullMap = useCallback(() => {
+    setMapMode("expanded");
   }, []);
+
+  const closePageFullMap = useCallback(() => {
+    setMapMode("collapsed");
+  }, []);
+
+  useEffect(() => {
+    if (mapMode !== "expanded") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMapMode("collapsed");
+      return true;
+    });
+    return () => sub.remove();
+  }, [mapMode]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
-      if (hasMiniMapSv.value !== 1) return;
-      scrollCheckTick.value += 1;
-      if (scrollCheckTick.value % 6 === 0) {
-        runOnJS(runMiniMapVisibilityCheck)();
-      }
     },
   });
 
@@ -253,8 +268,10 @@ function PageContent({
           paddingBottom: 0,
           flexGrow: 1,
         }}
+        pointerEvents={mapMode === "expanded" ? "none" : "auto"}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        scrollEnabled={mapMode !== "expanded"}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
         onScrollEndDrag={checkMiniMapInView}
@@ -338,15 +355,19 @@ function PageContent({
             {hasMiniMap ? (
               <View
                 ref={miniMapGateRef}
+                collapsable={false}
                 style={styles.miniMapWrap}
-                onLayout={() => {
+                onLayout={(e) => {
+                  const { width, height } = e.nativeEvent.layout;
+                  setMiniMapAnchorRect((prev) =>
+                    prev == null
+                      ? { x: 0, y: 0, width, height }
+                      : { ...prev, width, height }
+                  );
                   requestAnimationFrame(() => checkMiniMapInView());
                 }}
               >
-                <MiniMapView
-                  miniMap={data.miniMap!}
-                  mountNativeMap={mountMiniMapNative}
-                />
+                <View style={minimapStyles.wrapper} />
               </View>
             ) : null}
             {(data.betaSections ?? [])
@@ -365,13 +386,22 @@ function PageContent({
         </View>
       </AnimatedScrollView>
 
-      <Pressable
-        style={[styles.backButton, styles.backButtonFixed, { top: insets.top + 8 }]}
-        onPress={() => router.back()}
-        accessibilityLabel="Go back"
-      >
-        <FontAwesome5 name="arrow-left" size={20} color="#000" />
-      </Pressable>
+      {mapMode !== "expanded" && (
+        <BackButton onPress={() => router.back()} top={insets.top + 8} />
+      )}
+      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.TilesTemplate ? (
+        <PageMiniMap
+          miniMap={data.miniMap as PageMiniMapConfig}
+          pageName={data.name}
+          mountNativeMap={mountMiniMapNative}
+          expanded={mapMode === "expanded"}
+          anchorRect={miniMapAnchorRect}
+          baseScrollY={baseScrollYRef.current}
+          scrollY={scrollY}
+          onExpand={openPageFullMap}
+          onCollapse={closePageFullMap}
+        />
+      ) : null}
     </View>
   );
 }
@@ -400,13 +430,7 @@ export function RopewikiPageScreen({
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#666" />
               </View>
-              <Pressable
-                style={[styles.backButton, styles.backButtonFixed, { top: insets.top + 8 }]}
-                onPress={() => router.back()}
-                accessibilityLabel="Go back"
-              >
-                <FontAwesome5 name="arrow-left" size={20} color="#000" />
-              </Pressable>
+              <BackButton onPress={() => router.back()} top={insets.top + 8} />
             </View>
           );
         }
@@ -464,24 +488,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  backButton: {
-    left: 16,
-    width: BACK_BUTTON_SIZE,
-    height: BACK_BUTTON_SIZE,
-    borderRadius: BACK_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  backButtonFixed: {
-    position: "absolute",
-    zIndex: 1001,
   },
   externalLinkWrap: {
     position: "absolute",

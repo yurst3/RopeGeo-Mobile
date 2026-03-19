@@ -1,30 +1,32 @@
+import { BackButton } from "@/components/buttons/BackButton";
 import { RegionBanner } from "./RegionBanner";
+import { RegionMiniMap } from "./RegionMiniMap";
 import { RegionContent } from "./RegionContent";
 import {
-  Method,
   RopeGeoHttpRequest,
   Service,
+  Method,
 } from "@/components/RopeGeoHttpRequest";
-import { FontAwesome5 } from "@expo/vector-icons";
+
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
-  Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { RopewikiRegionView } from "ropegeo-common";
+import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
 const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
-const BACK_BUTTON_SIZE = 44;
+
 
 function ErrorEffect({ error }: { error: Error }) {
   const router = useRouter();
@@ -54,6 +56,42 @@ function RegionScreenBody({
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
+  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
+  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+  const [miniMapAnchorRect, setMiniMapAnchorRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const baseScrollYRef = useRef(0);
+
+  const hasMiniMap = data.miniMap != null;
+
+  useEffect(() => {
+    setMountMiniMapNative(false);
+    setMiniMapAnchorRect(null);
+  }, [regionId]);
+
+  const handleMiniMapAnchorRect = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      setMiniMapAnchorRect(rect);
+      baseScrollYRef.current = scrollY.value;
+    },
+    [scrollY]
+  );
+
+  const handleMountMiniMapNative = useCallback(() => {
+    setMountMiniMapNative(true);
+  }, []);
+
+  const openRegionFullMap = useCallback(() => {
+    setMapMode("expanded");
+  }, []);
+
+  const closeRegionFullMap = useCallback(() => {
+    setMapMode("collapsed");
+  }, []);
 
   const bottomPadding = insets.bottom + 16;
   const paddingTop =
@@ -78,6 +116,15 @@ function RegionScreenBody({
     };
   });
 
+  useEffect(() => {
+    if (mapMode !== "expanded") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMapMode("collapsed");
+      return true;
+    });
+    return () => sub.remove();
+  }, [mapMode]);
+
   return (
     <View style={styles.container}>
       <RegionBanner regionId={regionId} style={bannerAnimatedStyle} />
@@ -89,15 +136,29 @@ function RegionScreenBody({
         scrollY={scrollY}
         paddingTop={paddingTop}
         onCardHeightLayout={setCardHeight}
+        onOpenFullMap={openRegionFullMap}
+        mapExpanded={mapMode === "expanded"}
+        onMiniMapAnchorRect={handleMiniMapAnchorRect}
+        onMountMiniMapNative={handleMountMiniMapNative}
       />
 
-      <Pressable
-        style={[styles.backButton, styles.backButtonFixed, { top: insets.top + 8 }]}
-        onPress={() => router.back()}
-        accessibilityLabel="Go back"
-      >
-        <FontAwesome5 name="arrow-left" size={20} color="#000" />
-      </Pressable>
+      {mapMode !== "expanded" && (
+        <BackButton onPress={() => router.back()} top={insets.top + 8} />
+      )}
+      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.GeoJson ? (
+        <RegionMiniMap
+          regionName={data.name}
+          regionId={regionId}
+          source={PageDataSource.Ropewiki}
+          mountNativeMap={mountMiniMapNative}
+          expanded={mapMode === "expanded"}
+          anchorRect={miniMapAnchorRect}
+          baseScrollY={baseScrollYRef.current}
+          scrollY={scrollY}
+          onExpand={openRegionFullMap}
+          onCollapse={closeRegionFullMap}
+        />
+      ) : null}
     </View>
   );
 }
@@ -127,13 +188,7 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#666" />
               </View>
-              <Pressable
-                style={[styles.backButton, styles.backButtonFixed, { top: insets.top + 8 }]}
-                onPress={() => router.back()}
-                accessibilityLabel="Go back"
-              >
-                <FontAwesome5 name="arrow-left" size={20} color="#000" />
-              </Pressable>
+              <BackButton onPress={() => router.back()} top={insets.top + 8} />
             </View>
           );
         }
@@ -156,23 +211,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
-  },
-  backButton: {
-    left: 16,
-    width: BACK_BUTTON_SIZE,
-    height: BACK_BUTTON_SIZE,
-    borderRadius: BACK_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  backButtonFixed: {
-    position: "absolute",
-    zIndex: 1001,
   },
 });
