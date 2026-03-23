@@ -10,6 +10,9 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -50,6 +53,8 @@ export type RegionContentProps = {
   mapExpanded: boolean;
   onMiniMapAnchorRect: (rect: { x: number; y: number; width: number; height: number }) => void;
   onMountMiniMapNative: () => void;
+  /** True while the user is dragging or flinging the page vertically (parallax scroll). */
+  onVerticalScrollActiveChange?: (active: boolean) => void;
 };
 
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
@@ -65,10 +70,12 @@ export function RegionContent({
   mapExpanded,
   onMiniMapAnchorRect,
   onMountMiniMapNative,
+  onVerticalScrollActiveChange,
 }: RegionContentProps) {
   const loadMoreRef = useRef<() => void>(() => {});
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
+  const scrollIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const countsText = formatCounts(region.pageCount, region.regionCount);
   const url = region.externalLink ?? null;
@@ -121,6 +128,14 @@ export function RegionContent({
     return () => clearTimeout(t);
   }, [hasMiniMap, checkMiniMapInView]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollIdleTimeoutRef.current != null) {
+        clearTimeout(scrollIdleTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -131,6 +146,52 @@ export function RegionContent({
       );
     },
   });
+
+  const clearScrollIdleTimeout = useCallback(() => {
+    if (scrollIdleTimeoutRef.current != null) {
+      clearTimeout(scrollIdleTimeoutRef.current);
+      scrollIdleTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleScrollBeginDrag = useCallback(() => {
+    clearScrollIdleTimeout();
+    onVerticalScrollActiveChange?.(true);
+  }, [clearScrollIdleTimeout, onVerticalScrollActiveChange]);
+
+  const handleMomentumScrollBegin = useCallback(() => {
+    clearScrollIdleTimeout();
+  }, [clearScrollIdleTimeout]);
+
+  const handleScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      checkMiniMapInView();
+      const vy = e.nativeEvent.velocity?.y;
+      if (vy != null && Math.abs(vy) >= 8) {
+        return;
+      }
+      if (vy != null) {
+        onVerticalScrollActiveChange?.(false);
+        return;
+      }
+      clearScrollIdleTimeout();
+      scrollIdleTimeoutRef.current = setTimeout(() => {
+        scrollIdleTimeoutRef.current = null;
+        onVerticalScrollActiveChange?.(false);
+      }, 100);
+    },
+    [
+      checkMiniMapInView,
+      clearScrollIdleTimeout,
+      onVerticalScrollActiveChange,
+    ]
+  );
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    clearScrollIdleTimeout();
+    onVerticalScrollActiveChange?.(false);
+    checkMiniMapInView();
+  }, [checkMiniMapInView, clearScrollIdleTimeout, onVerticalScrollActiveChange]);
 
   return (
     <RopeGeoCursorPaginationHttpRequest<Preview>
@@ -151,13 +212,16 @@ export function RegionContent({
               flexGrow: 1,
             }}
             pointerEvents={mapExpanded ? "none" : "auto"}
+            nestedScrollEnabled
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             scrollEnabled={!mapExpanded}
             showsVerticalScrollIndicator={false}
             overScrollMode="never"
-            onScrollEndDrag={checkMiniMapInView}
-            onMomentumScrollEnd={checkMiniMapInView}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            onMomentumScrollBegin={handleMomentumScrollBegin}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
           >
             <View
               style={[
@@ -195,7 +259,7 @@ export function RegionContent({
                   />
                   <Text style={styles.counts}>{countsText}</Text>
                   {region.overview != null ? (
-                    <BetaSection section={region.overview} />
+                    <BetaSection section={region.overview} pageTitle={region.name} />
                   ) : null}
                   {hasMiniMap ? (
                     <View
@@ -262,7 +326,13 @@ export function RegionContent({
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
+    /** Always above the absolute banner layer. */
+    position: "relative",
     zIndex: 1000,
+    ...Platform.select({
+      android: { elevation: 3 },
+      default: {},
+    }),
   },
   cardWrapper: {
     position: "relative",

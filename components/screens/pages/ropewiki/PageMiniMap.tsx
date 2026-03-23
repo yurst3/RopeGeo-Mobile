@@ -15,8 +15,8 @@ import {
   MAP_BUTTON_TOP_OFFSET,
 } from "@/components/minimap/fullScreenMapLayout";
 import { Camera, LineLayer, LocationPuck, MapView, VectorSource } from "@rnmapbox/maps";
-import { useEffect } from "react";
-import { Platform, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import type { PageMiniMap as PageMiniMapConfig } from "ropegeo-common";
 
@@ -79,6 +79,17 @@ export function PageMiniMap({
     requestAnimationFrame(() => fitToBounds(b, expandedPadding));
   };
 
+  const [mapFinishedLoading, setMapFinishedLoading] = useState(false);
+
+  useEffect(() => {
+    if (!mountNativeMap) {
+      setMapFinishedLoading(false);
+    }
+  }, [mountNativeMap]);
+
+  const showMapLoading =
+    !mountNativeMap || (mountNativeMap && !mapFinishedLoading);
+
   if (!anchorRect) return null;
 
   return (
@@ -92,13 +103,20 @@ export function PageMiniMap({
         pointerEvents={expanded ? "auto" : "box-none"}
       >
         {!mountNativeMap ? (
-          <View style={[minimapStyles.map, minimapStyles.mapPlaceholder]} />
+          <View
+            style={[minimapStyles.map, minimapStyles.mapPlaceholder]}
+            pointerEvents="none"
+          />
         ) : (
-          <MapView
-            styleURL="mapbox://styles/mapbox/outdoors-v12"
+          <View
             style={minimapStyles.map}
-            projection="globe"
             pointerEvents={expanded ? "auto" : "none"}
+          >
+            <MapView
+              styleURL="mapbox://styles/mapbox/outdoors-v12"
+              style={StyleSheet.absoluteFill}
+              projection="globe"
+              pointerEvents={expanded ? "auto" : "none"}
             scrollEnabled={expanded}
             zoomEnabled={expanded}
             rotateEnabled={expanded}
@@ -109,6 +127,8 @@ export function PageMiniMap({
             logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
             attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
             onCameraChanged={onCameraChanged}
+            onDidFinishLoadingMap={() => setMapFinishedLoading(true)}
+            onMapLoadingError={() => setMapFinishedLoading(true)}
           >
             <LocationPuck />
             <Camera
@@ -134,7 +154,16 @@ export function PageMiniMap({
               />
             </VectorSource>
           </MapView>
+          </View>
         )}
+        {showMapLoading ? (
+          <View
+            style={[StyleSheet.absoluteFill, styles.mapLoadingOverlay]}
+            pointerEvents="none"
+          >
+            <ActivityIndicator size="large" color="#64748b" />
+          </View>
+        ) : null}
         {!expanded && <MiniMapExpandButton onPress={onExpand} />}
       </Animated.View>
       {expanded && (
@@ -159,3 +188,12 @@ export function PageMiniMap({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  mapLoadingOverlay: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(229, 231, 235, 0.92)",
+    borderRadius: minimapStyles.map.borderRadius,
+  },
+});

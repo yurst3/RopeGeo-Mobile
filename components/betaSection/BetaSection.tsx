@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import RenderHtml from "react-native-render-html";
 import type { BetaSection as BetaSectionType } from "ropegeo-common";
+import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
+import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import { BetaSectionImages } from "./BetaSectionImages";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -27,9 +29,11 @@ const HTML_TAGS_STYLES = {
 
 export type BetaSectionProps = {
   section: BetaSectionType;
+  /** Page or region name for expanded image header (bold top line). */
+  pageTitle: string;
 };
 
-export function BetaSection({ section }: BetaSectionProps) {
+export function BetaSection({ section, pageTitle }: BetaSectionProps) {
   const [textExpanded, setTextExpanded] = useState(false);
   const [showExpandButton, setShowExpandButton] = useState(false);
   const hasImages = section.images != null && section.images.length > 0;
@@ -37,7 +41,13 @@ export function BetaSection({ section }: BetaSectionProps) {
     ? [...section.images].sort((a, b) => a.order - b.order)
     : [];
 
-  const htmlSource = { html: section.text || "" };
+  const htmlSource = useMemo(
+    () => ({
+      html: replaceEmbeddedImgTagsWithLinks(section.text || ""),
+      baseUrl: ROPEWIKI_ORIGIN,
+    }),
+    [section.text]
+  );
 
   const handleTextLayout = (e: { nativeEvent: { layout: { height: number } } }) => {
     if (textExpanded) return;
@@ -80,7 +90,11 @@ export function BetaSection({ section }: BetaSectionProps) {
       ) : null}
 
       {hasImages && sortedImages.length > 0 && (
-        <BetaSectionImages images={sortedImages} />
+        <BetaSectionImages
+          images={sortedImages}
+          pageTitle={pageTitle}
+          sectionTitle={section.title}
+        />
       )}
     </View>
   );

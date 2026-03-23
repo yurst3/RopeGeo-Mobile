@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/buttons/BackButton";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import {
   Method,
@@ -102,17 +103,7 @@ export function SearchScreen() {
             { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
           ]}
         >
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <FontAwesome5 name="chevron-left" size={20} color="#111827" />
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
         </View>
         <View style={styles.searchBar}>
           <FontAwesome5 name="search" size={16} color="#6b7280" />

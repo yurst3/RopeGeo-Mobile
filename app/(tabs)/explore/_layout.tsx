@@ -1,26 +1,9 @@
-import { FontAwesome5 } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Pressable, Text } from "react-native";
-import { Stack } from "expo-router";
+import { BackButton } from "@/components/buttons/BackButton";
+import { Stack, useRouter } from "expo-router";
 
 function HeaderBackButton() {
   const router = useRouter();
-  return (
-    <Pressable
-      onPress={() => router.back()}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 8,
-        paddingRight: 12,
-        opacity: pressed ? 0.6 : 1,
-      })}
-      accessibilityLabel="Go back"
-    >
-      <FontAwesome5 name="chevron-left" size={20} color="#3b82f6" />
-      <Text style={{ marginLeft: 4, fontSize: 17, color: "#3b82f6" }}>Back</Text>
-    </Pressable>
-  );
+  return <BackButton onPress={() => router.back()} />;
 }
 
 export default function ExploreLayout() {

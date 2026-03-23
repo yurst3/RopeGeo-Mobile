@@ -14,6 +14,8 @@ import { minimapStyles } from "@/components/minimap/minimapShared";
 import { PageMiniMap } from "./PageMiniMap";
 import { PageBadges } from "./PageBadges";
 import { BetaSection } from "../../../betaSection/BetaSection";
+import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
+import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { TimeEstimates } from "./TimeEstimates";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -22,13 +24,20 @@ import {
   ActivityIndicator,
   BackHandler,
   Dimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import Animated, {
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { MiniMapType, PageDataSource, type PageMiniMap as PageMiniMapConfig, type RopewikiPageView } from "ropegeo-common";
@@ -105,12 +114,16 @@ function PageContent({
   const router = useRouter();
   const [bannerAspectRatio, setBannerAspectRatio] = useState<number | null>(null);
   const [bannerImageLoading, setBannerImageLoading] = useState(true);
-  const bannerUrl = data.bannerImage?.url ?? null;
+  const bannerUrl = data.bannerImage?.bannerUrl ?? null;
+  const hasBannerImageObject = data.bannerImage != null;
   const displayRegions = (data.regions?.length ?? 0) > 0
     ? (data.regions ?? []).slice(0, -1)
     : [];
 
   const scrollY = useSharedValue(0);
+  /** JS copy of scroll offset (throttled) so we can clip the banner hit rect above the overlapping card. */
+  const [contentScrollY, setContentScrollY] = useState(0);
+  const lastBannerHitScrollRef = useRef(0);
   const baseScrollYRef = useRef(0);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
@@ -126,12 +139,25 @@ function PageContent({
     height: number;
   } | null>(null);
 
+  /** Full banner bounds for expand animation (`measureInWindow`). Hit testing uses a clipped overlay. */
+  const bannerFullRectRef = useRef<View>(null);
+  const [bannerExpanded, setBannerExpanded] = useState(false);
+  const [bannerExpandAnchor, setBannerExpandAnchor] =
+    useState<ExpandedImageAnchorRect | null>(null);
+  const bannerFullUrl = data.bannerImage?.fullUrl ?? null;
+  /** Prefer full-res URL; fall back to banner so expand works when API omits `fullUrl`. */
+  const bannerExpandSourceUrl = bannerFullUrl ?? bannerUrl;
+
   const hasMiniMap = data.miniMap != null;
 
   useEffect(() => {
     miniMapUnlockedRef.current = false;
     setMountMiniMapNative(false);
     setMiniMapAnchorRect(null);
+    setBannerExpanded(false);
+    setBannerExpandAnchor(null);
+    setContentScrollY(0);
+    lastBannerHitScrollRef.current = 0;
   }, [pageId]);
 
   const checkMiniMapInView = useCallback(() => {
@@ -160,12 +186,52 @@ function PageContent({
     return () => clearTimeout(t);
   }, [hasMiniMap, checkMiniMapInView]);
 
+  const flushBannerHitScrollFromEvent = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      lastBannerHitScrollRef.current = Math.round(y * 2) / 2;
+      setContentScrollY(y);
+    },
+    []
+  );
+
+  const onScrollEndDragPage = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      flushBannerHitScrollFromEvent(e);
+      checkMiniMapInView();
+    },
+    [checkMiniMapInView, flushBannerHitScrollFromEvent]
+  );
+
+  const onMomentumScrollEndPage = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      flushBannerHitScrollFromEvent(e);
+      checkMiniMapInView();
+    },
+    [checkMiniMapInView, flushBannerHitScrollFromEvent]
+  );
+
   const openPageFullMap = useCallback(() => {
     setMapMode("expanded");
   }, []);
 
   const closePageFullMap = useCallback(() => {
     setMapMode("collapsed");
+  }, []);
+
+  const openBannerExpanded = useCallback(() => {
+    if (bannerExpandSourceUrl == null) return;
+    const node = bannerFullRectRef.current;
+    if (node == null) return;
+    node.measureInWindow((x, y, width, height) => {
+      setBannerExpandAnchor({ x, y, width, height });
+      setBannerExpanded(true);
+    });
+  }, [bannerExpandSourceUrl]);
+
+  const onBannerExpandedDismissed = useCallback(() => {
+    setBannerExpanded(false);
+    setBannerExpandAnchor(null);
   }, []);
 
   useEffect(() => {
@@ -177,9 +243,20 @@ function PageContent({
     return () => sub.remove();
   }, [mapMode]);
 
+  const onScrollOffsetForBannerHit = useCallback((y: number) => {
+    const q = Math.round(y * 2) / 2;
+    if (Math.abs(q - lastBannerHitScrollRef.current) < 2) {
+      return;
+    }
+    lastBannerHitScrollRef.current = q;
+    setContentScrollY(q);
+  }, []);
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
-      scrollY.value = e.contentOffset.y;
+      const y = e.contentOffset.y;
+      scrollY.value = y;
+      runOnJS(onScrollOffsetForBannerHit)(y);
     },
   });
 
@@ -229,21 +306,48 @@ function PageContent({
     };
   });
 
+  /** Match `bannerAnimatedStyle` height logic in JS (see useAnimatedStyle above). */
+  const bannerHeightJs = (() => {
+    const ratio =
+      bannerAspectRatio != null && bannerAspectRatio > 0
+        ? bannerAspectRatio
+        : FALLBACK_BANNER_ASPECT_RATIO;
+    const minFromImage = Math.round(SCREEN_WIDTH / ratio);
+    const parallax = Math.min(BANNER_HEIGHT_MAX, paddingTop - contentScrollY);
+    return Math.max(minFromImage, parallax);
+  })();
+
+  /** Top edge of the overlapping card in window Y; only the banner above this should capture taps. */
+  const cardTopWindowY = paddingTop - CARD_BORDER_RADIUS - contentScrollY;
+  const bannerTapHeight = Math.max(
+    0,
+    Math.min(bannerHeightJs, cardTopWindowY)
+  );
+  const bannerHitActive =
+    bannerTapHeight >= 12 && !bannerImageLoading && mapMode !== "expanded";
+
   return (
     <View style={styles.container}>
       {/* Parallax banner: height shrinks with scroll (Reanimated) */}
+      {/* Banner visuals sit behind the scroll view; touches are handled by `bannerHitLayer`. */}
       <Animated.View
-        pointerEvents="box-none"
+        pointerEvents="none"
         style={[styles.bannerWrap, bannerAnimatedStyle]}
       >
         {bannerUrl ? (
           <>
-            <Image
-              source={bannerUrl}
-              style={styles.bannerImage}
-              contentFit="contain"
-              onLoadEnd={() => setBannerImageLoading(false)}
-            />
+            <View
+              ref={bannerFullRectRef}
+              style={StyleSheet.absoluteFill}
+              collapsable={false}
+            >
+              <Image
+                source={bannerUrl}
+                style={styles.bannerImage}
+                contentFit="contain"
+                onLoadEnd={() => setBannerImageLoading(false)}
+              />
+            </View>
             {bannerImageLoading && (
               <View style={[StyleSheet.absoluteFill, styles.bannerLoadingOverlay]}>
                 <ActivityIndicator size="large" color="#fff" />
@@ -253,13 +357,38 @@ function PageContent({
         ) : (
           <View style={styles.bannerNoImageWrap}>
             <Image
-              source={require("@/assets/images/noImage.png")}
+              source={
+                hasBannerImageObject
+                  ? require("@/assets/images/missingImage.png")
+                  : require("@/assets/images/noImage.png")
+              }
               style={styles.bannerNoImageIcon}
               contentFit="contain"
             />
+            {hasBannerImageObject ? (
+              <Text style={styles.missingImageText}>Missing Image</Text>
+            ) : null}
           </View>
         )}
       </Animated.View>
+
+      {/* Above the pager scroll view (zIndex 1000) so banner taps are not swallowed by padding. */}
+      {bannerUrl != null && bannerExpandSourceUrl != null ? (
+        <Animated.View
+          pointerEvents={bannerHitActive ? "box-none" : "none"}
+          style={[styles.bannerHitLayer, bannerAnimatedStyle]}
+        >
+          <Pressable
+            disabled={!bannerHitActive}
+            onPress={openBannerExpanded}
+            style={({ pressed }) => [
+              styles.bannerHitPressable,
+              { height: bannerTapHeight },
+              pressed && bannerHitActive && styles.bannerPressablePressed,
+            ]}
+          />
+        </Animated.View>
+      ) : null}
 
       <AnimatedScrollView
         style={styles.scrollView}
@@ -274,8 +403,8 @@ function PageContent({
         scrollEnabled={mapMode !== "expanded"}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
-        onScrollEndDrag={checkMiniMapInView}
-        onMomentumScrollEnd={checkMiniMapInView}
+        onScrollEndDrag={onScrollEndDragPage}
+        onMomentumScrollEnd={onMomentumScrollEndPage}
       >
         {/* Card wrapper: button floats above card, card overlaps banner */}
         <View
@@ -374,7 +503,11 @@ function PageContent({
               .slice()
               .sort((a, b) => a.order - b.order)
               .map((section) => (
-                <BetaSection key={section.order} section={section} />
+                <BetaSection
+                  key={section.order}
+                  section={section}
+                  pageTitle={data.name}
+                />
               ))}
             {data.latestRevisionDate != null ? (
               <Text style={styles.lastUpdated}>
@@ -400,6 +533,25 @@ function PageContent({
           scrollY={scrollY}
           onExpand={openPageFullMap}
           onCollapse={closePageFullMap}
+        />
+      ) : null}
+
+      {bannerExpanded &&
+      bannerExpandAnchor != null &&
+      bannerExpandSourceUrl != null ? (
+        <ExpandedImageModal
+          anchorRect={bannerExpandAnchor}
+          pages={[
+            {
+              itemKey: "page-banner",
+              fullUrl: bannerExpandSourceUrl,
+              bannerUrl,
+              captionHtml: data.bannerImage?.caption ?? null,
+            },
+          ]}
+          initialPageIndex={0}
+          headerPageTitle={data.name}
+          onDismissed={onBannerExpandedDismissed}
         />
       ) : null}
     </View>
@@ -467,9 +619,25 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     zIndex: 0,
   },
+  /** Same geometry as `bannerWrap` + `bannerAnimatedStyle`, stacked above `scrollView` for hits. */
+  bannerHitLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    overflow: "hidden",
+    zIndex: 1001,
+  },
+  /** Top-aligned; height set inline to exclude the card overlap zone. */
+  bannerHitPressable: {
+    width: "100%",
+    alignSelf: "flex-start",
+  },
   bannerImage: {
     width: "100%",
     height: "100%",
+  },
+  bannerPressablePressed: {
+    opacity: 0.94,
   },
   bannerNoImageWrap: {
     flex: 1,
@@ -482,6 +650,12 @@ const styles = StyleSheet.create({
   bannerNoImageIcon: {
     width: 64,
     height: 64,
+  },
+  missingImageText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: "600",
   },
   bannerLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
