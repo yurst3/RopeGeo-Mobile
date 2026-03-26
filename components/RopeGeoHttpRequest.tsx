@@ -83,6 +83,15 @@ export function RopeGeoHttpRequest<T = unknown>({
   const [data, setData] = useState<T | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
 
+  const pathParamsKey = JSON.stringify(pathParams ?? null);
+  const queryParamsKey = JSON.stringify(queryParams ?? null);
+  const bodyKey =
+    body === undefined || body === null
+      ? body
+      : typeof body === "object"
+        ? JSON.stringify(body)
+        : body;
+
   useEffect(() => {
     let cancelled = false;
     const baseUrl = SERVICE_BASE_URL[service];
@@ -153,7 +162,7 @@ export function RopeGeoHttpRequest<T = unknown>({
     return () => {
       cancelled = true;
     };
-  }, [service, method, path, pathParams, queryParams, body]);
+  }, [service, method, path, pathParamsKey, queryParamsKey, bodyKey]);
 
   return <>{children({ loading, data, errors })}</>;
 }

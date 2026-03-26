@@ -1,5 +1,4 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { minimapStyles } from "@/components/minimap/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
@@ -78,7 +77,6 @@ export function RegionContent({
   const scrollIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const countsText = formatCounts(region.pageCount, region.regionCount);
-  const url = region.externalLink ?? null;
   const regions = region.regions ?? [];
   const hasMiniMap = region.miniMap != null;
 
@@ -233,15 +231,6 @@ export function RegionContent({
               ]}
               onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
             >
-              {url ? (
-                <View style={[styles.externalLinkWrap, { top: -64, left: 16 }]}>
-                  <ExternalLinkButton
-                    icon={require("@/assets/images/ropewiki.png")}
-                    link={url}
-                    accessibilityLabel="Open on RopeWiki"
-                  />
-                </View>
-              ) : null}
               <View style={styles.cardWrap}>
                 <View
                   style={[
@@ -336,9 +325,6 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     position: "relative",
-  },
-  externalLinkWrap: {
-    position: "absolute",
   },
   cardWrap: {
     backgroundColor: "#fff",

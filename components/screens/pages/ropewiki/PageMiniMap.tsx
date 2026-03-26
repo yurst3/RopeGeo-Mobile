@@ -20,6 +20,11 @@ import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import type { PageMiniMap as PageMiniMapConfig } from "ropegeo-common";
 
+function localVectorTileTemplate(rootUri: string, layerId: string): string {
+  const base = rootUri.endsWith("/") ? rootUri : `${rootUri}/`;
+  return `${base}tiles/${layerId}/{z}/{x}/{y}.pbf`;
+}
+
 export function PageMiniMap({
   miniMap,
   pageName,
@@ -30,6 +35,7 @@ export function PageMiniMap({
   scrollY,
   onExpand,
   onCollapse,
+  localTileRootUri,
 }: {
   miniMap: PageMiniMapConfig;
   pageName: string;
@@ -40,8 +46,14 @@ export function PageMiniMap({
   scrollY: SharedValue<number>;
   onExpand: () => void;
   onCollapse: () => void;
+  /** When set, load vector tiles from the offline bundle (`file://` root) instead of the remote template. */
+  localTileRootUri?: string | null;
 }) {
   const b = miniMap.bounds;
+  const tileTemplate =
+    localTileRootUri != null && localTileRootUri.length > 0
+      ? localVectorTileTemplate(localTileRootUri, miniMap.layerId)
+      : miniMap.tilesTemplate;
   const {
     cameraRef,
     fitToBounds,
@@ -141,7 +153,7 @@ export function PageMiniMap({
                 },
               }}
             />
-            <VectorSource id="page-mini-map-tiles" tileUrlTemplates={[miniMap.tilesTemplate]}>
+            <VectorSource id="page-mini-map-tiles" tileUrlTemplates={[tileTemplate]}>
               <LineLayer
                 id="page-mini-map-line"
                 sourceLayerID={miniMap.layerId}

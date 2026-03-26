@@ -1,8 +1,10 @@
+import { SavedPageGlyph } from "@/components/buttons/SavedPageGlyph";
 import {
   Method,
   RopeGeoHttpRequest,
   Service,
 } from "@/components/RopeGeoHttpRequest";
+import { useSavedPages } from "@/context/SavedPagesContext";
 import { useRef, useState, useEffect } from "react";
 import { Image } from "expo-image";
 import {
@@ -28,6 +30,8 @@ const CARD_PADDING = 12;
 const IMAGE_ASPECT = 3 / 4;
 const NO_IMAGE_ICON_SIZE = 36;
 const EXTERNAL_LINK_BUTTON_GAP = 8;
+/** Matches {@link ExternalLinkButton} circle (white + shadow). */
+const SAVED_GLYPH_BUTTON_SIZE = 48;
 /** Minimum height so loading and loaded preview cards stay the same size. */
 const PREVIEW_CARD_MIN_HEIGHT = 140;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -191,6 +195,7 @@ type RoutePreviewProps = {
 export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange, onPreviewPress, badgeScale = 0.65 }: RoutePreviewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { isSaved } = useSavedPages();
 
   return (
     <RopeGeoHttpRequest<PagePreview[]>
@@ -218,6 +223,13 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
               currentIndex={currentIndex}
               onCurrentPreviewChange={onCurrentPreviewChange}
             />
+            {currentPreview != null && isSaved(currentPreview.id) && (
+              <View style={styles.savedGlyphWrap} pointerEvents="none">
+                <View style={styles.savedGlyphCircle} pointerEvents="none">
+                  <SavedPageGlyph isSaved />
+                </View>
+              </View>
+            )}
             {showExternalLink && currentPreview.externalLink != null && (
               <View style={styles.externalLinkButtonWrap}>
                 <ExternalLinkButton
@@ -306,6 +318,29 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
 const styles = StyleSheet.create({
   previewWrapper: {
     position: "relative",
+  },
+  savedGlyphWrap: {
+    position: "absolute",
+    top: -(SAVED_GLYPH_BUTTON_SIZE + EXTERNAL_LINK_BUTTON_GAP),
+    left: CARD_MARGIN_H,
+    zIndex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: SAVED_GLYPH_BUTTON_SIZE,
+    height: SAVED_GLYPH_BUTTON_SIZE,
+  },
+  savedGlyphCircle: {
+    width: SAVED_GLYPH_BUTTON_SIZE,
+    height: SAVED_GLYPH_BUTTON_SIZE,
+    borderRadius: SAVED_GLYPH_BUTTON_SIZE / 2,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   externalLinkButtonWrap: {
     position: "absolute",

@@ -1,4 +1,5 @@
 import { BackButton } from "@/components/buttons/BackButton";
+import { FilterButton } from "@/components/buttons/FilterButton";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import {
   Method,
@@ -125,17 +126,7 @@ export function SearchScreen() {
             { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
           ]}
         >
-          <Pressable
-            onPress={() => {}}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-            accessibilityLabel="Filter"
-            accessibilityRole="button"
-          >
-            <FontAwesome5 name="filter" size={18} color="#111827" />
-          </Pressable>
+          <FilterButton onPress={() => {}} />
         </View>
       </View>
       <Pressable
@@ -248,22 +239,6 @@ const styles = StyleSheet.create({
     height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "center",
-  },
-  headerButton: {
-    width: HEADER_BUTTON_SIZE,
-    height: HEADER_BUTTON_SIZE,
-    borderRadius: HEADER_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  headerButtonPressed: {
-    opacity: 0.6,
   },
   searchBar: {
     flex: 1,

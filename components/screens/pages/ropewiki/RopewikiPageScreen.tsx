@@ -1,33 +1,31 @@
 import { BackButton } from "@/components/buttons/BackButton";
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
-import { RegionLinks } from "@/components/RegionLinks";
-import { RappelInfoRow } from "@/components/RappelInfoRow";
-import { StarRating } from "@/components/StarRating";
+import { SaveButton } from "@/components/buttons/SaveButton";
+import { useDownloadQueue } from "@/context/DownloadQueueContext";
+import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
+import { useSavedPages } from "@/context/SavedPagesContext";
 import {
   Method,
   RopeGeoHttpRequest,
   Service,
 } from "@/components/RopeGeoHttpRequest";
-import { ElevationGains } from "./ElevationGains";
-import { Lengths } from "./Lengths";
-import { minimapStyles } from "@/components/minimap/minimapShared";
 import { PageMiniMap } from "./PageMiniMap";
-import { PageBadges } from "./PageBadges";
-import { BetaSection } from "../../../betaSection/BetaSection";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
-import { TimeEstimates } from "./TimeEstimates";
+import { PageBanner } from "./PageBanner";
+import { PageContent as PageScrollContent } from "./PageContent";
+import { PageSeamButtons } from "./PageSeamButtons";
 import { useRouter } from "expo-router";
+import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
+  Animated as RNAnimated,
   BackHandler,
   Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Pressable,
-  ScrollView,
+  PanResponder,
   StyleSheet,
   Text,
   View,
@@ -40,7 +38,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { MiniMapType, PageDataSource, type PageMiniMap as PageMiniMapConfig, type RopewikiPageView } from "ropegeo-common";
+import {
+  MiniMapType,
+  type PageMiniMap as PageMiniMapConfig,
+  Result,
+  type RopewikiPageView,
+  RouteType,
+} from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
@@ -50,11 +54,34 @@ const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
 const CARD_BORDER_RADIUS = 24;
 
+/** Space for header circle buttons (16 inset + 44 tap area + gap). */
+const HEADER_TOAST_INSET = 16 + 44 + 8;
+const SAVED_TOAST_DURATION_MS = 2000;
+const SAVED_TOAST_FADE_IN_MS = 250;
+const SAVED_TOAST_FADE_OUT_MS = 300;
+const SAVED_TOAST_BG = "rgba(0, 90, 55, 0.88)";
+const SAVED_TOAST_TEXT = "#86efac";
+
+const DOWNLOAD_TOAST_BG = "rgba(55, 48, 0, 0.9)";
+const DOWNLOAD_TOAST_TEXT = "#fde047";
+const DOWNLOAD_COMPLETE_BG = SAVED_TOAST_BG;
+const DOWNLOAD_COMPLETE_TEXT = SAVED_TOAST_TEXT;
+const DOWNLOAD_FAIL_BG = "rgba(80, 0, 0, 0.88)";
+const DOWNLOAD_FAIL_TEXT = "#fca5a5";
+
+const DOWNLOAD_PHASE_COUNT = 4;
+
+/** Same tap thresholds as `RopewikiRegionScreen` hero layer (pans disabled for single-image page). */
+const TAP_MAX_DISPLACEMENT = 10;
+const TAP_MAX_DURATION_MS = 300;
+
+/** Visualize the hero hit strip; set `true` while debugging layout. */
+const DEBUG_BANNER_EXPAND_HIT_OUTLINE = false;
 
 export type RopewikiPageScreenProps = {
   pageId: string;
-  /** Route type for badge display (e.g. "Canyon", "Cave", "POI"). */
-  routeType?: string | null;
+  /** Route type for badge display (e.g. Canyon, Cave, POI). */
+  routeType?: RouteType;
 };
 
 function ErrorEffect({ error }: { error: Error }) {
@@ -72,53 +99,124 @@ function ErrorEffect({ error }: { error: Error }) {
   return null;
 }
 
-const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
-
-function formatLastUpdated(revisionDate: Date | string): string {
-  const date =
-    typeof revisionDate === "string" ? new Date(revisionDate) : revisionDate;
-  if (Number.isNaN(date.getTime())) return "";
-  const formatted = date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  let ago: string;
-  if (diffDays >= 365) {
-    const years = Math.floor(diffDays / 365);
-    const days = diffDays % 365;
-    const yearLabel = years === 1 ? "year" : "years";
-    ago =
-      days === 0
-        ? `${years} ${yearLabel} ago`
-        : `${years} ${yearLabel} and ${days} days ago`;
-  } else {
-    ago = diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
-  }
-  return `Last updated on: ${formatted} (${ago})`;
-}
-
-function PageContent({
+function PageScreenBody({
   pageId,
   data,
   routeType,
 }: {
   pageId: string;
   data: RopewikiPageView;
-  routeType?: string | null;
+  routeType?: RouteType;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
+  const { setHighlightSavedTab } = useSavedTabHighlight();
+  const {
+    isSaved,
+    removeSaved,
+    toggleSaveFromRopewikiPage,
+    removeDownloadBundle,
+    savedEntries,
+  } = useSavedPages();
+  const saved = isSaved(pageId);
+  const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
+  const isDownloaded = savedEntry?.downloadedPageView != null;
+  const routeTypeResolved = routeType ?? RouteType.Unknown;
+  const downloadTask = getTaskSnapshot(pageId);
+  const downloading =
+    downloadTask?.state === "queued" || downloadTask?.state === "running";
+  const downloadUi: 
+    | { kind: "idle" }
+    | { kind: "progress"; phase: number; phaseTitle: string; phaseProgress: number }
+    | { kind: "success" }
+    | { kind: "error" } = (() => {
+    if (downloadTask == null) return { kind: "idle" };
+    if (downloadTask.state === "queued" || downloadTask.state === "running") {
+      return {
+        kind: "progress",
+        phase: downloadTask.phase,
+        phaseTitle: downloadTask.phaseTitle,
+        phaseProgress: downloadTask.phaseProgress,
+      };
+    }
+    if (downloadTask.state === "success") return { kind: "success" };
+    return { kind: "error" };
+  })();
+
+  const onDownloadPress = useCallback(() => {
+    if (downloading || isDownloaded) return;
+    enqueuePageDownload({
+      pageId,
+      apiPageId: pageId,
+      data,
+      routeType: routeTypeResolved,
+    });
+  }, [
+    data,
+    downloading,
+    enqueuePageDownload,
+    isDownloaded,
+    pageId,
+    routeTypeResolved,
+  ]);
+
+  const onRemoveDownloadPress = useCallback(async () => {
+    if (!isDownloaded) return;
+    await removeDownloadBundle(pageId);
+  }, [isDownloaded, pageId, removeDownloadBundle]);
+
+  const savedToastOpacity = useRef(new RNAnimated.Value(0)).current;
+  const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissSavedToastImmediate = useCallback(() => {
+    if (savedToastTimerRef.current != null) {
+      clearTimeout(savedToastTimerRef.current);
+      savedToastTimerRef.current = null;
+    }
+    savedToastOpacity.stopAnimation();
+    savedToastOpacity.setValue(0);
+    setHighlightSavedTab(false);
+  }, [savedToastOpacity, setHighlightSavedTab]);
+
+  const showSavedToast = useCallback(() => {
+    if (savedToastTimerRef.current != null) {
+      clearTimeout(savedToastTimerRef.current);
+      savedToastTimerRef.current = null;
+    }
+    savedToastOpacity.stopAnimation();
+    setHighlightSavedTab(true);
+    savedToastOpacity.setValue(0);
+    RNAnimated.timing(savedToastOpacity, {
+      toValue: 1,
+      duration: SAVED_TOAST_FADE_IN_MS,
+      useNativeDriver: true,
+    }).start();
+    savedToastTimerRef.current = setTimeout(() => {
+      savedToastTimerRef.current = null;
+      RNAnimated.timing(savedToastOpacity, {
+        toValue: 0,
+        duration: SAVED_TOAST_FADE_OUT_MS,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setHighlightSavedTab(false);
+      });
+    }, SAVED_TOAST_DURATION_MS);
+  }, [savedToastOpacity, setHighlightSavedTab]);
+
+  const onSavePress = () => {
+    if (saved) {
+      dismissSavedToastImmediate();
+      removeSaved(pageId);
+      return;
+    }
+    toggleSaveFromRopewikiPage(data, routeTypeResolved, pageId);
+    showSavedToast();
+  };
   const [bannerAspectRatio, setBannerAspectRatio] = useState<number | null>(null);
   const [bannerImageLoading, setBannerImageLoading] = useState(true);
   const bannerUrl = data.bannerImage?.bannerUrl ?? null;
   const hasBannerImageObject = data.bannerImage != null;
-  const displayRegions = (data.regions?.length ?? 0) > 0
-    ? (data.regions ?? []).slice(0, -1)
-    : [];
 
   const scrollY = useSharedValue(0);
   /** JS copy of scroll offset (throttled) so we can clip the banner hit rect above the overlapping card. */
@@ -141,6 +239,18 @@ function PageContent({
 
   /** Full banner bounds for expand animation (`measureInWindow`). Hit testing uses a clipped overlay. */
   const bannerFullRectRef = useRef<View>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
+    null,
+  );
+  const [heroPressed, setHeroPressed] = useState(false);
+  const heroResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: () => false,
+      onPanResponderRelease: () => {},
+      onPanResponderTerminationRequest: () => true,
+    }),
+  ).current;
   const [bannerExpanded, setBannerExpanded] = useState(false);
   const [bannerExpandAnchor, setBannerExpandAnchor] =
     useState<ExpandedImageAnchorRect | null>(null);
@@ -158,7 +268,8 @@ function PageContent({
     setBannerExpandAnchor(null);
     setContentScrollY(0);
     lastBannerHitScrollRef.current = 0;
-  }, [pageId]);
+    dismissSavedToastImmediate();
+  }, [pageId, dismissSavedToastImmediate]);
 
   const checkMiniMapInView = useCallback(() => {
     if (!hasMiniMap) return;
@@ -276,13 +387,6 @@ function PageContent({
       .catch(() => setBannerAspectRatio(null));
   }, [bannerUrl, aspectRatioSv]);
 
-  const rating = data.quality ?? 0;
-  const ratingCount = data.userVotes ?? 0;
-  const technicalRating = data.difficulty?.technical ?? null;
-  const rappelCount = data.rappelCount ?? null;
-  const longestRappel = data.rappelLongest ?? null;
-  const jumps = data.jumps ?? null;
-
   const bottomPadding = insets.bottom + 16;
   const paddingTop =
     cardHeight != null && cardHeight < SCREEN_HEIGHT / 2
@@ -317,6 +421,15 @@ function PageContent({
     return Math.max(minFromImage, parallax);
   })();
 
+  /**
+   * Hero hit target: full window width × `bannerTapHeight` (same horizontal span as
+   * `RopewikiRegionScreen` hero layer). Seam controls may need a higher z-index if taps are stolen.
+   */
+  const bannerExpandHitRect =
+    bannerUrl != null && bannerExpandSourceUrl != null
+      ? { left: 0, width: SCREEN_WIDTH }
+      : null;
+
   /** Top edge of the overlapping card in window Y; only the banner above this should capture taps. */
   const cardTopWindowY = paddingTop - CARD_BORDER_RADIUS - contentScrollY;
   const bannerTapHeight = Math.max(
@@ -328,199 +441,151 @@ function PageContent({
 
   return (
     <View style={styles.container}>
-      {/* Parallax banner: height shrinks with scroll (Reanimated) */}
-      {/* Banner visuals sit behind the scroll view; touches are handled by `bannerHitLayer`. */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.bannerWrap, bannerAnimatedStyle]}
-      >
-        {bannerUrl ? (
-          <>
-            <View
-              ref={bannerFullRectRef}
-              style={StyleSheet.absoluteFill}
-              collapsable={false}
-            >
-              <Image
-                source={bannerUrl}
-                style={styles.bannerImage}
-                contentFit="contain"
-                onLoadEnd={() => setBannerImageLoading(false)}
-              />
-            </View>
-            {bannerImageLoading && (
-              <View style={[StyleSheet.absoluteFill, styles.bannerLoadingOverlay]}>
-                <ActivityIndicator size="large" color="#fff" />
-              </View>
-            )}
-          </>
-        ) : (
-          <View style={styles.bannerNoImageWrap}>
-            <Image
-              source={
-                hasBannerImageObject
-                  ? require("@/assets/images/missingImage.png")
-                  : require("@/assets/images/noImage.png")
-              }
-              style={styles.bannerNoImageIcon}
-              contentFit="contain"
-            />
-            {hasBannerImageObject ? (
-              <Text style={styles.missingImageText}>Missing Image</Text>
-            ) : null}
-          </View>
-        )}
-      </Animated.View>
+      <PageBanner
+        imageFrameStyle={bannerAnimatedStyle}
+        bannerUrl={bannerUrl}
+        hasBannerImageObject={hasBannerImageObject}
+        bannerImageLoading={bannerImageLoading}
+        bannerFullRectRef={bannerFullRectRef}
+        onBannerImageLoadEnd={() => setBannerImageLoading(false)}
+      />
 
-      {/* Above the pager scroll view (zIndex 1000) so banner taps are not swallowed by padding. */}
-      {bannerUrl != null && bannerExpandSourceUrl != null ? (
+      {bannerExpandHitRect != null && mapMode !== "expanded" ? (
         <Animated.View
-          pointerEvents={bannerHitActive ? "box-none" : "none"}
-          style={[styles.bannerHitLayer, bannerAnimatedStyle]}
-        >
-          <Pressable
-            disabled={!bannerHitActive}
-            onPress={openBannerExpanded}
-            style={({ pressed }) => [
-              styles.bannerHitPressable,
-              { height: bannerTapHeight },
-              pressed && bannerHitActive && styles.bannerPressablePressed,
-            ]}
-          />
-        </Animated.View>
+          {...heroResponder.panHandlers}
+          pointerEvents={bannerHitActive ? "box-only" : "none"}
+          onTouchStart={(e) => {
+            if (!bannerHitActive) return;
+            setHeroPressed(true);
+            touchStartRef.current = {
+              x: e.nativeEvent.pageX,
+              y: e.nativeEvent.pageY,
+              time: Date.now(),
+            };
+          }}
+          onTouchEnd={(e) => {
+            setHeroPressed(false);
+            const start = touchStartRef.current;
+            touchStartRef.current = null;
+            if (start == null || !bannerHitActive) return;
+            const dx = Math.abs(e.nativeEvent.pageX - start.x);
+            const dy = Math.abs(e.nativeEvent.pageY - start.y);
+            const dt = Date.now() - start.time;
+            if (
+              dx < TAP_MAX_DISPLACEMENT &&
+              dy < TAP_MAX_DISPLACEMENT &&
+              dt < TAP_MAX_DURATION_MS
+            ) {
+              openBannerExpanded();
+            }
+          }}
+          style={[
+            styles.heroBannerLayer,
+            {
+              top: 0,
+              height: bannerTapHeight,
+              left: bannerExpandHitRect.left,
+              width: bannerExpandHitRect.width,
+              opacity: heroPressed && bannerHitActive ? 0.94 : 1,
+              ...(DEBUG_BANNER_EXPAND_HIT_OUTLINE
+                ? { borderWidth: 2, borderColor: "red" }
+                : {}),
+            },
+          ]}
+        />
       ) : null}
 
-      <AnimatedScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{
-          paddingTop,
-          paddingBottom: 0,
-          flexGrow: 1,
-        }}
-        pointerEvents={mapMode === "expanded" ? "none" : "auto"}
+      <PageScrollContent
+        data={data}
+        routeTypeResolved={routeTypeResolved}
+        insets={insets}
+        paddingTop={paddingTop}
+        mapExpanded={mapMode === "expanded"}
         onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        scrollEnabled={mapMode !== "expanded"}
-        showsVerticalScrollIndicator={false}
-        overScrollMode="never"
         onScrollEndDrag={onScrollEndDragPage}
         onMomentumScrollEnd={onMomentumScrollEndPage}
-      >
-        {/* Card wrapper: button floats above card, card overlaps banner */}
-        <View
-          style={[
-            styles.cardWrapper,
-            { marginTop: -CARD_BORDER_RADIUS },
-          ]}
-          onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
-        >
-          <View
-            style={[
-              styles.externalLinkWrap,
-              { top: -64, left: 16 },
-            ]}
-          >
-            <ExternalLinkButton
-              icon={require("@/assets/images/ropewiki.png")}
-              link={data.url}
-              accessibilityLabel="Open on RopeWiki"
-            />
-          </View>
-          <View style={styles.cardWrap}>
-            <View
-              style={[
-                styles.cardInner,
-                {
-                  paddingTop: 20,
-                  paddingBottom: insets.bottom + 16,
-                },
-              ]}
-            >
-              <Text style={styles.title}>{data.name}</Text>
-            {data.aka != null && data.aka.length > 0 ? (
-              <Text style={styles.aka}>
-                <Text style={styles.akaLabel}>AKA: </Text>
-                {data.aka.join(", ")}
-              </Text>
-            ) : null}
-            <RegionLinks
-              source={PageDataSource.Ropewiki}
-              regions={displayRegions}
-              containerStyle={data.aka?.length ? styles.regionsAfterAka : undefined}
-              numberOfLines={2}
-            />
-            <StarRating
-                rating={rating}
-                count={ratingCount}
-                style={styles.starRatingRow}
-              />
-            <RappelInfoRow
-                rappelCount={rappelCount}
-                longestRappel={longestRappel}
-                jumps={jumps}
-                technicalRating={
-                  technicalRating != null ? Number(technicalRating) : null
-                }
-              />
-            <PageBadges data={data} routeType={routeType} />
-            <TimeEstimates
-                overallTime={data.overallTime}
-                approachTime={data.approachTime}
-                descentTime={data.descentTime}
-                exitTime={data.exitTime}
-                shuttleTime={data.shuttleTime}
-              />
-            <Lengths
-                overallLength={data.overallLength}
-                approachLength={data.approachLength}
-                descentLength={data.descentLength}
-                exitLength={data.exitLength}
-              />
-            <ElevationGains
-                approachElevGain={data.approachElevGain}
-                descentElevGain={data.descentElevGain}
-                exitElevGain={data.exitElevGain}
-              />
-            {hasMiniMap ? (
-              <View
-                ref={miniMapGateRef}
-                collapsable={false}
-                style={styles.miniMapWrap}
-                onLayout={(e) => {
-                  const { width, height } = e.nativeEvent.layout;
-                  setMiniMapAnchorRect((prev) =>
-                    prev == null
-                      ? { x: 0, y: 0, width, height }
-                      : { ...prev, width, height }
-                  );
-                  requestAnimationFrame(() => checkMiniMapInView());
-                }}
-              >
-                <View style={minimapStyles.wrapper} />
-              </View>
-            ) : null}
-            {(data.betaSections ?? [])
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((section) => (
-                <BetaSection
-                  key={section.order}
-                  section={section}
-                  pageTitle={data.name}
-                />
-              ))}
-            {data.latestRevisionDate != null ? (
-              <Text style={styles.lastUpdated}>
-                {formatLastUpdated(data.latestRevisionDate)}
-              </Text>
-            ) : null}
-            </View>
-          </View>
-        </View>
-      </AnimatedScrollView>
+        onCardHeightLayout={setCardHeight}
+        miniMapGateRef={miniMapGateRef}
+        onMiniMapLayout={(width, height) => {
+          setMiniMapAnchorRect((prev) =>
+            prev == null
+              ? { x: 0, y: 0, width, height }
+              : { ...prev, width, height },
+          );
+        }}
+        checkMiniMapInView={checkMiniMapInView}
+      />
+
+      <PageSeamButtons
+        url={data.url}
+        scrollY={scrollY}
+        paddingTop={paddingTop}
+        mapExpanded={mapMode === "expanded"}
+        isDownloaded={isDownloaded}
+        downloading={downloading}
+        downloadPhase={downloadUi.kind === "progress" ? downloadUi.phase : 1}
+        downloadPhaseProgress={
+          downloadUi.kind === "progress" ? downloadUi.phaseProgress : 0
+        }
+        onDownloadPress={onDownloadPress}
+        onRemoveDownloadPress={onRemoveDownloadPress}
+      />
 
       {mapMode !== "expanded" && (
-        <BackButton onPress={() => router.back()} top={insets.top + 8} />
+        <>
+          <BackButton onPress={() => router.back()} top={insets.top + 8} />
+          <RNAnimated.View
+            pointerEvents="none"
+            style={[
+              styles.savedToastWrap,
+              {
+                top: insets.top + 8,
+                opacity: savedToastOpacity,
+              },
+            ]}
+          >
+            <View style={styles.savedToastInner}>
+              <Text style={styles.savedToastText}>Page saved</Text>
+            </View>
+          </RNAnimated.View>
+          {downloadUi.kind !== "idle" ? (
+            <View
+              pointerEvents="none"
+              style={[styles.downloadToastWrap, { top: insets.top + 8 }]}
+            >
+              {downloadUi.kind === "progress" ? (
+                <View style={[styles.downloadToastInner, styles.downloadToastInnerProgress]}>
+                  <Text style={styles.downloadToastTitle}>
+                    {`(${downloadUi.phase}/${DOWNLOAD_PHASE_COUNT}) ${downloadUi.phaseTitle}`}
+                  </Text>
+                  <View style={styles.downloadProgressTrack}>
+                    <View
+                      style={[
+                        styles.downloadProgressFill,
+                        {
+                          width: `${Math.round(downloadUi.phaseProgress * 100)}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              ) : null}
+              {downloadUi.kind === "success" ? (
+                <View style={[styles.downloadToastInner, styles.downloadToastInnerSuccess]}>
+                  <Text style={styles.downloadToastTitleSuccess}>
+                    ({DOWNLOAD_PHASE_COUNT}/{DOWNLOAD_PHASE_COUNT}) Download complete
+                  </Text>
+                </View>
+              ) : null}
+              {downloadUi.kind === "error" ? (
+                <View style={[styles.downloadToastInner, styles.downloadToastInnerError]}>
+                  <Text style={styles.downloadToastTitleError}>Download failed</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+          <SaveButton saved={saved} onPress={onSavePress} top={insets.top + 8} />
+        </>
       )}
       {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.TilesTemplate ? (
         <PageMiniMap
@@ -533,6 +598,7 @@ function PageContent({
           scrollY={scrollY}
           onExpand={openPageFullMap}
           onCollapse={closePageFullMap}
+          localTileRootUri={savedEntry?.downloadedMapData ?? null}
         />
       ) : null}
 
@@ -564,6 +630,64 @@ export function RopewikiPageScreen({
 }: RopewikiPageScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { savedEntries } = useSavedPages();
+  const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
+
+  const [offlineData, setOfflineData] = useState<RopewikiPageView | null>(null);
+  const [offlineError, setOfflineError] = useState<Error | null>(null);
+  const [offlineLoading, setOfflineLoading] = useState(false);
+
+  useEffect(() => {
+    if (savedEntry?.downloadedPageView == null) {
+      setOfflineData(null);
+      setOfflineError(null);
+      setOfflineLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setOfflineLoading(true);
+    void (async () => {
+      const path = savedEntry.downloadedPageView;
+      if (path == null) return;
+      try {
+        const text = await FileSystem.readAsStringAsync(path);
+        const raw = JSON.parse(text) as unknown;
+        const parsed = Result.fromResponseBody(raw);
+        const view = parsed.result as RopewikiPageView;
+        const patched = savedEntry.applyDownloadedImagesToPageView(view);
+        if (!cancelled) {
+          setOfflineData(patched);
+          setOfflineError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setOfflineError(e instanceof Error ? e : new Error(String(e)));
+        }
+      } finally {
+        if (!cancelled) setOfflineLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageId, savedEntry?.downloadedPageView, savedEntry?.downloadedImages]);
+
+  if (savedEntry?.downloadedPageView != null) {
+    if (offlineError != null) {
+      return <ErrorEffect error={offlineError} />;
+    }
+    if (offlineLoading || offlineData == null) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#666" />
+          </View>
+          <BackButton onPress={() => router.back()} top={insets.top + 8} />
+        </View>
+      );
+    }
+    return <PageScreenBody pageId={pageId} data={offlineData} routeType={routeType} />;
+  }
 
   return (
     <RopeGeoHttpRequest<RopewikiPageView>
@@ -590,7 +714,7 @@ export function RopewikiPageScreen({
           return null;
         }
         return (
-          <PageContent pageId={pageId} data={data} routeType={routeType} />
+          <PageScreenBody pageId={pageId} data={data} routeType={routeType} />
         );
       }}
     </RopeGeoHttpRequest>
@@ -602,113 +726,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#e5e7eb",
   },
-  scrollView: {
-    flex: 1,
-    zIndex: 1000,
-  },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
   },
-  bannerWrap: {
+  heroBannerLayer: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    overflow: "hidden",
-    zIndex: 0,
+    zIndex: 2000,
   },
-  /** Same geometry as `bannerWrap` + `bannerAnimatedStyle`, stacked above `scrollView` for hits. */
-  bannerHitLayer: {
+  savedToastWrap: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    overflow: "hidden",
-    zIndex: 1001,
-  },
-  /** Top-aligned; height set inline to exclude the card overlap zone. */
-  bannerHitPressable: {
-    width: "100%",
-    alignSelf: "flex-start",
-  },
-  bannerImage: {
-    width: "100%",
-    height: "100%",
-  },
-  bannerPressablePressed: {
-    opacity: 0.94,
-  },
-  bannerNoImageWrap: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
+    left: HEADER_TOAST_INSET,
+    right: HEADER_TOAST_INSET,
+    zIndex: 3650,
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
+    justifyContent: "center",
+    minHeight: 44,
   },
-  bannerNoImageIcon: {
-    width: 64,
-    height: 64,
+  savedToastInner: {
+    backgroundColor: SAVED_TOAST_BG,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    maxWidth: "100%",
   },
-  missingImageText: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#6b7280",
+  savedToastText: {
+    color: SAVED_TOAST_TEXT,
+    fontSize: 15,
     fontWeight: "600",
   },
-  bannerLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  externalLinkWrap: {
+  downloadToastWrap: {
     position: "absolute",
+    left: HEADER_TOAST_INSET,
+    right: HEADER_TOAST_INSET,
+    zIndex: 3651,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  /** Wrapper so external link can float above card without being clipped. */
-  cardWrapper: {
-    position: "relative",
+  downloadToastInner: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    maxWidth: "100%",
+    alignSelf: "stretch",
   },
-  cardWrap: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: CARD_BORDER_RADIUS,
-    borderTopRightRadius: CARD_BORDER_RADIUS,
+  downloadToastInnerProgress: {
+    backgroundColor: DOWNLOAD_TOAST_BG,
+  },
+  downloadToastTitle: {
+    color: DOWNLOAD_TOAST_TEXT,
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  downloadProgressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.25)",
     overflow: "hidden",
   },
-  cardInner: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+  downloadProgressFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DOWNLOAD_TOAST_TEXT,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#000",
-    marginBottom: 6,
+  downloadToastInnerSuccess: {
+    backgroundColor: DOWNLOAD_COMPLETE_BG,
   },
-  aka: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 4,
-    marginLeft: 8,
+  downloadToastTitleSuccess: {
+    color: DOWNLOAD_COMPLETE_TEXT,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
   },
-  akaLabel: {
-    fontWeight: "700",
+  downloadToastInnerError: {
+    backgroundColor: DOWNLOAD_FAIL_BG,
   },
-  regionsAfterAka: {
-    marginTop: 4,
-  },
-  starRatingRow: {
-    alignSelf: "center",
-  },
-  miniMapWrap: {
-    marginTop: 16,
-    marginBottom: 0,
-  },
-  lastUpdated: {
-    marginTop: 24,
-    fontSize: 12,
-    color: "#6b7280",
-    textAlign: "right",
+  downloadToastTitleError: {
+    color: DOWNLOAD_FAIL_TEXT,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

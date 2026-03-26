@@ -262,7 +262,7 @@ export function ExploreScreen() {
               onPreviewPress={(preview) => {
                 if (preview.source === "ropewiki") {
                   router.push({
-                    pathname: "/explore/[id]/page",
+                    pathname: "/(tabs)/explore/[id]/page",
                     params: {
                       id: preview.id,
                       source: PageDataSource.Ropewiki,

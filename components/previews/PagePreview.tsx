@@ -1,4 +1,5 @@
 import { StarRating } from "@/components/StarRating";
+import { useSavedPages } from "@/context/SavedPagesContext";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Image } from "expo-image";
@@ -38,11 +39,22 @@ function sourceIcon(source: PageDataSource): number | null {
 
 type Props = {
   preview: PagePreviewData;
+  /** `explore` (default): `/(tabs)/explore/[id]/page`. `saved`: `/(tabs)/saved/[id]/page`. */
+  pageHref?: "explore" | "saved";
+  /** When omitted, uses stored route type if saved, else `Unknown`. */
+  routeType?: RouteType;
 };
 
-export function PagePreview({ preview }: Props) {
+export function PagePreview({
+  preview,
+  pageHref = "explore",
+  routeType: routeTypeProp,
+}: Props) {
   const router = useRouter();
+  const { savedEntries } = useSavedPages();
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
+  const stored = savedEntries.find((e) => e.preview.id === preview.id);
+  const routeForNav = routeTypeProp ?? stored?.routeType ?? RouteType.Unknown;
   const difficultyText = formatPageDifficulty(preview.difficulty);
   const regionLine =
     preview.regions?.length > 0
@@ -53,16 +65,23 @@ export function PagePreview({ preview }: Props) {
   const icon = sourceIcon(preview.source);
 
   const onPress = () => {
-    if (preview.source === PageDataSource.Ropewiki) {
+    if (preview.source !== PageDataSource.Ropewiki) return;
+    const params = {
+      id: preview.id,
+      source: PageDataSource.Ropewiki,
+      routeType: routeForNav,
+    };
+    if (pageHref === "saved") {
       router.push({
-        pathname: "/explore/[id]/page",
-        params: {
-          id: preview.id,
-          source: PageDataSource.Ropewiki,
-          routeType: RouteType.Unknown,
-        },
+        pathname: "/(tabs)/saved/[id]/page",
+        params,
       } as unknown as Parameters<typeof router.push>[0]);
+      return;
     }
+    router.push({
+      pathname: "/(tabs)/explore/[id]/page",
+      params,
+    } as unknown as Parameters<typeof router.push>[0]);
   };
 
   return (

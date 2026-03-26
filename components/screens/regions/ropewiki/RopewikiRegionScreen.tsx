@@ -4,6 +4,7 @@ import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/compon
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
 import { RegionMiniMap } from "./RegionMiniMap";
 import { RegionContent } from "./RegionContent";
+import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
   RopeGeoHttpRequest,
   Service,
@@ -29,9 +30,9 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
 const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
+const CARD_BORDER_RADIUS = 24;
 const HERO_SWIPE_ACTIVATE_DX = 16;
 const HERO_SWIPE_TRIGGER_DX = 40;
-const HERO_SWIPE_BOTTOM_INSET = 72;
 const TAP_MAX_DISPLACEMENT = 10;
 const TAP_MAX_DURATION_MS = 300;
 
@@ -166,7 +167,7 @@ function RegionScreenBody({
   }, []);
 
   const heroSwipeLayerStyle = useAnimatedStyle(() => ({
-    height: Math.max(0, paddingTopSv.value - HERO_SWIPE_BOTTOM_INSET - scrollY.value),
+    height: Math.max(0, paddingTopSv.value - CARD_BORDER_RADIUS - scrollY.value),
   }));
 
   const bannerImageFrameStyle = useAnimatedStyle(() => {
@@ -263,6 +264,13 @@ function RegionScreenBody({
         onMiniMapAnchorRect={handleMiniMapAnchorRect}
         onMountMiniMapNative={handleMountMiniMapNative}
         onVerticalScrollActiveChange={setRegionPageVerticalScrollActive}
+      />
+
+      <RegionSeamButtons
+        url={data.externalLink ?? null}
+        scrollY={scrollY}
+        paddingTop={paddingTop}
+        mapExpanded={mapMode === "expanded"}
       />
 
       {mapMode !== "expanded" && (
