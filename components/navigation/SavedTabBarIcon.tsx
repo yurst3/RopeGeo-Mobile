@@ -100,8 +100,8 @@ export function SavedTabBarIcon({ color, size, focused }: Props) {
       <Image
         source={
           focused
-            ? require("@/assets/images/saved-solid.png")
-            : require("@/assets/images/saved.png")
+            ? require("@/assets/images/icons/saved-solid.png")
+            : require("@/assets/images/icons/saved.png")
         }
         style={[styles.icon, { width: dim, height: dim, tintColor: color }]}
         contentFit="contain"

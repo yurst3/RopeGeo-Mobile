@@ -5,7 +5,7 @@ export function FourWDBadge({
 }: { showLabel?: boolean } = {}) {
   return (
     <Badge
-      icon={require("@/assets/images/badgeIcons/vehicle/4WD.png")}
+      icon={require("@/assets/images/icons/badges/vehicle/4WD.png")}
       backgroundColor={BadgeBackgroundColor.Yellow}
       label={showLabel ? "4WD" : undefined}
     />

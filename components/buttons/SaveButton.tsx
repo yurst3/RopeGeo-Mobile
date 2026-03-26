@@ -24,7 +24,7 @@ export function SaveButton({ saved, onPress, top, style }: SaveButtonProps) {
     >
       <Image
         source={
-          saved ? require("@/assets/images/saved-solid.png") : require("@/assets/images/saved.png")
+          saved ? require("@/assets/images/icons/saved-solid.png") : require("@/assets/images/icons/saved.png")
         }
         style={[styles.image, saved && { tintColor: colors.primary }]}
         contentFit="contain"

@@ -121,7 +121,7 @@ function SinglePreviewCard({
           ) : (
             <View style={styles.noImageWrap}>
               <Image
-                source={require("@/assets/images/noImage.png")}
+                source={require("@/assets/images/icons/noImage.png")}
                 style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
                 contentFit="contain"
               />
@@ -233,7 +233,7 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
             {showExternalLink && currentPreview.externalLink != null && (
               <View style={styles.externalLinkButtonWrap}>
                 <ExternalLinkButton
-                  icon={require("@/assets/images/ropewiki.png")}
+                  icon={require("@/assets/images/icons/ropewiki.png")}
                   link={currentPreview.externalLink}
                   accessibilityLabel="Open on RopeWiki"
                 />

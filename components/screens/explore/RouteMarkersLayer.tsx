@@ -173,7 +173,7 @@ function RouteMarkersLayerContent({
       />
       <Images
         images={{
-          "map-marker": require("@/assets/images/location-dot-solid.png"),
+          "map-marker": require("@/assets/images/icons/location-dot-solid.png"),
         }}
       />
     </ShapeSource>

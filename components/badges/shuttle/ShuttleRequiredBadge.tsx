@@ -5,7 +5,7 @@ export function ShuttleRequiredBadge({
 }: { showLabel?: boolean } = {}) {
   return (
     <Badge
-      icon={require("@/assets/images/badgeIcons/shuttle/shuttle.png")}
+      icon={require("@/assets/images/icons/badges/shuttle/shuttle.png")}
       backgroundColor={BadgeBackgroundColor.Yellow}
       label={showLabel ? "Shuttle Required" : undefined}
     />

@@ -58,8 +58,8 @@ export function PageBanner({
           <Image
             source={
               hasBannerImageObject
-                ? require("@/assets/images/missingImage.png")
-                : require("@/assets/images/noImage.png")
+                ? require("@/assets/images/icons/missingImage.png")
+                : require("@/assets/images/icons/noImage.png")
             }
             style={styles.bannerNoImageIcon}
             contentFit="contain"

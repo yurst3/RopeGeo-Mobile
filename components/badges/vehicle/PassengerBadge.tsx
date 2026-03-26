@@ -5,7 +5,7 @@ export function PassengerBadge({
 }: { showLabel?: boolean } = {}) {
   return (
     <Badge
-      icon={require("@/assets/images/badgeIcons/vehicle/passenger.png")}
+      icon={require("@/assets/images/icons/badges/vehicle/passenger.png")}
       backgroundColor={BadgeBackgroundColor.Green}
       label={showLabel ? "Passenger" : undefined}
     />

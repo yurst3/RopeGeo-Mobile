@@ -5,7 +5,7 @@ export function HighClearanceBadge({
 }: { showLabel?: boolean } = {}) {
   return (
     <Badge
-      icon={require("@/assets/images/badgeIcons/vehicle/highClearance.png")}
+      icon={require("@/assets/images/icons/badges/vehicle/highClearance.png")}
       backgroundColor={BadgeBackgroundColor.Orange}
       label={showLabel ? "High Clearance" : undefined}
     />

@@ -17,7 +17,7 @@ const NO_IMAGE_ICON_SIZE = 36;
 
 function sourceIcon(source: PageDataSource): number | null {
   if (source === PageDataSource.Ropewiki) {
-    return require("@/assets/images/ropewiki.png");
+    return require("@/assets/images/icons/ropewiki.png");
   }
   return null;
 }
@@ -76,7 +76,7 @@ export function RegionPreview({ preview }: Props) {
         ) : (
           <View style={styles.noImageWrap}>
             <Image
-              source={require("@/assets/images/noImage.png")}
+              source={require("@/assets/images/icons/noImage.png")}
               style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
               contentFit="contain"
             />
@@ -84,7 +84,7 @@ export function RegionPreview({ preview }: Props) {
         )}
         <View style={styles.regionIconOverlay}>
           <Image
-            source={require("@/assets/images/region.png")}
+            source={require("@/assets/images/icons/region.png")}
             style={styles.regionIcon}
             contentFit="contain"
           />

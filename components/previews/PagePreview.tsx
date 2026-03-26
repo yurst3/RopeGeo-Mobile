@@ -32,7 +32,7 @@ function formatPageDifficulty(d: Difficulty): string {
 
 function sourceIcon(source: PageDataSource): number | null {
   if (source === PageDataSource.Ropewiki) {
-    return require("@/assets/images/ropewiki.png");
+    return require("@/assets/images/icons/ropewiki.png");
   }
   return null;
 }
@@ -108,7 +108,7 @@ export function PagePreview({
         ) : (
           <View style={styles.noImageWrap}>
             <Image
-              source={require("@/assets/images/noImage.png")}
+              source={require("@/assets/images/icons/noImage.png")}
               style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
               contentFit="contain"
             />

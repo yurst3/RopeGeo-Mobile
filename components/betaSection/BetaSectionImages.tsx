@@ -32,7 +32,7 @@ const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
 const IMAGE_HEIGHT = 220;
 const IMAGE_INDICATOR_HEIGHT = 28;
 
-const MISSING_IMAGE = require("@/assets/images/missingImage.png");
+const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 
 const HTML_TAGS_STYLES = {
   a: {

@@ -19,8 +19,8 @@ export function SavedPageGlyph({ isSaved }: Props) {
       <Image
         source={
           isSaved
-            ? require("@/assets/images/saved-solid.png")
-            : require("@/assets/images/saved.png")
+            ? require("@/assets/images/icons/saved-solid.png")
+            : require("@/assets/images/icons/saved.png")
         }
         style={[styles.image, isSaved && { tintColor: colors.primary }]}
         contentFit="contain"

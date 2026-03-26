@@ -399,7 +399,7 @@ function RegionBannerCarousel({
           ) : (
             <View style={styles.bannerNoImageWrap} pointerEvents="auto">
               <Image
-                source={require("@/assets/images/missingImage.png")}
+                source={require("@/assets/images/icons/missingImage.png")}
                 style={styles.bannerNoImageIcon}
                 contentFit="contain"
               />
@@ -448,7 +448,7 @@ function RegionBannerCarousel({
         ) : showPlaceholder ? (
           <View style={styles.bannerNoImageWrap} pointerEvents="box-none">
             <Image
-              source={require("@/assets/images/noImage.png")}
+              source={require("@/assets/images/icons/noImage.png")}
               style={styles.bannerNoImageIcon}
               contentFit="contain"
             />

@@ -46,7 +46,7 @@ export function RegionSeamButtons({
       style={[styles.wrapper, animatedStyle]}
     >
       <ExternalLinkButton
-        icon={require("@/assets/images/ropewiki.png")}
+        icon={require("@/assets/images/icons/ropewiki.png")}
         link={url}
         accessibilityLabel="Open on RopeWiki"
       />
