@@ -8,6 +8,7 @@ import {
   RopeGeoHttpRequest,
   Service,
 } from "@/components/RopeGeoHttpRequest";
+import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { PageMiniMap } from "./PageMiniMap";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
@@ -44,6 +45,7 @@ import {
   Result,
   type RopewikiPageView,
   RouteType,
+  SavedPage,
 } from "ropegeo-common";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -61,6 +63,10 @@ const SAVED_TOAST_FADE_IN_MS = 250;
 const SAVED_TOAST_FADE_OUT_MS = 300;
 const SAVED_TOAST_BG = "rgba(0, 90, 55, 0.88)";
 const SAVED_TOAST_TEXT = "#86efac";
+const DOWNLOAD_TOAST_FADE_IN_MS = 250;
+const DOWNLOAD_TOAST_FADE_OUT_MS = 300;
+const TOAST_STACK_GAP = 8;
+const TOAST_STACK_OFFSET = 44 + TOAST_STACK_GAP;
 
 const DOWNLOAD_TOAST_BG = "rgba(55, 48, 0, 0.9)";
 const DOWNLOAD_TOAST_TEXT = "#fde047";
@@ -144,23 +150,6 @@ function PageScreenBody({
     return { kind: "error" };
   })();
 
-  const onDownloadPress = useCallback(() => {
-    if (downloading || isDownloaded) return;
-    enqueuePageDownload({
-      pageId,
-      apiPageId: pageId,
-      data,
-      routeType: routeTypeResolved,
-    });
-  }, [
-    data,
-    downloading,
-    enqueuePageDownload,
-    isDownloaded,
-    pageId,
-    routeTypeResolved,
-  ]);
-
   const onRemoveDownloadPress = useCallback(async () => {
     if (!isDownloaded) return;
     await removeDownloadBundle(pageId);
@@ -168,6 +157,9 @@ function PageScreenBody({
 
   const savedToastOpacity = useRef(new RNAnimated.Value(0)).current;
   const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [savedToastVisible, setSavedToastVisible] = useState(false);
+  const downloadToastOpacity = useRef(new RNAnimated.Value(0)).current;
+  const prevDownloadToastKindRef = useRef(downloadUi.kind);
 
   const dismissSavedToastImmediate = useCallback(() => {
     if (savedToastTimerRef.current != null) {
@@ -176,6 +168,7 @@ function PageScreenBody({
     }
     savedToastOpacity.stopAnimation();
     savedToastOpacity.setValue(0);
+    setSavedToastVisible(false);
     setHighlightSavedTab(false);
   }, [savedToastOpacity, setHighlightSavedTab]);
 
@@ -186,6 +179,7 @@ function PageScreenBody({
     }
     savedToastOpacity.stopAnimation();
     setHighlightSavedTab(true);
+    setSavedToastVisible(true);
     savedToastOpacity.setValue(0);
     RNAnimated.timing(savedToastOpacity, {
       toValue: 1,
@@ -199,10 +193,38 @@ function PageScreenBody({
         duration: SAVED_TOAST_FADE_OUT_MS,
         useNativeDriver: true,
       }).start(({ finished }) => {
-        if (finished) setHighlightSavedTab(false);
+        if (finished) {
+          setSavedToastVisible(false);
+          setHighlightSavedTab(false);
+        }
       });
     }, SAVED_TOAST_DURATION_MS);
   }, [savedToastOpacity, setHighlightSavedTab]);
+
+  useEffect(() => {
+    const wasIdle = prevDownloadToastKindRef.current === "idle";
+    const isIdle = downloadUi.kind === "idle";
+    prevDownloadToastKindRef.current = downloadUi.kind;
+    if (isIdle) {
+      RNAnimated.timing(downloadToastOpacity, {
+        toValue: 0,
+        duration: DOWNLOAD_TOAST_FADE_OUT_MS,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    if (wasIdle) {
+      downloadToastOpacity.stopAnimation();
+      downloadToastOpacity.setValue(0);
+      RNAnimated.timing(downloadToastOpacity, {
+        toValue: 1,
+        duration: DOWNLOAD_TOAST_FADE_IN_MS,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    downloadToastOpacity.setValue(1);
+  }, [downloadToastOpacity, downloadUi.kind]);
 
   const onSavePress = () => {
     if (saved) {
@@ -213,6 +235,27 @@ function PageScreenBody({
     toggleSaveFromRopewikiPage(data, routeTypeResolved, pageId);
     showSavedToast();
   };
+  const onDownloadPress = useCallback(() => {
+    if (downloading || isDownloaded) return;
+    if (!saved) {
+      showSavedToast();
+    }
+    enqueuePageDownload({
+      pageId,
+      apiPageId: pageId,
+      data,
+      routeType: routeTypeResolved,
+    });
+  }, [
+    data,
+    downloading,
+    enqueuePageDownload,
+    isDownloaded,
+    pageId,
+    routeTypeResolved,
+    saved,
+    showSavedToast,
+  ]);
   const [bannerAspectRatio, setBannerAspectRatio] = useState<number | null>(null);
   const [bannerImageLoading, setBannerImageLoading] = useState(true);
   const bannerUrl = data.bannerImage?.bannerUrl ?? null;
@@ -539,7 +582,10 @@ function PageScreenBody({
             style={[
               styles.savedToastWrap,
               {
-                top: insets.top + 8,
+                top:
+                  insets.top +
+                  8 +
+                  (savedToastVisible && downloadUi.kind !== "idle" ? TOAST_STACK_OFFSET : 0),
                 opacity: savedToastOpacity,
               },
             ]}
@@ -549,9 +595,12 @@ function PageScreenBody({
             </View>
           </RNAnimated.View>
           {downloadUi.kind !== "idle" ? (
-            <View
+            <RNAnimated.View
               pointerEvents="none"
-              style={[styles.downloadToastWrap, { top: insets.top + 8 }]}
+              style={[
+                styles.downloadToastWrap,
+                { top: insets.top + 8, opacity: downloadToastOpacity },
+              ]}
             >
               {downloadUi.kind === "progress" ? (
                 <View style={[styles.downloadToastInner, styles.downloadToastInnerProgress]}>
@@ -582,7 +631,7 @@ function PageScreenBody({
                   <Text style={styles.downloadToastTitleError}>Download failed</Text>
                 </View>
               ) : null}
-            </View>
+            </RNAnimated.View>
           ) : null}
           <SaveButton saved={saved} onPress={onSavePress} top={insets.top + 8} />
         </>
@@ -630,15 +679,27 @@ export function RopewikiPageScreen({
 }: RopewikiPageScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { savedEntries } = useSavedPages();
+  const { savedEntries, replaceSaved, isLoading: savedPagesLoading } = useSavedPages();
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
+  const [preferOfflineForSession, setPreferOfflineForSession] = useState(false);
+  const shouldUseOffline =
+    preferOfflineForSession && savedEntry?.downloadedPageView != null;
 
   const [offlineData, setOfflineData] = useState<RopewikiPageView | null>(null);
   const [offlineError, setOfflineError] = useState<Error | null>(null);
   const [offlineLoading, setOfflineLoading] = useState(false);
 
   useEffect(() => {
-    if (savedEntry?.downloadedPageView == null) {
+    // Lock source mode when entering a page so finishing a download in-place
+    // does not switch from HTTP -> offline until the next visit.
+    if (savedPagesLoading) return;
+    setPreferOfflineForSession(savedEntry?.downloadedPageView != null);
+    // Intentionally omit savedEntry from deps: source mode is chosen on entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageId, savedPagesLoading]);
+
+  useEffect(() => {
+    if (!shouldUseOffline) {
       setOfflineData(null);
       setOfflineError(null);
       setOfflineLoading(false);
@@ -650,6 +711,26 @@ export function RopewikiPageScreen({
       const path = savedEntry.downloadedPageView;
       if (path == null) return;
       try {
+        let info: Awaited<ReturnType<typeof FileSystem.getInfoAsync>> | null = null;
+        try {
+          info = await FileSystem.getInfoAsync(path);
+        } catch {
+          info = null;
+        }
+        if (info != null && !info.exists) {
+          replaceSaved(
+            new SavedPage(
+              savedEntry.preview,
+              savedEntry.routeType,
+              savedEntry.savedAt,
+              null,
+              null,
+              null,
+            ),
+          );
+          void deleteOfflineBundleFiles(pageId);
+          return;
+        }
         const text = await FileSystem.readAsStringAsync(path);
         const raw = JSON.parse(text) as unknown;
         const parsed = Result.fromResponseBody(raw);
@@ -660,7 +741,26 @@ export function RopewikiPageScreen({
           setOfflineError(null);
         }
       } catch (e) {
-        if (!cancelled) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const staleOffline =
+          /not readable|no such file|does not exist|ENOENT|not found/i.test(msg);
+        if (staleOffline) {
+          replaceSaved(
+            new SavedPage(
+              savedEntry.preview,
+              savedEntry.routeType,
+              savedEntry.savedAt,
+              null,
+              null,
+              null,
+            ),
+          );
+          void deleteOfflineBundleFiles(pageId);
+          if (!cancelled) {
+            setOfflineError(null);
+            setOfflineData(null);
+          }
+        } else if (!cancelled) {
           setOfflineError(e instanceof Error ? e : new Error(String(e)));
         }
       } finally {
@@ -670,9 +770,15 @@ export function RopewikiPageScreen({
     return () => {
       cancelled = true;
     };
-  }, [pageId, savedEntry?.downloadedPageView, savedEntry?.downloadedImages]);
+  }, [
+    pageId,
+    shouldUseOffline,
+    savedEntry?.downloadedPageView,
+    savedEntry?.downloadedImages,
+    replaceSaved,
+  ]);
 
-  if (savedEntry?.downloadedPageView != null) {
+  if (shouldUseOffline) {
     if (offlineError != null) {
       return <ErrorEffect error={offlineError} />;
     }

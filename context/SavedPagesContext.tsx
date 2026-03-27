@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -50,7 +51,10 @@ async function persistEntries(entries: SavedPage[]): Promise<void> {
 
 export function SavedPagesProvider({ children }: { children: ReactNode }) {
   const [savedEntries, setSavedEntries] = useState<SavedPage[]>([]);
+  const savedEntriesRef = useRef<SavedPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  savedEntriesRef.current = savedEntries;
 
   useEffect(() => {
     let cancelled = false;
@@ -69,13 +73,14 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const persist = useCallback(async (entries: SavedPage[]) => {
-    setSavedEntries(entries);
-    try {
-      await persistEntries(entries);
-    } catch (e) {
-      console.warn("[SavedPages] persist failed", e);
-    }
+  const schedulePersist = useCallback((entries: SavedPage[]) => {
+    void (async () => {
+      try {
+        await persistEntries(entries);
+      } catch (e) {
+        console.warn("[SavedPages] persist failed", e);
+      }
+    })();
   }, []);
 
   const isSaved = useCallback(
@@ -85,32 +90,44 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
 
   const addSaved = useCallback(
     (entry: SavedPage) => {
-      void persist([...savedEntries.filter((e) => e.preview.id !== entry.preview.id), entry]);
+      setSavedEntries((prev) => {
+        const next = [...prev.filter((e) => e.preview.id !== entry.preview.id), entry];
+        schedulePersist(next);
+        return next;
+      });
     },
-    [savedEntries, persist],
+    [schedulePersist],
   );
 
   const replaceSaved = useCallback(
     (entry: SavedPage) => {
-      void persist([...savedEntries.filter((e) => e.preview.id !== entry.preview.id), entry]);
+      setSavedEntries((prev) => {
+        const next = [...prev.filter((e) => e.preview.id !== entry.preview.id), entry];
+        schedulePersist(next);
+        return next;
+      });
     },
-    [savedEntries, persist],
+    [schedulePersist],
   );
 
   const removeSaved = useCallback(
     (pageId: string) => {
-      const entry = savedEntries.find((e) => e.preview.id === pageId);
-      if (entry?.downloadedPageView != null) {
-        void deleteOfflineBundleFiles(pageId);
-      }
-      void persist(savedEntries.filter((e) => e.preview.id !== pageId));
+      setSavedEntries((prev) => {
+        const entry = prev.find((e) => e.preview.id === pageId);
+        if (entry?.downloadedPageView != null) {
+          void deleteOfflineBundleFiles(pageId);
+        }
+        const next = prev.filter((e) => e.preview.id !== pageId);
+        schedulePersist(next);
+        return next;
+      });
     },
-    [savedEntries, persist],
+    [schedulePersist],
   );
 
   const removeDownloadBundle = useCallback(
     async (pageId: string) => {
-      const entry = savedEntries.find((e) => e.preview.id === pageId);
+      const entry = savedEntriesRef.current.find((e) => e.preview.id === pageId);
       if (entry == null || entry.downloadedPageView == null) return;
       await deleteOfflineBundleFiles(pageId);
       const cleared = new SavedPage(
@@ -121,27 +138,33 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
         null,
         null,
       );
-      void persist([...savedEntries.filter((e) => e.preview.id !== pageId), cleared]);
+      setSavedEntries((prev) => {
+        const next = [...prev.filter((e) => e.preview.id !== pageId), cleared];
+        schedulePersist(next);
+        return next;
+      });
     },
-    [savedEntries, persist],
+    [schedulePersist],
   );
 
   const toggleSaveFromRopewikiPage = useCallback(
     (data: RopewikiPageView, routeType: RouteType, apiPageId: string) => {
-      const existing = savedEntries.find((e) => e.preview.id === apiPageId);
-      if (existing != null) {
-        if (existing.downloadedPageView != null) {
-          void deleteOfflineBundleFiles(apiPageId);
+      setSavedEntries((prev) => {
+        const existing = prev.find((e) => e.preview.id === apiPageId);
+        if (existing != null) {
+          if (existing.downloadedPageView != null) {
+            void deleteOfflineBundleFiles(apiPageId);
+          }
+          const next = prev.filter((e) => e.preview.id !== apiPageId);
+          schedulePersist(next);
+          return next;
         }
-        void persist(savedEntries.filter((e) => e.preview.id !== apiPageId));
-        return;
-      }
-      void persist([
-        ...savedEntries,
-        SavedPage.fromRopewikiPageView(data, routeType, apiPageId),
-      ]);
+        const next = [...prev, SavedPage.fromRopewikiPageView(data, routeType, apiPageId)];
+        schedulePersist(next);
+        return next;
+      });
     },
-    [savedEntries, persist],
+    [schedulePersist],
   );
 
   const value = useMemo<SavedPagesContextValue>(

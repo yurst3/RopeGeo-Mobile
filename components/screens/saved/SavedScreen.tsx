@@ -22,12 +22,17 @@ export function SavedScreen() {
   const searchBarTop = insets.top + 8;
   const searchBarHeight = 48;
 
+  /** Filter by search, then newest-first by `savedAt` (stable vs `replaceSaved` appending in storage). */
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (q === "") return savedEntries;
-    return savedEntries.filter((e) =>
-      e.preview.title.toLowerCase().includes(q),
-    );
+    const list =
+      q === ""
+        ? savedEntries.slice()
+        : savedEntries.filter((e) =>
+            e.preview.title.toLowerCase().includes(q),
+          );
+    list.sort((a, b) => b.savedAt - a.savedAt);
+    return list;
   }, [savedEntries, query]);
 
   return (
@@ -89,6 +94,7 @@ export function SavedScreen() {
               preview={entry.preview}
               pageHref="saved"
               routeType={entry.routeType}
+              showMiniDownload
             />
           ))
         )}
