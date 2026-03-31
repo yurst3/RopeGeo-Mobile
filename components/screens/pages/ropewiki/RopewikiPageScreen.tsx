@@ -1,5 +1,6 @@
 import { BackButton } from "@/components/buttons/BackButton";
 import { SaveButton } from "@/components/buttons/SaveButton";
+import { ShareButton } from "@/components/buttons/ShareButton";
 import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
@@ -27,6 +28,8 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   PanResponder,
+  Platform,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -41,6 +44,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import {
   MiniMapType,
+  PageDataSource,
   type PageMiniMap as PageMiniMapConfig,
   Result,
   type RopewikiPageView,
@@ -58,6 +62,14 @@ const CARD_BORDER_RADIUS = 24;
 
 /** Space for header circle buttons (16 inset + 44 tap area + gap). */
 const HEADER_TOAST_INSET = 16 + 44 + 8;
+/** Header row: safe-area padding + gap above first circle + circle size + gap before share row. */
+const HEADER_ROW_TOP = 8;
+const HEADER_CIRCLE_SIZE = 44;
+const HEADER_BUTTON_STACK_GAP = 8;
+
+function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
+  return `https://mobile.ropegeo.com/explore/${encodeURIComponent(pageId)}/page?source=${encodeURIComponent(source)}`;
+}
 const SAVED_TOAST_DURATION_MS = 2000;
 const SAVED_TOAST_FADE_IN_MS = 250;
 const SAVED_TOAST_FADE_OUT_MS = 300;
@@ -235,6 +247,10 @@ function PageScreenBody({
     toggleSaveFromRopewikiPage(data, routeTypeResolved, pageId);
     showSavedToast();
   };
+  const onSharePress = useCallback(() => {
+    const url = ropewikiPageShareUrl(pageId, PageDataSource.Ropewiki);
+    void Share.share(Platform.OS === "ios" ? { url } : { message: url });
+  }, [pageId]);
   const onDownloadPress = useCallback(() => {
     if (downloading || isDownloaded) return;
     if (!saved) {
@@ -322,7 +338,7 @@ function PageScreenBody({
       setMiniMapAnchorRect({ x, y, width, height: h });
       baseScrollYRef.current = scrollY.value;
       const winH = Dimensions.get("window").height;
-      const visTop = insets.top + 8;
+      const visTop = insets.top + HEADER_ROW_TOP;
       const visBottom = winH - insets.bottom - 72;
       const intersects = y + h > visTop && y < visBottom;
       if (intersects && !miniMapUnlockedRef.current) {
@@ -576,7 +592,7 @@ function PageScreenBody({
 
       {mapMode !== "expanded" && (
         <>
-          <BackButton onPress={() => router.back()} top={insets.top + 8} />
+          <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
           <RNAnimated.View
             pointerEvents="none"
             style={[
@@ -584,7 +600,7 @@ function PageScreenBody({
               {
                 top:
                   insets.top +
-                  8 +
+                  HEADER_ROW_TOP +
                   (savedToastVisible && downloadUi.kind !== "idle" ? TOAST_STACK_OFFSET : 0),
                 opacity: savedToastOpacity,
               },
@@ -599,7 +615,7 @@ function PageScreenBody({
               pointerEvents="none"
               style={[
                 styles.downloadToastWrap,
-                { top: insets.top + 8, opacity: downloadToastOpacity },
+                { top: insets.top + HEADER_ROW_TOP, opacity: downloadToastOpacity },
               ]}
             >
               {downloadUi.kind === "progress" ? (
@@ -633,7 +649,16 @@ function PageScreenBody({
               ) : null}
             </RNAnimated.View>
           ) : null}
-          <SaveButton saved={saved} onPress={onSavePress} top={insets.top + 8} />
+          <SaveButton saved={saved} onPress={onSavePress} top={insets.top + HEADER_ROW_TOP} />
+          <ShareButton
+            onPress={onSharePress}
+            top={
+              insets.top +
+              HEADER_ROW_TOP +
+              HEADER_CIRCLE_SIZE +
+              HEADER_BUTTON_STACK_GAP
+            }
+          />
         </>
       )}
       {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.TilesTemplate ? (
@@ -788,7 +813,7 @@ export function RopewikiPageScreen({
           <View style={styles.centered}>
             <ActivityIndicator size="large" color="#666" />
           </View>
-          <BackButton onPress={() => router.back()} top={insets.top + 8} />
+          <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
         </View>
       );
     }
@@ -812,7 +837,7 @@ export function RopewikiPageScreen({
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#666" />
               </View>
-              <BackButton onPress={() => router.back()} top={insets.top + 8} />
+              <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
             </View>
           );
         }
