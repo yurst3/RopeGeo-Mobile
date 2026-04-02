@@ -3,7 +3,7 @@ import { Service } from "@/components/RopeGeoHttpRequest";
 import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 import React, {
   useCallback,
   useEffect,

@@ -1,5 +1,5 @@
 import { RiskInfoScreen } from "@/components/screens/info/RiskInfoScreen";
-import { DifficultyRisk } from "ropegeo-common";
+import { DifficultyRisk } from "ropegeo-common/classes";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 

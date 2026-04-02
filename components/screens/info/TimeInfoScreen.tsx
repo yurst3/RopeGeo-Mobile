@@ -4,7 +4,7 @@ import { LongDayBadge } from "@/components/badges/difficulty/LongDayBadge";
 import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBadge";
 import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
 import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
-import { DifficultyTime } from "ropegeo-common";
+import { DifficultyTime } from "ropegeo-common/classes";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

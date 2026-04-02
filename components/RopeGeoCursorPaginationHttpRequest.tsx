@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type CursorPaginationParams,
   CursorPaginationResults,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 import { Method, Service, SERVICE_BASE_URL } from "@/components/RopeGeoHttpRequest";
 
 const PATH_PARAM_PATTERN = /:([a-zA-Z0-9_]+)/g;

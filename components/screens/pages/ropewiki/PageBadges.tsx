@@ -41,14 +41,14 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import {
-  type Difficulty,
-  DifficultyRisk,
-  DifficultyTechnical,
-  DifficultyTime,
-  DifficultyWater,
+  AcaDifficulty,
+  AcaRiskRating,
+  AcaTechnicalRating,
+  AcaTimeRating,
+  AcaWaterRating,
   PermitStatus,
   type RopewikiPageView,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BADGES_GRID_MIN_HEIGHT = 320;
@@ -59,47 +59,47 @@ const LABEL_WIDTH = 110;
 const BADGE_BLOCK_WIDTH = 80;
 
 const TECHNICAL_BADGES: Record<
-  DifficultyTechnical,
+  AcaTechnicalRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyTechnical.One]: NotTechnicalBadge,
-  [DifficultyTechnical.Two]: ScramblingBadge,
-  [DifficultyTechnical.Three]: TechnicalBadge,
-  [DifficultyTechnical.Four]: VeryTechnicalBadge,
+  [AcaTechnicalRating.One]: NotTechnicalBadge,
+  [AcaTechnicalRating.Two]: ScramblingBadge,
+  [AcaTechnicalRating.Three]: TechnicalBadge,
+  [AcaTechnicalRating.Four]: VeryTechnicalBadge,
 };
 const WATER_BADGES: Record<
-  DifficultyWater,
+  AcaWaterRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyWater.A]: MinimalWaterBadge,
-  [DifficultyWater.B]: SwimmingWaterBadge,
-  [DifficultyWater.C]: FlowingWaterBadge,
-  [DifficultyWater.C1]: FlowingC1WaterBadge,
-  [DifficultyWater.C2]: FlowingC2WaterBadge,
-  [DifficultyWater.C3]: FlowingC3WaterBadge,
-  [DifficultyWater.C4]: FlowingC4WaterBadge,
+  [AcaWaterRating.A]: MinimalWaterBadge,
+  [AcaWaterRating.B]: SwimmingWaterBadge,
+  [AcaWaterRating.C]: FlowingWaterBadge,
+  [AcaWaterRating.C1]: FlowingC1WaterBadge,
+  [AcaWaterRating.C2]: FlowingC2WaterBadge,
+  [AcaWaterRating.C3]: FlowingC3WaterBadge,
+  [AcaWaterRating.C4]: FlowingC4WaterBadge,
 };
 const TIME_BADGES: Record<
-  DifficultyTime,
+  AcaTimeRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyTime.I]: ShortBadge,
-  [DifficultyTime.II]: HalfDayBadge,
-  [DifficultyTime.III]: FullDayBadge,
-  [DifficultyTime.IV]: LongDayBadge,
-  [DifficultyTime.V]: OvernightBadge,
-  [DifficultyTime.VI]: MultipleDaysBadge,
+  [AcaTimeRating.I]: ShortBadge,
+  [AcaTimeRating.II]: HalfDayBadge,
+  [AcaTimeRating.III]: FullDayBadge,
+  [AcaTimeRating.IV]: LongDayBadge,
+  [AcaTimeRating.V]: OvernightBadge,
+  [AcaTimeRating.VI]: MultipleDaysBadge,
 };
 const RISK_BADGES: Record<
-  DifficultyRisk,
+  AcaRiskRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyRisk.G]: MinimalRiskBadge,
-  [DifficultyRisk.PG]: SomeRiskBadge,
-  [DifficultyRisk.PG13]: ModerateRiskBadge,
-  [DifficultyRisk.R]: HighRiskBadge,
-  [DifficultyRisk.X]: VeryHighRiskBadge,
-  [DifficultyRisk.XX]: ExtremeRiskBadge,
+  [AcaRiskRating.G]: MinimalRiskBadge,
+  [AcaRiskRating.PG]: SomeRiskBadge,
+  [AcaRiskRating.PG13]: ModerateRiskBadge,
+  [AcaRiskRating.R]: HighRiskBadge,
+  [AcaRiskRating.X]: VeryHighRiskBadge,
+  [AcaRiskRating.XX]: ExtremeRiskBadge,
 };
 const PERMIT_BADGES: Record<
   PermitStatus,
@@ -238,12 +238,13 @@ function openInfo(
 
 export function PageBadges({ data, routeType }: PageBadgesProps) {
   const router = useRouter();
-  const difficulty: Difficulty = data.difficulty ?? {};
+  const aca =
+    data.difficulty instanceof AcaDifficulty ? data.difficulty : null;
   const permit = data.permit ?? null;
-  const technical = difficulty.technical ?? null;
-  const water = difficulty.water ?? null;
-  const time = difficulty.time ?? null;
-  const risk = difficulty.risk ?? null;
+  const technical = aca?.technical ?? null;
+  const water = aca?.water ?? null;
+  const time = aca?.time ?? null;
+  const risk = aca?.effectiveRisk ?? null;
 
   const showInfoButton = (type: BadgeTypeKey) =>
     INFO_BADGE_TYPES.includes(type);

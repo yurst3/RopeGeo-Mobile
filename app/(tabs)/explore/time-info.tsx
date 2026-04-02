@@ -1,7 +1,7 @@
 import { TimeInfoScreen } from "@/components/screens/info/TimeInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { DifficultyTime } from "ropegeo-common";
+import { DifficultyTime } from "ropegeo-common/classes";
 
 const VALID_TIME: DifficultyTime[] = Object.values(DifficultyTime);
 

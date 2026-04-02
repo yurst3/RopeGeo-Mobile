@@ -1,4 +1,5 @@
 import { SavedPagesProvider } from "@/context/SavedPagesContext";
+import { SavedFiltersProvider } from "@/context/SavedFiltersContext";
 import { DownloadQueueProvider } from "@/context/DownloadQueueContext";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,6 +10,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SavedPagesProvider>
+        <SavedFiltersProvider>
         <DownloadQueueProvider>
           <Stack>
             <Stack.Screen
@@ -26,6 +28,7 @@ export default function RootLayout() {
           </Stack>
           <Toast />
         </DownloadQueueProvider>
+        </SavedFiltersProvider>
       </SavedPagesProvider>
     </GestureHandlerRootView>
   );

@@ -1,5 +1,9 @@
 import * as FileSystem from "expo-file-system/legacy";
-import { ImageVersions, type RopewikiPageView } from "ropegeo-common";
+import {
+  ImageVersion,
+  ImageVersions,
+  type RopewikiPageView,
+} from "ropegeo-common/classes";
 import { ensureParentDir, extFromUrl } from "@/lib/downloadQueue/util/downloadUtils";
 import type { DownloadContext } from "@/lib/downloadQueue/downloadTask";
 
@@ -29,11 +33,11 @@ function plannedImageBytes(view: RopewikiPageView): number {
 function finalizeImages(acc: ImageAcc): Record<string, ImageVersions> {
   const out: Record<string, ImageVersions> = {};
   for (const [id, v] of Object.entries(acc)) {
-    out[id] = new ImageVersions(
-      v.preview ?? null,
-      v.banner ?? null,
-      v.full ?? null,
-    );
+    out[id] = new ImageVersions({
+      [ImageVersion.preview]: v.preview ?? null,
+      [ImageVersion.banner]: v.banner ?? null,
+      [ImageVersion.full]: v.full ?? null,
+    });
   }
   return out;
 }

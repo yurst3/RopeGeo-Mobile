@@ -5,7 +5,7 @@ import { FlowingC4WaterBadge } from "@/components/badges/difficulty/FlowingC4Wat
 import { FlowingWaterBadge } from "@/components/badges/difficulty/FlowingWaterBadge";
 import { MinimalWaterBadge } from "@/components/badges/difficulty/MinimalWaterBadge";
 import { SwimmingWaterBadge } from "@/components/badges/difficulty/SwimmingWaterBadge";
-import { DifficultyWater } from "ropegeo-common";
+import { DifficultyWater } from "ropegeo-common/classes";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

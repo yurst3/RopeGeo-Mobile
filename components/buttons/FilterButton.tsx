@@ -1,7 +1,15 @@
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Pressable, StyleSheet } from "react-native";
 
-export function FilterButton({ onPress }: { onPress: () => void }) {
+export function FilterButton({
+  onPress,
+  persisted = false,
+}: {
+  onPress: () => void;
+  /** Solid blue when this filter slot is saved to storage. */
+  persisted?: boolean;
+}) {
+  const iconColor = persisted ? "#3b82f6" : "#111827";
   return (
     <Pressable
       onPress={onPress}
@@ -12,7 +20,7 @@ export function FilterButton({ onPress }: { onPress: () => void }) {
       accessibilityLabel="Filter"
       accessibilityRole="button"
     >
-      <FontAwesome5 name="filter" size={18} color="#111827" />
+      <FontAwesome5 name="filter" size={18} color={iconColor} solid={persisted} />
     </Pressable>
   );
 }

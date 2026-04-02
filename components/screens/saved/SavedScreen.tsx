@@ -1,6 +1,9 @@
+import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
+import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
+import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
 import { useMemo, useState } from "react";
 import {
   ScrollView,
@@ -11,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { SavedPagesFilter } from "ropegeo-common/classes";
 
 const HEADER_BUTTON_SIZE = 44;
 const HEADER_BUTTON_GAP = 8;
@@ -18,22 +22,42 @@ const HEADER_BUTTON_GAP = 8;
 export function SavedScreen() {
   const insets = useSafeAreaInsets();
   const { savedEntries } = useSavedPages();
-  const [query, setQuery] = useState("");
+  const {
+    getEffectiveSavedPagesFilter,
+    savedPagesPersisted,
+    persistSavedPagesFilter,
+    revision,
+  } = useSavedFilters();
+  const [nameInput, setNameInput] = useState("");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [savedDraft, setSavedDraft] = useState<SavedPagesFilter | null>(null);
+
+  const persistedSavedFilter = useMemo(() => {
+    return SavedPagesFilter.fromJsonString(
+      getEffectiveSavedPagesFilter().toString(),
+    );
+  }, [getEffectiveSavedPagesFilter, revision]);
+
+  const filtered = useMemo(
+    () =>
+      applySavedPagesFilter(
+        savedEntries,
+        persistedSavedFilter,
+        nameInput.trim() === "" ? null : nameInput.trim(),
+      ),
+    [savedEntries, persistedSavedFilter, nameInput],
+  );
+
   const searchBarTop = insets.top + 8;
   const searchBarHeight = 48;
 
-  /** Filter by search, then newest-first by `savedAt` (stable vs `replaceSaved` appending in storage). */
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list =
-      q === ""
-        ? savedEntries.slice()
-        : savedEntries.filter((e) =>
-            e.preview.title.toLowerCase().includes(q),
-          );
-    list.sort((a, b) => b.savedAt - a.savedAt);
-    return list;
-  }, [savedEntries, query]);
+  const openFilterSheet = () => {
+    const d = SavedPagesFilter.fromJsonString(
+      getEffectiveSavedPagesFilter().toString(),
+    );
+    setSavedDraft(d);
+    setFilterSheetOpen(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -57,8 +81,8 @@ export function SavedScreen() {
             style={styles.searchBarInput}
             placeholder="Search saved"
             placeholderTextColor="#9ca3af"
-            value={query}
-            onChangeText={setQuery}
+            value={nameInput}
+            onChangeText={setNameInput}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -70,7 +94,7 @@ export function SavedScreen() {
             { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
           ]}
         >
-          <FilterButton onPress={() => {}} />
+          <FilterButton persisted={savedPagesPersisted} onPress={openFilterSheet} />
         </View>
       </View>
       <ScrollView
@@ -99,6 +123,29 @@ export function SavedScreen() {
           ))
         )}
       </ScrollView>
+      <FilterBottomSheet
+        visible={filterSheetOpen}
+        onClose={() => {
+          setFilterSheetOpen(false);
+          setSavedDraft(null);
+        }}
+        mode={
+          filterSheetOpen && savedDraft != null
+            ? {
+                kind: "saved-pages",
+                draft: savedDraft,
+                onDraftChange: setSavedDraft,
+                persisted: savedPagesPersisted,
+                onApply: () => {
+                  persistSavedPagesFilter(
+                    SavedPagesFilter.fromJsonString(savedDraft.toString()),
+                  );
+                },
+                onRevert: () => persistSavedPagesFilter(null),
+              }
+            : null
+        }
+      />
     </View>
   );
 }

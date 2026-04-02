@@ -4,7 +4,7 @@ import {
   type PageMiniMap,
   type RopewikiPageView,
   type MapDataTileKeysResults,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 import { getOfflineMapDataRootUri } from "@/lib/offline/paths";
 import { ensureParentDir } from "@/lib/downloadQueue/util/downloadUtils";
 import { fetchMapDataTileKeys } from "@/lib/downloadQueue/util/fetchMapDataTileKeys";

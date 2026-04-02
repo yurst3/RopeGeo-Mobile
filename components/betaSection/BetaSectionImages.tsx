@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
-import type { BetaSectionImage } from "ropegeo-common";
+import type { BetaSectionImage } from "ropegeo-common/classes";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type {
   ExpandedImageAnchorRect,

@@ -24,7 +24,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common";
+import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/classes";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);

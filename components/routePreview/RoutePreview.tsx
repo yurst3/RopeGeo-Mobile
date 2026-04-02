@@ -19,10 +19,10 @@ import {
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { StarRating } from "@/components/StarRating";
 import {
-  type Difficulty,
+  AcaDifficulty,
   type PagePreview,
   RouteType,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 import { BadgeRow } from "./BadgeRow";
 
 const CARD_BORDER_RADIUS = 12;
@@ -38,12 +38,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_MARGIN_H = 16;
 const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
 
-function hasDifficultyInfo(difficulty: Difficulty): boolean {
+function hasDifficultyInfo(difficulty: PagePreview["difficulty"]): boolean {
+  if (!(difficulty instanceof AcaDifficulty)) return false;
   return (
     difficulty.technical != null ||
     difficulty.water != null ||
     difficulty.time != null ||
-    difficulty.risk != null
+    difficulty.getEffectiveRiskForDisplay() != null
   );
 }
 

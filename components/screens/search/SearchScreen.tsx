@@ -1,11 +1,14 @@
 import { BackButton } from "@/components/buttons/BackButton";
+import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import {
   Method,
   Service,
 } from "@/components/RopeGeoHttpRequest";
+import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { FontAwesome5 } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -20,7 +23,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
-import { Preview, SearchParams, SearchResults } from "ropegeo-common";
+import {
+  Preview,
+  SearchFilter,
+  type SearchParamsPosition,
+} from "ropegeo-common/classes";
 
 const HEADER_BUTTON_SIZE = 44;
 const HEADER_BUTTON_GAP = 8;
@@ -31,9 +38,17 @@ const LOAD_MORE_THRESHOLD = 100;
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const {
+    getEffectiveSearchFilter,
+    searchPersisted,
+    persistSearchFilter,
+  } = useSavedFilters();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef<TextInput>(null);
+  const [searchPos, setSearchPos] = useState<SearchParamsPosition | null>(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState<SearchFilter | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,19 +57,50 @@ export function SearchScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const searchParams = useMemo(() => {
-    if (debouncedQuery.length === 0) return null;
-    return new SearchParams(
-      debouncedQuery,
-      0.5,
-      true,
-      true,
-      true,
-      null,
-      "quality",
-      SEARCH_LIMIT
-    );
-  }, [debouncedQuery]);
+  useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+    void (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+      sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: 20,
+        },
+        (p) => {
+          setSearchPos({
+            lat: p.coords.latitude,
+            lon: p.coords.longitude,
+          });
+        },
+      );
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, []);
+
+  const effectiveSearchFilter = useMemo(
+    () =>
+      getEffectiveSearchFilter({
+        position: searchPos,
+        name: debouncedQuery,
+      }),
+    [getEffectiveSearchFilter, searchPos, debouncedQuery],
+  );
+
+  const searchParams = useMemo(
+    () =>
+      effectiveSearchFilter.toSearchParams({
+        name: debouncedQuery,
+        limit: SEARCH_LIMIT,
+        currentPosition: searchPos,
+      }),
+    [effectiveSearchFilter, debouncedQuery, searchPos],
+  );
 
   const handleScroll = useCallback(
     (e: {
@@ -73,7 +119,7 @@ export function SearchScreen() {
         loadMoreRef.current();
       }
     },
-    []
+    [],
   );
 
   const loadMoreRef = useRef<() => void>(() => {});
@@ -82,11 +128,18 @@ export function SearchScreen() {
     useCallback(() => {
       const timer = setTimeout(() => searchInputRef.current?.focus(), 0);
       return () => clearTimeout(timer);
-    }, [])
+    }, []),
   );
 
   const searchBarTop = insets.top + 8;
   const searchBarHeight = 48;
+
+  const openFilterSheet = () => {
+    setSearchDraft(
+      SearchFilter.fromJsonString(effectiveSearchFilter.toString()),
+    );
+    setFilterSheetOpen(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -126,98 +179,114 @@ export function SearchScreen() {
             { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
           ]}
         >
-          <FilterButton onPress={() => {}} />
+          <FilterButton persisted={searchPersisted} onPress={openFilterSheet} />
         </View>
       </View>
       <Pressable
         style={styles.content}
         onPress={() => searchInputRef.current?.blur()}
       >
-        {searchParams == null ? (
-          <View
-            style={[
-              styles.centered,
-              { paddingTop: searchBarTop + searchBarHeight + 12 },
-            ]}
-          >
-            <Text style={styles.hint}>
-              Type a search term to query the API.
-            </Text>
-          </View>
-        ) : (
-          <RopeGeoCursorPaginationHttpRequest<Preview>
-            service={Service.WEBSCRAPER}
-            method={Method.GET}
-            path="/search"
-            queryParams={searchParams}
-          >
-            {({ loading, loadingMore, data, errors, loadMore, hasMore }) => {
-              loadMoreRef.current = loadMore;
-              const items = data;
-              return (
-                <>
-                  {loading && items.length === 0 && (
-                    <View
-                      style={[
-                        styles.centered,
-                        {
-                          paddingTop: searchBarTop + searchBarHeight + 12,
-                        },
-                      ]}
-                    >
-                      <ActivityIndicator size="large" />
-                    </View>
-                  )}
-                  {errors != null && !loading && items.length === 0 && (
-                    <View
-                      style={[
-                        styles.centered,
-                        {
-                          paddingTop: searchBarTop + searchBarHeight + 12,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.errorText}>{errors.message}</Text>
-                    </View>
-                  )}
-                  {!loading && errors == null && (
-                    <ScrollView
-                      style={styles.scroll}
-                      contentContainerStyle={[
-                        styles.scrollContent,
-                        { paddingTop: searchBarTop + searchBarHeight + 12 },
-                      ]}
-                      keyboardShouldPersistTaps="handled"
-                      keyboardDismissMode="on-drag"
-                      onScroll={handleScroll}
-                      scrollEventThrottle={16}
-                    >
-                      {items.map((item, index) =>
-                        item.isPagePreview() ? (
-                          <PagePreview
-                            key={`page-${item.id}-${index}`}
-                            preview={item}
-                          />
-                        ) : item.isRegionPreview() ? (
-                          <RegionPreview
-                            key={`region-${item.id}-${index}`}
-                            preview={item}
-                          />
-                        ) : null
-                      )}
-                      {loadingMore ? (
-                        <View style={styles.loadMoreIndicator}>
-                          <ActivityIndicator size="small" />
-                        </View>
-                      ) : null}
-                    </ScrollView>
-                  )}
-                </>
-              );
-            }}
-          </RopeGeoCursorPaginationHttpRequest>
-        )}
+        <RopeGeoCursorPaginationHttpRequest<Preview>
+          service={Service.WEBSCRAPER}
+          method={Method.GET}
+          path="/search"
+          queryParams={searchParams}
+        >
+          {({ loading, loadingMore, data, errors, loadMore }) => {
+            loadMoreRef.current = loadMore;
+            const items = data;
+            return (
+              <>
+                {loading && items.length === 0 && (
+                  <View
+                    style={[
+                      styles.centered,
+                      {
+                        paddingTop: searchBarTop + searchBarHeight + 12,
+                      },
+                    ]}
+                  >
+                    <ActivityIndicator size="large" />
+                  </View>
+                )}
+                {errors != null && !loading && items.length === 0 && (
+                  <View
+                    style={[
+                      styles.centered,
+                      {
+                        paddingTop: searchBarTop + searchBarHeight + 12,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.errorText}>{errors.message}</Text>
+                  </View>
+                )}
+                {!loading && errors == null && (
+                  <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={[
+                      styles.scrollContent,
+                      { paddingTop: searchBarTop + searchBarHeight + 12 },
+                    ]}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
+                  >
+                    {items.length === 0 ? (
+                      <Text style={styles.hint}>
+                        No results. Try another term or change filters.
+                      </Text>
+                    ) : null}
+                    {items.map((item, index) =>
+                      item.isPagePreview() ? (
+                        <PagePreview
+                          key={`page-${item.id}-${index}`}
+                          preview={item}
+                        />
+                      ) : item.isRegionPreview() ? (
+                        <RegionPreview
+                          key={`region-${item.id}-${index}`}
+                          preview={item}
+                        />
+                      ) : null,
+                    )}
+                    {loadingMore ? (
+                      <View style={styles.loadMoreIndicator}>
+                        <ActivityIndicator size="small" />
+                      </View>
+                    ) : null}
+                  </ScrollView>
+                )}
+              </>
+            );
+          }}
+        </RopeGeoCursorPaginationHttpRequest>
       </Pressable>
+      <FilterBottomSheet
+        visible={filterSheetOpen}
+        onClose={() => {
+          setFilterSheetOpen(false);
+          setSearchDraft(null);
+        }}
+        mode={
+          filterSheetOpen && searchDraft != null
+            ? {
+                kind: "search",
+                draft: searchDraft,
+                onDraftChange: setSearchDraft,
+                persisted: searchPersisted,
+                livePosition: searchPos,
+                onApply: () => {
+                  persistSearchFilter(
+                    SearchFilter.fromJsonString(searchDraft.toString()),
+                  );
+                },
+                onRevert: () => persistSearchFilter(null),
+              }
+            : null
+        }
+      />
     </View>
   );
 }
@@ -293,5 +362,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
     textAlign: "center",
+    marginBottom: 16,
   },
 });

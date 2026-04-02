@@ -50,7 +50,7 @@ import {
   type RopewikiPageView,
   RouteType,
   SavedPage,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);

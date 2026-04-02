@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { PageDataSource } from "ropegeo-common";
+import { PageDataSource } from "ropegeo-common/classes";
 import React from "react";
 import { StyleSheet, Text } from "react-native";
 

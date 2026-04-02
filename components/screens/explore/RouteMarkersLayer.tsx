@@ -6,7 +6,8 @@ import {
 import { Camera, Images, ShapeSource, SymbolLayer } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useRef } from "react";
-import type { RoutesGeojson } from "ropegeo-common";
+import type { RoutesGeojson, RoutesParams } from "ropegeo-common/classes";
+import { routesParamsToQueryRecord } from "@/lib/routesParamsToQueryRecord";
 
 export type RoutesState = {
   loading: boolean;
@@ -30,6 +31,8 @@ type RouteMarkersLayerProps = {
   onRouteClusterPress?: () => void;
   /** Optional GET /routes query string params (e.g. region-scoped routes). */
   routesQueryParams?: Record<string, string | number | boolean | undefined>;
+  /** Preferred: validated params object (global or region-scoped). */
+  routesParams?: RoutesParams | null;
 };
 
 function RouteMarkersLayerContent({
@@ -191,13 +194,18 @@ export function RouteMarkersLayer({
   onRoutePress,
   onRouteClusterPress,
   routesQueryParams,
+  routesParams,
 }: RouteMarkersLayerProps) {
+  const resolvedQuery =
+    routesParams != null
+      ? routesParamsToQueryRecord(routesParams)
+      : routesQueryParams;
   return (
     <RopeGeoHttpRequest<RoutesGeojson>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/routes"
-      queryParams={routesQueryParams}
+      queryParams={resolvedQuery}
     >
       {({ loading, data, errors }) => (
         <RouteMarkersLayerContent

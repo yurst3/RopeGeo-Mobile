@@ -8,9 +8,18 @@ import {
   MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
 } from "@/components/minimap/fullScreenMapLayout";
+import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
+import { FilterButton } from "@/components/buttons/FilterButton";
+import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { RouteMarkersLayer } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
-import { PageDataSource, type PagePreview, type RoutesGeojson, RouteType } from "ropegeo-common";
+import {
+  PageDataSource,
+  RouteFilter,
+  type PagePreview,
+  type RoutesGeojson,
+  RouteType,
+} from "ropegeo-common/classes";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -37,6 +46,16 @@ const SEARCH_BAR_SIDE_WIDTH = HEADER_SIDE_SLOT_WIDTH;
 export function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const {
+    exploreRoutesParams,
+    explorePersisted,
+    persistExploreFilter,
+    getEffectiveRouteFilterForExplore,
+  } = useSavedFilters();
+  const [routeFilterSheetOpen, setRouteFilterSheetOpen] = useState(false);
+  const [exploreRouteDraft, setExploreRouteDraft] = useState<RouteFilter | null>(
+    null,
+  );
   const cameraRef = useRef<ComponentRef<typeof Camera>>(null);
   const hasCenteredOnLocationRef = useRef(false);
   const [currentPosition, setCurrentPosition] = useState<
@@ -171,17 +190,17 @@ export function ExploreScreen() {
               { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
             ]}
           >
-            <Pressable
-              onPress={() => {}}
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && styles.headerButtonPressed,
-              ]}
-              accessibilityLabel="Filter"
-              accessibilityRole="button"
-            >
-              <FontAwesome5 name="filter" size={18} color="#111827" />
-            </Pressable>
+            <FilterButton
+              persisted={explorePersisted}
+              onPress={() => {
+                setExploreRouteDraft(
+                  RouteFilter.fromJsonString(
+                    getEffectiveRouteFilterForExplore().toString(),
+                  ),
+                );
+                setRouteFilterSheetOpen(true);
+              }}
+            />
           </View>
         </View>
         {routesState.loading && (
@@ -231,6 +250,7 @@ export function ExploreScreen() {
                 }}
               />
               <RouteMarkersLayer
+                routesParams={exploreRoutesParams}
                 onStateChange={setRoutesState}
                 cameraRef={cameraRef}
                 onRoutePress={(routeId) => {
@@ -289,6 +309,29 @@ export function ExploreScreen() {
           visible={isCompassVisible}
           top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
         />
+        <FilterBottomSheet
+          visible={routeFilterSheetOpen}
+          onClose={() => {
+            setRouteFilterSheetOpen(false);
+            setExploreRouteDraft(null);
+          }}
+          mode={
+            routeFilterSheetOpen && exploreRouteDraft != null
+              ? {
+                  kind: "explore-route",
+                  draft: exploreRouteDraft,
+                  onDraftChange: setExploreRouteDraft,
+                  persisted: explorePersisted,
+                  onApply: () => {
+                    persistExploreFilter(
+                      RouteFilter.fromJsonString(exploreRouteDraft.toString()),
+                    );
+                  },
+                  onRevert: () => persistExploreFilter(null),
+                }
+              : null
+          }
+        />
       </View>
     </>
   );
@@ -313,22 +356,6 @@ const styles = StyleSheet.create({
     height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "center",
-  },
-  headerButton: {
-    width: HEADER_BUTTON_SIZE,
-    height: HEADER_BUTTON_SIZE,
-    borderRadius: HEADER_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  headerButtonPressed: {
-    opacity: 0.6,
   },
   searchBar: {
     flex: 1,

@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { RopewikiPageView } from "ropegeo-common";
+import type { RopewikiPageView } from "ropegeo-common/classes";
 
 export type TimeEstimatesProps = Pick<
   RopewikiPageView,

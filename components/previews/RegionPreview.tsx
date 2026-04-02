@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common";
+import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/classes";
 import { useState } from "react";
 import { Image } from "expo-image";
 import {

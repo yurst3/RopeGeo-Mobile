@@ -22,8 +22,8 @@ import Animated, {
   runOnJS,
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
-import type { RopewikiRegionView } from "ropegeo-common";
-import { PageDataSource, Preview, RopewikiRegionPreviewsParams } from "ropegeo-common";
+import type { RopewikiRegionView } from "ropegeo-common/classes";
+import { PageDataSource, Preview, RopewikiRegionPreviewsParams } from "ropegeo-common/classes";
 
 const PREVIEWS_PAGE_LIMIT = 10;
 const LOAD_MORE_THRESHOLD = 100;

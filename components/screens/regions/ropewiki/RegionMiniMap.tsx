@@ -9,6 +9,8 @@ import {
 } from "@/components/minimap/minimapShared";
 import { type Rect, useMiniMapAnimation } from "@/components/minimap/useMiniMapAnimation";
 import { useMiniMapCamera } from "@/components/minimap/useMiniMapCamera";
+import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
+import { FilterButton } from "@/components/buttons/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { RouteMarkersLayer } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
@@ -20,23 +22,22 @@ import {
   MAP_BUTTON_TOP_OFFSET,
 } from "@/components/minimap/fullScreenMapLayout";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
-import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import {
   PageDataSource,
+  RouteFilter,
   type PagePreview as PagePreviewType,
   type RoutesGeojson,
   RouteType,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 
 function isNonNullBounds(
   b: unknown
@@ -87,7 +88,19 @@ export function RegionMiniMap({
   }>({ loading: true, data: null, errors: null });
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<PagePreviewType | null>(null);
-  const routesQueryParams = useMemo(() => ({ source, region: regionId }), [source, regionId]);
+  const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
+    () => new RouteFilter([source], regionId),
+  );
+  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
+
+  useEffect(() => {
+    setRegionRouteFilter(new RouteFilter([source], regionId));
+  }, [source, regionId]);
+
+  const regionRoutesParams = useMemo(
+    () => regionRouteFilter.toRoutesParams(),
+    [regionRouteFilter],
+  );
 
   const routesBounds = useMemo(() => {
     return routesState.data && isNonNullBounds(routesState.data.bounds)
@@ -184,7 +197,7 @@ export function RegionMiniMap({
             <LocationPuck />
             <Camera ref={cameraRef} />
             <RouteMarkersLayer
-              routesQueryParams={routesQueryParams}
+              routesParams={regionRoutesParams}
               onStateChange={setRoutesState}
               cameraRef={cameraRef}
               onRoutePress={(routeId) => {
@@ -224,14 +237,10 @@ export function RegionMiniMap({
             top={insets.top + 8}
             rightSlot={
               <View style={[localStyles.filterButtonWrap, { width: HEADER_SIDE_SLOT_WIDTH }]}>
-                <Pressable
-                  onPress={() => {}}
-                  style={({ pressed }) => [localStyles.filterButton, pressed && localStyles.filterButtonPressed]}
-                  accessibilityLabel="Filter"
-                  accessibilityRole="button"
-                >
-                  <FontAwesome5 name="filter" size={18} color="#111827" />
-                </Pressable>
+                <FilterButton
+                  persisted={false}
+                  onPress={() => setRegionFilterOpen(true)}
+                />
               </View>
             }
           />
@@ -275,6 +284,22 @@ export function RegionMiniMap({
           />
         </>
       )}
+      <FilterBottomSheet
+        visible={regionFilterOpen}
+        onClose={() => setRegionFilterOpen(false)}
+        mode={
+          regionFilterOpen
+            ? {
+                kind: "region-route",
+                draft: regionRouteFilter,
+                onDraftChange: setRegionRouteFilter,
+                onApply: () => setRegionFilterOpen(false),
+                onReset: () =>
+                  setRegionRouteFilter(new RouteFilter([source], regionId)),
+              }
+            : null
+        }
+      />
     </View>
   );
 }
@@ -291,21 +316,5 @@ const localStyles = StyleSheet.create({
     height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "center",
-  },
-  filterButton: {
-    width: HEADER_BUTTON_SIZE,
-    height: HEADER_BUTTON_SIZE,
-    borderRadius: HEADER_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  filterButtonPressed: {
-    opacity: 0.6,
   },
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Result } from "ropegeo-common";
+import { Result } from "ropegeo-common/classes";
 
 export const Service = {
   WEBSCRAPER: "WEBSCRAPER",

@@ -19,10 +19,11 @@ import {
 } from "react-native";
 import Animated from "react-native-reanimated";
 import {
+  AcaDifficulty,
   PageDataSource,
   type RopewikiPageView,
   RouteType,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
@@ -91,7 +92,8 @@ export function PageContent({
     (data.regions?.length ?? 0) > 0 ? (data.regions ?? []).slice(0, -1) : [];
   const rating = data.quality ?? 0;
   const ratingCount = data.userVotes ?? 0;
-  const technicalRating = data.difficulty?.technical ?? null;
+  const technicalRating =
+    data.difficulty instanceof AcaDifficulty ? data.difficulty.technical : null;
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;

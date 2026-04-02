@@ -14,11 +14,11 @@ import {
   View,
 } from "react-native";
 import {
-  type Difficulty,
+  AcaDifficulty,
   PageDataSource,
   type PagePreview as PagePreviewData,
   RouteType,
-} from "ropegeo-common";
+} from "ropegeo-common/classes";
 
 const IMAGE_SIZE = 96;
 const NO_IMAGE_ICON_SIZE = 36;
@@ -28,13 +28,15 @@ const REGION_MAX = 3;
 /** Denominator for `(n/4)` label; numerator 0 = queued, 1–4 = active phases. */
 const DOWNLOAD_STEP_COUNT = 4;
 
-function formatPageDifficulty(d: Difficulty): string {
+function formatPageDifficulty(d: AcaDifficulty): string {
   const main = [d.technical, d.water]
     .filter((x): x is NonNullable<typeof x> => x != null)
     .map((x) => String(x))
     .join("");
   const time = d.time != null ? ` ${String(d.time)}` : "";
-  return main + time;
+  const risk = d.risk;
+  const riskPart = risk != null ? ` ${String(risk)}` : "";
+  return (main + time + riskPart).trim();
 }
 
 function sourceIcon(source: PageDataSource): number | null {
@@ -109,7 +111,10 @@ export function PagePreview({
   const onMiniRemovePress = useCallback(() => {
     void removeDownloadBundle(preview.id);
   }, [preview.id, removeDownloadBundle]);
-  const difficultyText = formatPageDifficulty(preview.difficulty);
+  const difficultyText =
+    preview.difficulty instanceof AcaDifficulty
+      ? formatPageDifficulty(preview.difficulty)
+      : "";
   const regionLine =
     preview.regions?.length > 0
       ? preview.regions.slice(0, REGION_MAX).join(" • ")

@@ -4,7 +4,7 @@ import { ModerateRiskBadge } from "@/components/badges/difficulty/ModerateRiskBa
 import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadge";
 import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
 import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
-import { DifficultyRisk } from "ropegeo-common";
+import { DifficultyRisk } from "ropegeo-common/classes";
 import React from "react";
 import {
   ScrollView,
