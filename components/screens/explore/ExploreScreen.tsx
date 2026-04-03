@@ -11,7 +11,12 @@ import {
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
-import { RouteMarkersLayer } from "./RouteMarkersLayer";
+import {
+  ProgressToast,
+  TOAST_HORIZONTAL_INSET,
+  useRoutesLoadToastDisplay,
+} from "@/components/toast";
+import { RouteMarkersLayer, type RoutesState } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
 import {
   PageDataSource,
@@ -26,15 +31,8 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import type { ComponentRef } from "react";
-import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Default map center when location is unavailable (Moab, UT). [lng, lat]. */
@@ -68,11 +66,20 @@ export function ExploreScreen() {
   >(undefined);
   const [cameraZoom, setCameraZoom] = useState<number | undefined>(undefined);
   const [followCurrentPosition, setFollowCurrentPosition] = useState(true);
-  const [routesState, setRoutesState] = useState<{
-    loading: boolean;
-    data: RoutesGeojson | null;
-    errors: Error | null;
-  }>({ loading: true, data: null, errors: null });
+  const [routesState, setRoutesState] = useState<RoutesState>({
+    loading: true,
+    data: null,
+    errors: null,
+    received: 0,
+    total: null,
+  });
+  const exploreRoutesKey = useMemo(
+    () => exploreRoutesParams.toQueryString(),
+    [exploreRoutesParams],
+  );
+  const routesToast = useRoutesLoadToastDisplay(routesState, {
+    resetKey: exploreRoutesKey,
+  });
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<PagePreview | null>(null);
 
@@ -203,14 +210,15 @@ export function ExploreScreen() {
             />
           </View>
         </View>
-        {routesState.loading && (
-          <View
-            style={[styles.loadingOverlay, { paddingTop: insets.top + 16 }]}
-            pointerEvents="none"
-          >
-            <ActivityIndicator size="large" />
-          </View>
-        )}
+        {routesToast.visible ? (
+          <ProgressToast
+            kind={routesToast.kind}
+            title={routesToast.title}
+            progress={routesToast.progress}
+            top={insets.top + MAP_BUTTON_TOP_OFFSET}
+            horizontalInset={TOAST_HORIZONTAL_INSET}
+          />
+        ) : null}
         <MapView
               styleURL="mapbox://styles/mapbox/outdoors-v12"
               style={styles.map}
@@ -380,14 +388,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     width: "100%",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 1,
   },
   previewContainer: {
     position: "absolute",

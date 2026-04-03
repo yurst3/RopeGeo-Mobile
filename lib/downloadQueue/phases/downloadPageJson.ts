@@ -1,6 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Result, type RopewikiPageView } from "ropegeo-common/classes";
-import { SERVICE_BASE_URL, Service } from "@/components/RopeGeoHttpRequest";
+import { SERVICE_BASE_URL, Service } from "ropegeo-common/components";
 import { getOfflinePageJsonUri } from "@/lib/offline/paths";
 import { ensureParentDir } from "@/lib/downloadQueue/util/downloadUtils";
 import type { DownloadContext } from "@/lib/downloadQueue/downloadTask";

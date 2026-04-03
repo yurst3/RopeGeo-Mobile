@@ -1,8 +1,10 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
 import { minimapStyles } from "@/components/minimap/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
-import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
-import { Service } from "@/components/RopeGeoHttpRequest";
+import {
+  RopeGeoCursorPaginationHttpRequest,
+  Service,
+} from "ropegeo-common/components";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";

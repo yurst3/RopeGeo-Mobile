@@ -1,5 +1,7 @@
-import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
-import { Service } from "@/components/RopeGeoHttpRequest";
+import {
+  RopeGeoCursorPaginationHttpRequest,
+  Service,
+} from "ropegeo-common/components";
 import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,

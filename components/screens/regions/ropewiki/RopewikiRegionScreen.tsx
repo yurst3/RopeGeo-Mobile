@@ -6,10 +6,10 @@ import { RegionMiniMap } from "./RegionMiniMap";
 import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
+  Method,
   RopeGeoHttpRequest,
   Service,
-  Method,
-} from "@/components/RopeGeoHttpRequest";
+} from "ropegeo-common/components";
 
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +23,13 @@ import {
 } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
+import {
+  ProgressToast,
+  TOAST_HORIZONTAL_INSET,
+  useAppToast,
+  useRoutesLoadToastDisplay,
+} from "@/components/toast";
+import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/classes";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -36,19 +42,20 @@ const HERO_SWIPE_TRIGGER_DX = 40;
 const TAP_MAX_DISPLACEMENT = 10;
 const TAP_MAX_DURATION_MS = 300;
 
+/** Matches {@link RopewikiPageScreen} header row / back button inset. */
+const HEADER_ROW_TOP = 8;
 
 function ErrorEffect({ error }: { error: Error }) {
   const router = useRouter();
+  const showToast = useAppToast();
   useEffect(() => {
     router.back();
-    Toast.show({
-      type: "error",
-      text1: "Error",
-      text2: error.message,
-      position: "top",
-      visibilityTime: 5000,
+    showToast({
+      variant: "error",
+      message: "Error",
+      subtitle: error.message,
     });
-  }, [error, router]);
+  }, [error, router, showToast]);
   return null;
 }
 
@@ -84,6 +91,16 @@ function RegionScreenBody({
   const [expandedAnchorRect, setExpandedAnchorRect] = useState<ExpandedImageAnchorRect | null>(null);
   const [expandedPageTitle, setExpandedPageTitle] = useState("");
   const [expandedInitialIndex, setExpandedInitialIndex] = useState(0);
+  const [regionRoutesState, setRegionRoutesState] = useState<RoutesState>({
+    loading: false,
+    data: null,
+    errors: null,
+    received: 0,
+    total: null,
+  });
+  const regionRoutesToast = useRoutesLoadToastDisplay(regionRoutesState, {
+    resetKey: regionId,
+  });
 
   const hasMiniMap = data.miniMap != null;
 
@@ -274,8 +291,20 @@ function RegionScreenBody({
       />
 
       {mapMode !== "expanded" && (
-        <BackButton onPress={() => router.back()} top={insets.top + 8} />
+        <BackButton
+          onPress={() => router.back()}
+          top={insets.top + HEADER_ROW_TOP}
+        />
       )}
+      {regionRoutesToast.visible ? (
+        <ProgressToast
+          kind={regionRoutesToast.kind}
+          title={regionRoutesToast.title}
+          progress={regionRoutesToast.progress}
+          top={insets.top + HEADER_ROW_TOP}
+          horizontalInset={TOAST_HORIZONTAL_INSET}
+        />
+      ) : null}
       {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.GeoJson ? (
         <RegionMiniMap
           regionName={data.name}
@@ -288,6 +317,7 @@ function RegionScreenBody({
           scrollY={scrollY}
           onExpand={openRegionFullMap}
           onCollapse={closeRegionFullMap}
+          onRoutesStateChange={setRegionRoutesState}
         />
       ) : null}
 
@@ -330,7 +360,10 @@ export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#666" />
               </View>
-              <BackButton onPress={() => router.back()} top={insets.top + 8} />
+              <BackButton
+                onPress={() => router.back()}
+                top={insets.top + HEADER_ROW_TOP}
+              />
             </View>
           );
         }

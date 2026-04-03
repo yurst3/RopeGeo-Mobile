@@ -1,6 +1,6 @@
 import type { RoutesParams } from "ropegeo-common/classes";
 
-/** Converts {@link RoutesParams} to flat query keys for {@link RopeGeoHttpRequest}. */
+/** Converts {@link RoutesParams} to flat query keys (e.g. for manual fetch URLs; includes `limit` / `page`). */
 export function routesParamsToQueryRecord(
   params: RoutesParams,
 ): Record<string, string> {

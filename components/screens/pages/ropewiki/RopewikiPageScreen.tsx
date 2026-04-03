@@ -8,7 +8,7 @@ import {
   Method,
   RopeGeoHttpRequest,
   Service,
-} from "@/components/RopeGeoHttpRequest";
+} from "ropegeo-common/components";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { PageMiniMap } from "./PageMiniMap";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
@@ -16,6 +16,13 @@ import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
 import { PageContent as PageScrollContent } from "./PageContent";
 import { PageSeamButtons } from "./PageSeamButtons";
+import {
+  ProgressToast,
+  SAVED_TOAST_DURATION_MS,
+  Toast,
+  TOAST_HORIZONTAL_INSET,
+  useAppToast,
+} from "@/components/toast";
 import { useRouter } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -41,7 +48,6 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
 import {
   MiniMapType,
   PageDataSource,
@@ -60,8 +66,6 @@ const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
 const CARD_BORDER_RADIUS = 24;
 
-/** Space for header circle buttons (16 inset + 44 tap area + gap). */
-const HEADER_TOAST_INSET = 16 + 44 + 8;
 /** Header row: safe-area padding + gap above first circle + circle size + gap before share row. */
 const HEADER_ROW_TOP = 8;
 const HEADER_CIRCLE_SIZE = 44;
@@ -70,22 +74,8 @@ const HEADER_BUTTON_STACK_GAP = 8;
 function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
   return `https://mobile.ropegeo.com/explore/${encodeURIComponent(pageId)}/page?source=${encodeURIComponent(source)}`;
 }
-const SAVED_TOAST_DURATION_MS = 2000;
-const SAVED_TOAST_FADE_IN_MS = 250;
-const SAVED_TOAST_FADE_OUT_MS = 300;
-const SAVED_TOAST_BG = "rgba(0, 90, 55, 0.88)";
-const SAVED_TOAST_TEXT = "#86efac";
-const DOWNLOAD_TOAST_FADE_IN_MS = 250;
-const DOWNLOAD_TOAST_FADE_OUT_MS = 300;
 const TOAST_STACK_GAP = 8;
 const TOAST_STACK_OFFSET = 44 + TOAST_STACK_GAP;
-
-const DOWNLOAD_TOAST_BG = "rgba(55, 48, 0, 0.9)";
-const DOWNLOAD_TOAST_TEXT = "#fde047";
-const DOWNLOAD_COMPLETE_BG = SAVED_TOAST_BG;
-const DOWNLOAD_COMPLETE_TEXT = SAVED_TOAST_TEXT;
-const DOWNLOAD_FAIL_BG = "rgba(80, 0, 0, 0.88)";
-const DOWNLOAD_FAIL_TEXT = "#fca5a5";
 
 const DOWNLOAD_PHASE_COUNT = 4;
 
@@ -104,16 +94,15 @@ export type RopewikiPageScreenProps = {
 
 function ErrorEffect({ error }: { error: Error }) {
   const router = useRouter();
+  const showToast = useAppToast();
   useEffect(() => {
     router.back();
-    Toast.show({
-      type: "error",
-      text1: "Error",
-      text2: error.message,
-      position: "top",
-      visibilityTime: 5000,
+    showToast({
+      variant: "error",
+      message: "Error",
+      subtitle: error.message,
     });
-  }, [error, router]);
+  }, [error, router, showToast]);
   return null;
 }
 
@@ -167,76 +156,34 @@ function PageScreenBody({
     await removeDownloadBundle(pageId);
   }, [isDownloaded, pageId, removeDownloadBundle]);
 
-  const savedToastOpacity = useRef(new RNAnimated.Value(0)).current;
   const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [savedToastVisible, setSavedToastVisible] = useState(false);
-  const downloadToastOpacity = useRef(new RNAnimated.Value(0)).current;
-  const prevDownloadToastKindRef = useRef(downloadUi.kind);
 
   const dismissSavedToastImmediate = useCallback(() => {
     if (savedToastTimerRef.current != null) {
       clearTimeout(savedToastTimerRef.current);
       savedToastTimerRef.current = null;
     }
-    savedToastOpacity.stopAnimation();
-    savedToastOpacity.setValue(0);
     setSavedToastVisible(false);
     setHighlightSavedTab(false);
-  }, [savedToastOpacity, setHighlightSavedTab]);
+  }, [setHighlightSavedTab]);
 
   const showSavedToast = useCallback(() => {
     if (savedToastTimerRef.current != null) {
       clearTimeout(savedToastTimerRef.current);
       savedToastTimerRef.current = null;
     }
-    savedToastOpacity.stopAnimation();
     setHighlightSavedTab(true);
     setSavedToastVisible(true);
-    savedToastOpacity.setValue(0);
-    RNAnimated.timing(savedToastOpacity, {
-      toValue: 1,
-      duration: SAVED_TOAST_FADE_IN_MS,
-      useNativeDriver: true,
-    }).start();
     savedToastTimerRef.current = setTimeout(() => {
       savedToastTimerRef.current = null;
-      RNAnimated.timing(savedToastOpacity, {
-        toValue: 0,
-        duration: SAVED_TOAST_FADE_OUT_MS,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) {
-          setSavedToastVisible(false);
-          setHighlightSavedTab(false);
-        }
-      });
+      setSavedToastVisible(false);
     }, SAVED_TOAST_DURATION_MS);
-  }, [savedToastOpacity, setHighlightSavedTab]);
+  }, [setHighlightSavedTab]);
 
-  useEffect(() => {
-    const wasIdle = prevDownloadToastKindRef.current === "idle";
-    const isIdle = downloadUi.kind === "idle";
-    prevDownloadToastKindRef.current = downloadUi.kind;
-    if (isIdle) {
-      RNAnimated.timing(downloadToastOpacity, {
-        toValue: 0,
-        duration: DOWNLOAD_TOAST_FADE_OUT_MS,
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-    if (wasIdle) {
-      downloadToastOpacity.stopAnimation();
-      downloadToastOpacity.setValue(0);
-      RNAnimated.timing(downloadToastOpacity, {
-        toValue: 1,
-        duration: DOWNLOAD_TOAST_FADE_IN_MS,
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-    downloadToastOpacity.setValue(1);
-  }, [downloadToastOpacity, downloadUi.kind]);
+  const handleSavedToastHidden = useCallback(() => {
+    setHighlightSavedTab(false);
+  }, [setHighlightSavedTab]);
 
   const onSavePress = () => {
     if (saved) {
@@ -593,61 +540,37 @@ function PageScreenBody({
       {mapMode !== "expanded" && (
         <>
           <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
-          <RNAnimated.View
-            pointerEvents="none"
-            style={[
-              styles.savedToastWrap,
-              {
-                top:
-                  insets.top +
-                  HEADER_ROW_TOP +
-                  (savedToastVisible && downloadUi.kind !== "idle" ? TOAST_STACK_OFFSET : 0),
-                opacity: savedToastOpacity,
-              },
-            ]}
-          >
-            <View style={styles.savedToastInner}>
-              <Text style={styles.savedToastText}>Page saved</Text>
-            </View>
-          </RNAnimated.View>
+          <Toast
+            visible={savedToastVisible}
+            variant="success"
+            message="Page saved"
+            top={
+              insets.top +
+              HEADER_ROW_TOP +
+              (savedToastVisible && downloadUi.kind !== "idle" ? TOAST_STACK_OFFSET : 0)
+            }
+            horizontalInset={TOAST_HORIZONTAL_INSET}
+            zIndex={3650}
+            onHidden={handleSavedToastHidden}
+          />
           {downloadUi.kind !== "idle" ? (
-            <RNAnimated.View
-              pointerEvents="none"
-              style={[
-                styles.downloadToastWrap,
-                { top: insets.top + HEADER_ROW_TOP, opacity: downloadToastOpacity },
-              ]}
-            >
-              {downloadUi.kind === "progress" ? (
-                <View style={[styles.downloadToastInner, styles.downloadToastInnerProgress]}>
-                  <Text style={styles.downloadToastTitle}>
-                    {`(${downloadUi.phase}/${DOWNLOAD_PHASE_COUNT}) ${downloadUi.phaseTitle}`}
-                  </Text>
-                  <View style={styles.downloadProgressTrack}>
-                    <View
-                      style={[
-                        styles.downloadProgressFill,
-                        {
-                          width: `${Math.round(downloadUi.phaseProgress * 100)}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              ) : null}
-              {downloadUi.kind === "success" ? (
-                <View style={[styles.downloadToastInner, styles.downloadToastInnerSuccess]}>
-                  <Text style={styles.downloadToastTitleSuccess}>
-                    ({DOWNLOAD_PHASE_COUNT}/{DOWNLOAD_PHASE_COUNT}) Download complete
-                  </Text>
-                </View>
-              ) : null}
-              {downloadUi.kind === "error" ? (
-                <View style={[styles.downloadToastInner, styles.downloadToastInnerError]}>
-                  <Text style={styles.downloadToastTitleError}>Download failed</Text>
-                </View>
-              ) : null}
-            </RNAnimated.View>
+            <ProgressToast
+              kind={downloadUi.kind}
+              title={
+                downloadUi.kind === "progress"
+                  ? `(${downloadUi.phase}/${DOWNLOAD_PHASE_COUNT}) ${downloadUi.phaseTitle}`
+                  : downloadUi.kind === "success"
+                    ? `(${DOWNLOAD_PHASE_COUNT}/${DOWNLOAD_PHASE_COUNT}) Download complete`
+                    : "Download failed"
+              }
+              progress={
+                downloadUi.kind === "progress"
+                  ? downloadUi.phaseProgress
+                  : undefined
+              }
+              top={insets.top + HEADER_ROW_TOP}
+              horizontalInset={TOAST_HORIZONTAL_INSET}
+            />
           ) : null}
           <SaveButton saved={saved} onPress={onSavePress} top={insets.top + HEADER_ROW_TOP} />
           <ShareButton
@@ -866,80 +789,5 @@ const styles = StyleSheet.create({
   heroBannerLayer: {
     position: "absolute",
     zIndex: 2000,
-  },
-  savedToastWrap: {
-    position: "absolute",
-    left: HEADER_TOAST_INSET,
-    right: HEADER_TOAST_INSET,
-    zIndex: 3650,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-  },
-  savedToastInner: {
-    backgroundColor: SAVED_TOAST_BG,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    maxWidth: "100%",
-  },
-  savedToastText: {
-    color: SAVED_TOAST_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  downloadToastWrap: {
-    position: "absolute",
-    left: HEADER_TOAST_INSET,
-    right: HEADER_TOAST_INSET,
-    zIndex: 3651,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  downloadToastInner: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    maxWidth: "100%",
-    alignSelf: "stretch",
-  },
-  downloadToastInnerProgress: {
-    backgroundColor: DOWNLOAD_TOAST_BG,
-  },
-  downloadToastTitle: {
-    color: DOWNLOAD_TOAST_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  downloadProgressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    overflow: "hidden",
-  },
-  downloadProgressFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: DOWNLOAD_TOAST_TEXT,
-  },
-  downloadToastInnerSuccess: {
-    backgroundColor: DOWNLOAD_COMPLETE_BG,
-  },
-  downloadToastTitleSuccess: {
-    color: DOWNLOAD_COMPLETE_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  downloadToastInnerError: {
-    backgroundColor: DOWNLOAD_FAIL_BG,
-  },
-  downloadToastTitleError: {
-    color: DOWNLOAD_FAIL_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
   },
 });

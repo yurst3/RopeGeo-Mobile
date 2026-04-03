@@ -3,7 +3,7 @@ import {
   Method,
   RopeGeoHttpRequest,
   Service,
-} from "@/components/RopeGeoHttpRequest";
+} from "ropegeo-common/components";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useRef, useState, useEffect } from "react";
 import { Image } from "expo-image";

@@ -1,11 +1,11 @@
 import { BackButton } from "@/components/buttons/BackButton";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
-import { RopeGeoCursorPaginationHttpRequest } from "@/components/RopeGeoCursorPaginationHttpRequest";
 import {
   Method,
+  RopeGeoCursorPaginationHttpRequest,
   Service,
-} from "@/components/RopeGeoHttpRequest";
+} from "ropegeo-common/components";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";

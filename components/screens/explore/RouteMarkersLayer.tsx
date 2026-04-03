@@ -1,18 +1,25 @@
 import {
+  RouteGeoJsonFeature,
+  RoutesGeojson,
+  RoutesParams,
+} from "ropegeo-common/classes";
+import {
   Method,
-  RopeGeoHttpRequest,
+  RopeGeoPaginationHttpRequest,
   Service,
-} from "@/components/RopeGeoHttpRequest";
+} from "ropegeo-common/components";
 import { Camera, Images, ShapeSource, SymbolLayer } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
-import { useEffect, useRef } from "react";
-import type { RoutesGeojson, RoutesParams } from "ropegeo-common/classes";
-import { routesParamsToQueryRecord } from "@/lib/routesParamsToQueryRecord";
+import { useEffect, useMemo, useRef } from "react";
 
 export type RoutesState = {
   loading: boolean;
   data: RoutesGeojson | null;
   errors: Error | null;
+  /** Items merged from completed pages so far. */
+  received: number;
+  /** Total from API when known; `null` until the first page returns. */
+  total: number | null;
 };
 
 /**
@@ -39,6 +46,8 @@ function RouteMarkersLayerContent({
   loading,
   data,
   errors,
+  received,
+  total,
   onStateChange,
   cameraRef,
   onRoutePress,
@@ -52,8 +61,8 @@ function RouteMarkersLayerContent({
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
   useEffect(() => {
-    onStateChange?.({ loading, data, errors });
-  }, [loading, data, errors, onStateChange]);
+    onStateChange?.({ loading, data, errors, received, total });
+  }, [loading, data, errors, received, total, onStateChange]);
 
   const handlePress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
@@ -77,7 +86,7 @@ function RouteMarkersLayerContent({
       onRouteClusterPress?.();
       try {
         const zoom = await shapeSourceRef.current.getClusterExpansionZoom(
-          feature as GeoJSON.Feature<GeoJSON.Point>
+          feature as GeoJSON.Feature<GeoJSON.Point>,
         );
         cameraRef.current.setCamera({
           centerCoordinate: [lng, lat],
@@ -183,10 +192,19 @@ function RouteMarkersLayerContent({
   );
 }
 
+function queryRecordToRoutesParams(
+  q: Record<string, string | number | boolean | undefined>,
+): RoutesParams {
+  const str: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(q)) {
+    if (v !== undefined && v !== "") str[k] = String(v);
+  }
+  return RoutesParams.fromQueryStringParams(str);
+}
+
 /**
- * Route markers with client-side clustering. Fetches GeoJSON once and uses
- * Mapbox's native clustering (performant; no JS clustering on pan/zoom).
- * Backend must expose GET /routes returning a FeatureCollection of points.
+ * Route markers with client-side clustering. Fetches all pages of GET /routes via
+ * {@link RopeGeoPaginationHttpRequest} and builds a single GeoJSON collection.
  */
 export function RouteMarkersLayer({
   onStateChange,
@@ -196,28 +214,35 @@ export function RouteMarkersLayer({
   routesQueryParams,
   routesParams,
 }: RouteMarkersLayerProps) {
-  const resolvedQuery =
-    routesParams != null
-      ? routesParamsToQueryRecord(routesParams)
-      : routesQueryParams;
+  const paginationParams = useMemo((): RoutesParams => {
+    if (routesParams != null) return routesParams;
+    return queryRecordToRoutesParams(routesQueryParams ?? {});
+  }, [routesParams, routesQueryParams]);
+
   return (
-    <RopeGeoHttpRequest<RoutesGeojson>
+    <RopeGeoPaginationHttpRequest<RouteGeoJsonFeature>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/routes"
-      queryParams={resolvedQuery}
+      queryParams={paginationParams}
     >
-      {({ loading, data, errors }) => (
-        <RouteMarkersLayerContent
-          loading={loading}
-          data={data}
-          errors={errors}
-          onStateChange={onStateChange}
-          cameraRef={cameraRef}
-          onRoutePress={onRoutePress}
-          onRouteClusterPress={onRouteClusterPress}
-        />
-      )}
-    </RopeGeoHttpRequest>
+      {({ loading, data, errors, received, total }) => {
+        const geojson =
+          data != null ? new RoutesGeojson(data) : null;
+        return (
+          <RouteMarkersLayerContent
+            loading={loading}
+            data={geojson}
+            errors={errors}
+            received={received}
+            total={total}
+            onStateChange={onStateChange}
+            cameraRef={cameraRef}
+            onRoutePress={onRoutePress}
+            onRouteClusterPress={onRouteClusterPress}
+          />
+        );
+      }}
+    </RopeGeoPaginationHttpRequest>
   );
 }
