@@ -18,7 +18,7 @@ export default function ExploreLayout() {
       <Stack.Screen
         name="risk-info"
         options={{
-          title: "Risk ratings",
+          title: "Effective Risk",
           headerBackVisible: false,
           headerLeft: () => <HeaderBackButton />,
           headerTitleStyle: {

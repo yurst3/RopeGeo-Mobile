@@ -34,20 +34,20 @@ const RISK_DESCRIPTIONS: Record<
   { minimumFor?: string; body: string }
 > = {
   [DifficultyRisk.G]: {
-    minimumFor: "Class 1",
+    minimumFor: "technical rating 1",
     body:
       "Minimal risk. Normal risk factors are present. Non-technical canyon hiking; no rope required. " +
       "May involve easy scrambling with occasional use of hands for balance. Appropriate for beginners.",
   },
   [DifficultyRisk.PG]: {
-    minimumFor: "Class 2",
+    minimumFor: "technical rating 2",
     body:
       "Some additional considerations. Scrambling, easy climbing or downclimbing; a rope may be handy for handlines, " +
       "belays, lowering packs and emergency use. Exit or retreat possible upcanyon without fixed ropes. " +
       "Suitable for hikers with reasonable fitness.",
   },
   [DifficultyRisk.PG13]: {
-    minimumFor: "Class 3 and Class 4",
+    minimumFor: "technical rating 3 and 4",
     body:
       "Every class 3 and class 4 canyon is at least PG13 because rappels and technical terrain introduce significant risk. " +
       "Rope required for belays and single-pitch rappels (Class 3) or complex rope work such as multi-pitch rappels, " +
@@ -94,7 +94,10 @@ export function RiskInfoScreen({ highlightedRisk }: RiskInfoScreenProps) {
       ]}
     >
       <Text style={styles.subtitle}>
-        ACA-style additional risk (beyond technical, water, and time). Higher ratings indicate greater seriousness.
+        The ACA rating system uses &quot;additional risk&quot; to denote elevated risk factors above the norm.
+        &quot;Effective risk&quot; takes into account the technical rating
+        and additional risk rating to reflect the true expected risk of a route.
+        Each technical rating has a minimum effective risk which the ACA additional risk rating can increase.
       </Text>
       {RISK_ORDER.map((risk) => {
         const BadgeComponent = RISK_BADGES[risk];

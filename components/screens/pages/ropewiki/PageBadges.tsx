@@ -37,7 +37,7 @@ import { FourWDVeryHighClearanceBadge } from "@/components/badges/vehicle/4WDVer
 import { HighClearanceBadge } from "@/components/badges/vehicle/HighClearanceBadge";
 import { PassengerBadge } from "@/components/badges/vehicle/PassengerBadge";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import React from "react";
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import {
@@ -125,7 +125,7 @@ const BADGE_TYPE_LABELS: Record<BadgeTypeKey, string> = {
   technical: "Technical Rating",
   water: "Water Rating",
   time: "Time Estimate",
-  risk: "Risk Estimate",
+  risk: "Effective Risk",
   permit: "Permit",
   shuttle: "Shuttle",
   vehicle: "Vehicle",
@@ -180,52 +180,60 @@ const ROUTE_TYPE_BADGES: Record<
   POI: PoiBadge,
 };
 
+/** Tab stack for badge info screens — must match the tab the user opened the page from. */
+function badgeInfoBasePath(pathname: string): "/explore" | "/saved" {
+  return pathname === "/saved" || pathname.startsWith("/saved/")
+    ? "/saved"
+    : "/explore";
+}
+
 function openInfo(
   router: ReturnType<typeof useRouter>,
   type: BadgeTypeKey,
-  value: string | number | null | undefined
+  value: string | number | null | undefined,
+  basePath: "/explore" | "/saved"
 ) {
   const param = value != null ? String(value) : undefined;
   switch (type) {
     case "technical":
       router.push({
-        pathname: "/explore/technical-info",
+        pathname: `${basePath}/technical-info`,
         params: param ? { highlightedTechnical: param } : {},
       });
       break;
     case "water":
       router.push({
-        pathname: "/explore/water-info",
+        pathname: `${basePath}/water-info`,
         params: param ? { highlightedWater: param } : {},
       });
       break;
     case "time":
       router.push({
-        pathname: "/explore/time-info",
+        pathname: `${basePath}/time-info`,
         params: param ? { highlightedTime: param } : {},
       });
       break;
     case "risk":
       router.push({
-        pathname: "/explore/risk-info",
+        pathname: `${basePath}/risk-info`,
         params: param ? { highlightedRisk: param } : {},
       });
       break;
     case "permit":
       router.push({
-        pathname: "/explore/permit-info",
+        pathname: `${basePath}/permit-info`,
         params: param ? { highlightedPermit: param } : {},
       });
       break;
     case "shuttle":
       router.push({
-        pathname: "/explore/shuttle-info",
+        pathname: `${basePath}/shuttle-info`,
         params: param != null ? { highlightedShuttle: param } : {},
       });
       break;
     case "vehicle":
       router.push({
-        pathname: "/explore/vehicle-info",
+        pathname: `${basePath}/vehicle-info`,
         params: param != null ? { highlightedVehicle: param } : {},
       });
       break;
@@ -238,6 +246,8 @@ function openInfo(
 
 export function PageBadges({ data, routeType }: PageBadgesProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const infoBasePath = badgeInfoBasePath(pathname ?? "");
   const aca =
     data.difficulty instanceof AcaDifficulty ? data.difficulty : null;
   const permit = data.permit ?? null;
@@ -358,7 +368,7 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
     const { node, value } = renderBadge(type);
     const hasInfo = showInfoButton(type);
     const onPress = hasInfo
-      ? () => openInfo(router, type, value)
+      ? () => openInfo(router, type, value, infoBasePath)
       : undefined;
 
     return (
