@@ -1,7 +1,7 @@
 import { PermitInfoScreen } from "@/components/screens/info/PermitInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { PermitStatus } from "ropegeo-common/classes";
+import { PermitStatus } from "ropegeo-common/models";
 
 const VALID_PERMIT: PermitStatus[] = Object.values(PermitStatus);
 

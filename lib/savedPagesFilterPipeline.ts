@@ -5,7 +5,7 @@ import {
   type PagePreview,
   type SavedPage,
   type SavedPagesFilter,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 function previewMatchesDifficulty(
   preview: PagePreview,
@@ -28,9 +28,9 @@ function previewMatchesDifficulty(
   if (params.time.length > 0) {
     if (d.time == null || !params.time.includes(d.time)) return false;
   }
-  if (params.risk.length > 0) {
+  if (params.effectiveRisk.length > 0) {
     const er = d.effectiveRisk;
-    if (er == null || !params.risk.includes(er)) return false;
+    if (er == null || !params.effectiveRisk.includes(er)) return false;
   }
   return true;
 }

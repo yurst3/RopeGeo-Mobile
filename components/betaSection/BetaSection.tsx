@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import RenderHtml from "react-native-render-html";
-import type { BetaSection as BetaSectionType } from "ropegeo-common/classes";
+import type { BetaSection as BetaSectionType } from "ropegeo-common/models";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import { BetaSectionImages } from "./BetaSectionImages";

@@ -1,4 +1,4 @@
-import type { RoutesParams } from "ropegeo-common/classes";
+import type { RoutesParams } from "ropegeo-common/models";
 
 /** Converts {@link RoutesParams} to flat query keys (e.g. for manual fetch URLs; includes `limit` / `page`). */
 export function routesParamsToQueryRecord(

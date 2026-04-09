@@ -6,7 +6,7 @@ import {
   SavedPagesFilter,
   SearchFilter,
   type SearchParamsPosition,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import {
   createContext,
   useCallback,

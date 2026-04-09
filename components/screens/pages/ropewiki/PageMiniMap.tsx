@@ -18,7 +18,7 @@ import { Camera, LineLayer, LocationPuck, MapView, VectorSource } from "@rnmapbo
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
-import type { PageMiniMap as PageMiniMapConfig } from "ropegeo-common/classes";
+import type { PageMiniMap as PageMiniMapConfig } from "ropegeo-common/models";
 
 function localVectorTileTemplate(rootUri: string, layerId: string): string {
   const base = rootUri.endsWith("/") ? rootUri : `${rootUri}/`;

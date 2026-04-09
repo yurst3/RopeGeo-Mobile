@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { SavedPagesFilter } from "ropegeo-common/classes";
+import { SavedPagesFilter } from "ropegeo-common/models";
 
 const HEADER_BUTTON_SIZE = 44;
 const HEADER_BUTTON_GAP = 8;
@@ -134,14 +134,17 @@ export function SavedScreen() {
             ? {
                 kind: "saved-pages",
                 draft: savedDraft,
-                onDraftChange: setSavedDraft,
-                persisted: savedPagesPersisted,
-                onApply: () => {
+                onDraftChange: (f) => {
+                  setSavedDraft(f);
                   persistSavedPagesFilter(
-                    SavedPagesFilter.fromJsonString(savedDraft.toString()),
+                    SavedPagesFilter.fromJsonString(f.toString()),
                   );
                 },
-                onRevert: () => persistSavedPagesFilter(null),
+                persisted: savedPagesPersisted,
+                onRevert: () => {
+                  persistSavedPagesFilter(null);
+                  setSavedDraft(SavedPagesFilter.defaultFilter());
+                },
               }
             : null
         }

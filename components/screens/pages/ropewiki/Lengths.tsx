@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { RopewikiPageView } from "ropegeo-common/classes";
+import type { RopewikiPageView } from "ropegeo-common/models";
 
 export type LengthsProps = Pick<
   RopewikiPageView,

@@ -18,7 +18,7 @@ export function ShareButton({ onPress, top, style }: ShareButtonProps) {
       accessibilityRole="button"
     >
       <Image
-        source={require("@/assets/images/icons/share.png")}
+        source={require("@/assets/images/icons/buttons/share.png")}
         style={styles.image}
         contentFit="contain"
       />

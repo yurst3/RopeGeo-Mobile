@@ -1,7 +1,7 @@
 import { RopewikiPageScreen } from "@/components/screens/pages/ropewiki/RopewikiPageScreen";
 import { useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
-import { PageDataSource, RouteType } from "ropegeo-common/classes";
+import { PageDataSource, RouteType } from "ropegeo-common/models";
 
 const VALID_SOURCES = new Set<string>(Object.values(PageDataSource));
 const VALID_ROUTE_TYPES = new Set<string>(Object.values(RouteType));

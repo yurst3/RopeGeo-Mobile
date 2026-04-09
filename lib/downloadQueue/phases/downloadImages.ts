@@ -3,7 +3,7 @@ import {
   ImageVersion,
   ImageVersions,
   type RopewikiPageView,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import { ensureParentDir, extFromUrl } from "@/lib/downloadQueue/util/downloadUtils";
 import type { DownloadContext } from "@/lib/downloadQueue/downloadTask";
 

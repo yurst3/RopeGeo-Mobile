@@ -1,7 +1,7 @@
 import { TechnicalInfoScreen } from "@/components/screens/info/TechnicalInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { DifficultyTechnical } from "ropegeo-common/classes";
+import { DifficultyTechnical } from "ropegeo-common/models";
 
 const VALID_TECHNICAL: DifficultyTechnical[] = Object.values(DifficultyTechnical);
 

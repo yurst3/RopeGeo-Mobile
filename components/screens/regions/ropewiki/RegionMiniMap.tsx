@@ -38,10 +38,11 @@ import {
   Bounds,
   PageDataSource,
   RouteFilter,
+  RoutesParams,
   type PagePreview as PagePreviewType,
   type RoutesGeojson,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 type RegionFitBounds = {
   north: number;
@@ -155,18 +156,29 @@ function RegionMiniMapBody({
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<PagePreviewType | null>(null);
   const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
-    () => new RouteFilter([source], regionId),
+    () => new RouteFilter([source]),
   );
   const [regionFilterOpen, setRegionFilterOpen] = useState(false);
 
   useEffect(() => {
-    setRegionRouteFilter(new RouteFilter([source], regionId));
+    setRegionRouteFilter(new RouteFilter([source]));
   }, [source, regionId]);
 
-  const regionRoutesParams = useMemo(
-    () => regionRouteFilter.toRoutesParams(),
-    [regionRouteFilter],
-  );
+  const regionRoutesParams = useMemo((): RoutesParams => {
+    const base = regionRouteFilter.toRoutesParams();
+    const catalogue =
+      regionRouteFilter.sources != null && regionRouteFilter.sources.length > 0
+        ? regionRouteFilter.sources[0]
+        : source;
+    return new RoutesParams({
+      region: { id: regionId, source: catalogue },
+      sources: null,
+      routeTypes: base.routeTypes,
+      difficulty: base.difficulty,
+      limit: base.limit,
+      page: base.page,
+    });
+  }, [regionRouteFilter, regionId, source]);
 
   const {
     cameraRef,
@@ -341,9 +353,7 @@ function RegionMiniMapBody({
                 kind: "region-route",
                 draft: regionRouteFilter,
                 onDraftChange: setRegionRouteFilter,
-                onApply: () => setRegionFilterOpen(false),
-                onReset: () =>
-                  setRegionRouteFilter(new RouteFilter([source], regionId)),
+                onReset: () => setRegionRouteFilter(new RouteFilter([source])),
               }
             : null
         }

@@ -48,7 +48,7 @@ import {
   AcaWaterRating,
   PermitStatus,
   type RopewikiPageView,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BADGES_GRID_MIN_HEIGHT = 320;

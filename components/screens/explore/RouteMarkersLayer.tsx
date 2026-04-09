@@ -2,7 +2,7 @@ import {
   RouteGeoJsonFeature,
   RoutesGeojson,
   RoutesParams,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import {
   Method,
   RopeGeoPaginationHttpRequest,

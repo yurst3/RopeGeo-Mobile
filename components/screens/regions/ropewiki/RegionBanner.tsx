@@ -5,7 +5,7 @@ import {
 import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import React, {
   useCallback,
   useEffect,

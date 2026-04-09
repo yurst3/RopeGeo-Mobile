@@ -23,8 +23,9 @@ import {
   RouteFilter,
   type PagePreview,
   type RoutesGeojson,
+  type RoutesParams,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -51,6 +52,9 @@ export function ExploreScreen() {
     getEffectiveRouteFilterForExplore,
   } = useSavedFilters();
   const [routeFilterSheetOpen, setRouteFilterSheetOpen] = useState(false);
+  /** Snapshot of `/routes` params at sheet open — map fetch stays on this until the sheet closes. */
+  const [frozenExploreRoutesParams, setFrozenExploreRoutesParams] =
+    useState<RoutesParams | null>(null);
   const [exploreRouteDraft, setExploreRouteDraft] = useState<RouteFilter | null>(
     null,
   );
@@ -73,15 +77,36 @@ export function ExploreScreen() {
     received: 0,
     total: null,
   });
+  const routesParamsForExploreMap = useMemo(() => {
+    if (routeFilterSheetOpen && frozenExploreRoutesParams != null) {
+      return frozenExploreRoutesParams;
+    }
+    return exploreRoutesParams;
+  }, [
+    routeFilterSheetOpen,
+    frozenExploreRoutesParams,
+    exploreRoutesParams,
+  ]);
+
   const exploreRoutesKey = useMemo(
-    () => exploreRoutesParams.toQueryString(),
-    [exploreRoutesParams],
+    () => routesParamsForExploreMap.toQueryString(),
+    [routesParamsForExploreMap],
   );
   const routesToast = useRoutesLoadToastDisplay(routesState, {
     resetKey: exploreRoutesKey,
   });
+  const prevExploreRoutesKeyRef = useRef<string | null>(null);
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<PagePreview | null>(null);
+
+  useEffect(() => {
+    const prev = prevExploreRoutesKeyRef.current;
+    prevExploreRoutesKeyRef.current = exploreRoutesKey;
+    if (prev !== null && prev !== exploreRoutesKey) {
+      setFocusedRouteId(null);
+      setCurrentPreview(null);
+    }
+  }, [exploreRoutesKey]);
 
   const defaultCenter = currentPosition ?? DEFAULT_CURRENT_POSITION;
   const isCompassVisible =
@@ -200,6 +225,7 @@ export function ExploreScreen() {
             <FilterButton
               persisted={explorePersisted}
               onPress={() => {
+                setFrozenExploreRoutesParams(exploreRoutesParams);
                 setExploreRouteDraft(
                   RouteFilter.fromJsonString(
                     getEffectiveRouteFilterForExplore().toString(),
@@ -258,7 +284,7 @@ export function ExploreScreen() {
                 }}
               />
               <RouteMarkersLayer
-                routesParams={exploreRoutesParams}
+                routesParams={routesParamsForExploreMap}
                 onStateChange={setRoutesState}
                 cameraRef={cameraRef}
                 onRoutePress={(routeId) => {
@@ -321,6 +347,7 @@ export function ExploreScreen() {
           visible={routeFilterSheetOpen}
           onClose={() => {
             setRouteFilterSheetOpen(false);
+            setFrozenExploreRoutesParams(null);
             setExploreRouteDraft(null);
           }}
           mode={
@@ -328,14 +355,17 @@ export function ExploreScreen() {
               ? {
                   kind: "explore-route",
                   draft: exploreRouteDraft,
-                  onDraftChange: setExploreRouteDraft,
-                  persisted: explorePersisted,
-                  onApply: () => {
+                  onDraftChange: (f) => {
+                    setExploreRouteDraft(f);
                     persistExploreFilter(
-                      RouteFilter.fromJsonString(exploreRouteDraft.toString()),
+                      RouteFilter.fromJsonString(f.toString()),
                     );
                   },
-                  onRevert: () => persistExploreFilter(null),
+                  persisted: explorePersisted,
+                  onRevert: () => {
+                    persistExploreFilter(null);
+                    setExploreRouteDraft(new RouteFilter());
+                  },
                 }
               : null
           }

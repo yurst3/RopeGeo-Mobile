@@ -48,7 +48,7 @@ export function DownloadButton({
           accessibilityRole="button"
         >
           <Image
-            source={require("@/assets/images/icons/remove.png")}
+            source={require("@/assets/images/icons/buttons/remove.png")}
             style={styles.removeIcon}
             contentFit="contain"
           />
@@ -97,8 +97,8 @@ export function DownloadButton({
           <Image
             source={
               isDownloaded
-                ? require("@/assets/images/icons/downloaded.png")
-                : require("@/assets/images/icons/download.png")
+                ? require("@/assets/images/icons/buttons/downloaded.png")
+                : require("@/assets/images/icons/buttons/download.png")
             }
             style={[styles.pillIcon, isDownloaded && styles.pillIconDone]}
             contentFit="contain"

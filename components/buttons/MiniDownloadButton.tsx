@@ -93,8 +93,8 @@ export function MiniDownloadButton({
           <Image
             source={
               isDownloaded
-                ? require("@/assets/images/icons/downloaded.png")
-                : require("@/assets/images/icons/download.png")
+                ? require("@/assets/images/icons/buttons/downloaded.png")
+                : require("@/assets/images/icons/buttons/download.png")
             }
             style={[styles.icon, isDownloaded && styles.iconDone]}
             contentFit="contain"

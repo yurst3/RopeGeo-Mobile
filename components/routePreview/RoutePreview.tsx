@@ -22,7 +22,7 @@ import {
   AcaDifficulty,
   type PagePreview,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
 
 const CARD_BORDER_RADIUS = 12;

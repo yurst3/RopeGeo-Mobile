@@ -1,4 +1,4 @@
-import type { ImageVersions, RopewikiPageView } from "ropegeo-common/classes";
+import type { ImageVersions, RopewikiPageView } from "ropegeo-common/models";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { getOfflinePageRootUri } from "@/lib/offline/paths";
 import { downloadPageJson } from "@/lib/downloadQueue/phases/downloadPageJson";

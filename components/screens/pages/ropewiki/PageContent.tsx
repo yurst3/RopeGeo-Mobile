@@ -23,7 +23,7 @@ import {
   PageDataSource,
   type RopewikiPageView,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 

@@ -1,7 +1,7 @@
 import { WaterInfoScreen } from "@/components/screens/info/WaterInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { DifficultyWater } from "ropegeo-common/classes";
+import { DifficultyWater } from "ropegeo-common/models";
 
 const VALID_WATER: DifficultyWater[] = Object.values(DifficultyWater);
 

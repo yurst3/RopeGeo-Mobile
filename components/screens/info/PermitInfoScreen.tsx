@@ -2,7 +2,7 @@ import { ClosedBadge } from "@/components/badges/permit/ClosedBadge";
 import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
 import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
 import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
-import { PermitStatus } from "ropegeo-common/classes";
+import { PermitStatus } from "ropegeo-common/models";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

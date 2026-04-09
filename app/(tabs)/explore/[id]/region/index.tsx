@@ -1,6 +1,6 @@
 import { RopewikiRegionScreen } from "@/components/screens/regions/ropewiki/RopewikiRegionScreen";
 import { useLocalSearchParams } from "expo-router";
-import { PageDataSource } from "ropegeo-common/classes";
+import { PageDataSource } from "ropegeo-common/models";
 import { Text, View } from "react-native";
 
 const VALID_SOURCES = new Set<string>(Object.values(PageDataSource));

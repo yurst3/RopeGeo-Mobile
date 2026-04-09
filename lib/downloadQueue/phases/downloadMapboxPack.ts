@@ -1,5 +1,5 @@
 import { offlineManager } from "@rnmapbox/maps";
-import { MiniMapType, type PageMiniMap, type RopewikiPageView } from "ropegeo-common/classes";
+import { MiniMapType, type PageMiniMap, type RopewikiPageView } from "ropegeo-common/models";
 import { mapboxPackName } from "@/lib/downloadQueue/util/downloadUtils";
 import type { DownloadContext } from "@/lib/downloadQueue/downloadTask";
 

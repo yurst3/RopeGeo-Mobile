@@ -8,7 +8,7 @@ import {
   TechnicalMinMax,
   TimeMinMax,
   WaterMinMax,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 /** Widest ACA ranges (matches “no difficulty constraint” when passed to the API). */
 export function fullRangeAcaDifficultyFilterOptions(): AcaDifficultyFilterOptions {

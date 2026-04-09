@@ -1,4 +1,5 @@
-import { FontAwesome5 } from "@expo/vector-icons";
+import { useTheme } from "@react-navigation/native";
+import { Image } from "expo-image";
 import { Pressable, StyleSheet } from "react-native";
 
 export function FilterButton({
@@ -6,10 +7,10 @@ export function FilterButton({
   persisted = false,
 }: {
   onPress: () => void;
-  /** Solid blue when this filter slot is saved to storage. */
+  /** Solid asset + primary tint when this filter slot is saved to storage. */
   persisted?: boolean;
 }) {
-  const iconColor = persisted ? "#3b82f6" : "#111827";
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -20,7 +21,15 @@ export function FilterButton({
       accessibilityLabel="Filter"
       accessibilityRole="button"
     >
-      <FontAwesome5 name="filter" size={18} color={iconColor} solid={persisted} />
+      <Image
+        source={
+          persisted
+            ? require("@/assets/images/icons/buttons/filter-solid.png")
+            : require("@/assets/images/icons/buttons/filter.png")
+        }
+        style={[styles.image, persisted && { tintColor: colors.primary }]}
+        contentFit="contain"
+      />
     </Pressable>
   );
 }
@@ -41,5 +50,9 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.6,
+  },
+  image: {
+    width: 26.4,
+    height: 26.4,
   },
 });

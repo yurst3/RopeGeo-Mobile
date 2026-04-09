@@ -18,7 +18,7 @@ import {
   PageDataSource,
   type PagePreview as PagePreviewData,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 const IMAGE_SIZE = 96;
 const NO_IMAGE_ICON_SIZE = 36;
@@ -34,8 +34,9 @@ function formatPageDifficulty(d: AcaDifficulty): string {
     .map((x) => String(x))
     .join("");
   const time = d.time != null ? ` ${String(d.time)}` : "";
-  const risk = d.risk;
-  const riskPart = risk != null ? ` ${String(risk)}` : "";
+  const riskForDisplay = d.additionalRisk;
+  const riskPart =
+    riskForDisplay != null ? ` ${String(riskForDisplay)}` : "";
   return (main + time + riskPart).trim();
 }
 

@@ -30,7 +30,7 @@ import {
   useRoutesLoadToastDisplay,
 } from "@/components/toast";
 import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
-import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/classes";
+import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/models";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);

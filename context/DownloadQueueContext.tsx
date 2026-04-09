@@ -13,7 +13,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type RopewikiPageView, RouteType, SavedPage } from "ropegeo-common/classes";
+import { type RopewikiPageView, RouteType, SavedPage } from "ropegeo-common/models";
 
 type EnqueuePageDownloadInput = {
   pageId: string;

@@ -38,7 +38,7 @@ import {
   type Difficulty,
   PermitStatus,
   RouteType,
-} from "ropegeo-common/classes";
+} from "ropegeo-common/models";
 
 const TECHNICAL_BADGES: Record<AcaTechnicalRating, React.ComponentType> = {
   [AcaTechnicalRating.One]: NotTechnicalBadge,

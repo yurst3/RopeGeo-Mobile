@@ -2,7 +2,7 @@ import { NotTechnicalBadge } from "@/components/badges/difficulty/NotTechnicalBa
 import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge";
 import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
 import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
-import { DifficultyTechnical } from "ropegeo-common/classes";
+import { DifficultyTechnical } from "ropegeo-common/models";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

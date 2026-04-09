@@ -1,4 +1,4 @@
-import { PaginationResults } from "ropegeo-common/classes";
+import { PaginationResults } from "ropegeo-common/models";
 import { SERVICE_BASE_URL, Service } from "ropegeo-common/components";
 
 const WEB_BASE = SERVICE_BASE_URL[Service.WEBSCRAPER];
