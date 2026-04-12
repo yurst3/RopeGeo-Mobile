@@ -4,6 +4,7 @@ import { ShareButton } from "@/components/buttons/ShareButton";
 import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
+import { useShareSheetDimmer } from "@/context/ShareSheetDimmerContext";
 import {
   Method,
   RopeGeoHttpRequest,
@@ -126,6 +127,7 @@ function PageScreenBody({
     removeDownloadBundle,
     savedEntries,
   } = useSavedPages();
+  const { showShareDimmer, hideShareDimmer } = useShareSheetDimmer();
   const saved = isSaved(pageId);
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
   const isDownloaded = savedEntry?.downloadedPageView != null;
@@ -194,10 +196,22 @@ function PageScreenBody({
     toggleSaveFromRopewikiPage(data, routeTypeResolved, pageId);
     showSavedToast();
   };
-  const onSharePress = useCallback(() => {
+  /** True until `Share.share` settles; keeps page non-interactive even if the dimmer was dismissed. */
+  const [shareInteractionLocked, setShareInteractionLocked] = useState(false);
+  const onSharePress = useCallback(async () => {
     const url = ropewikiPageShareUrl(pageId, PageDataSource.Ropewiki);
-    void Share.share(Platform.OS === "ios" ? { url } : { message: url });
-  }, [pageId]);
+    setShareInteractionLocked(true);
+    showShareDimmer();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    try {
+      await Share.share(Platform.OS === "ios" ? { url } : { message: url });
+    } catch {
+      // Share can reject when unavailable or cancelled on some platforms.
+    } finally {
+      setShareInteractionLocked(false);
+      hideShareDimmer();
+    }
+  }, [pageId, showShareDimmer, hideShareDimmer]);
   const onDownloadPress = useCallback(() => {
     if (downloading || isDownloaded) return;
     if (!saved) {
@@ -265,6 +279,12 @@ function PageScreenBody({
   const bannerExpandSourceUrl = bannerFullUrl ?? bannerUrl;
 
   const hasMiniMap = data.miniMap != null;
+  const mapDirections =
+    data.coordinates != null &&
+    hasMiniMap &&
+    data.miniMap?.miniMapType === MiniMapType.TilesTemplate
+      ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
+      : null;
 
   useEffect(() => {
     miniMapUnlockedRef.current = false;
@@ -447,6 +467,11 @@ function PageScreenBody({
 
   return (
     <View style={styles.container}>
+      <View
+        style={styles.shareBlockableLayer}
+        pointerEvents={shareInteractionLocked ? "none" : "auto"}
+        collapsable={false}
+      >
       <PageBanner
         imageFrameStyle={bannerAnimatedStyle}
         bannerUrl={bannerUrl}
@@ -596,6 +621,7 @@ function PageScreenBody({
           onExpand={openPageFullMap}
           onCollapse={closePageFullMap}
           localTileRootUri={savedEntry?.downloadedMapData ?? null}
+          mapDirections={mapDirections}
         />
       ) : null}
 
@@ -617,6 +643,7 @@ function PageScreenBody({
           onDismissed={onBannerExpandedDismissed}
         />
       ) : null}
+      </View>
     </View>
   );
 }
@@ -789,5 +816,8 @@ const styles = StyleSheet.create({
   heroBannerLayer: {
     position: "absolute",
     zIndex: 2000,
+  },
+  shareBlockableLayer: {
+    flex: 1,
   },
 });

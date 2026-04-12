@@ -4,6 +4,7 @@ import { MiniMapHeader } from "@/components/minimap/MiniMapHeader";
 import { miniMapHostStyles } from "@/components/minimap/miniMapHostStyles";
 import {
   CAMERA_PADDING,
+  MiniMapDirectionsButtons,
   MiniMapExpandButton,
   minimapStyles,
 } from "@/components/minimap/minimapShared";
@@ -36,6 +37,7 @@ export function PageMiniMap({
   onExpand,
   onCollapse,
   localTileRootUri,
+  mapDirections,
 }: {
   miniMap: PageMiniMapConfig;
   pageName: string;
@@ -48,6 +50,8 @@ export function PageMiniMap({
   onCollapse: () => void;
   /** When set, load vector tiles from the offline bundle (`file://` root) instead of the remote template. */
   localTileRootUri?: string | null;
+  /** When set, show Apple/Google directions icon buttons on the collapsed minimap (bottom-left). */
+  mapDirections?: { lat: number; lon: number } | null;
 }) {
   const b = miniMap.bounds;
   const tileTemplate =
@@ -175,6 +179,9 @@ export function PageMiniMap({
           >
             <ActivityIndicator size="large" color="#64748b" />
           </View>
+        ) : null}
+        {!expanded && mapDirections != null ? (
+          <MiniMapDirectionsButtons lat={mapDirections.lat} lon={mapDirections.lon} />
         ) : null}
         {!expanded && <MiniMapExpandButton onPress={onExpand} />}
       </Animated.View>

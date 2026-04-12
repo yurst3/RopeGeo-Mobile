@@ -1,4 +1,5 @@
 import { AppToastProvider } from "@/components/toast";
+import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
 import { SavedPagesProvider } from "@/context/SavedPagesContext";
 import { SavedFiltersProvider } from "@/context/SavedFiltersContext";
 import { DownloadQueueProvider } from "@/context/DownloadQueueContext";
@@ -10,26 +11,28 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <AppToastProvider>
-        <SavedPagesProvider>
-          <SavedFiltersProvider>
-            <DownloadQueueProvider>
-              <Stack>
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="index"
-                  options={{
-                    headerShown: false,
-                  }}
-                />
-              </Stack>
-            </DownloadQueueProvider>
-          </SavedFiltersProvider>
-        </SavedPagesProvider>
+        <ShareSheetDimmerProvider>
+          <SavedPagesProvider>
+            <SavedFiltersProvider>
+              <DownloadQueueProvider>
+                <Stack>
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="index"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                </Stack>
+              </DownloadQueueProvider>
+            </SavedFiltersProvider>
+          </SavedPagesProvider>
+        </ShareSheetDimmerProvider>
       </AppToastProvider>
     </GestureHandlerRootView>
   );
