@@ -1,34 +1,34 @@
 import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
 import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import { MiniMapHeader } from "@/components/minimap/MiniMapHeader";
-import { miniMapHostStyles } from "@/components/minimap/miniMapHostStyles";
+import {
+  MAP_BUTTON_GAP,
+  MAP_BUTTON_SIZE,
+  MAP_BUTTON_TOP_OFFSET,
+} from "./fullScreenMapLayout";
+import { MiniMapHeader } from "./MiniMapHeader";
+import { miniMapHostStyles } from "./miniMapHostStyles";
 import {
   CAMERA_PADDING,
   MiniMapDirectionsButtons,
   MiniMapExpandButton,
   minimapStyles,
-} from "@/components/minimap/minimapShared";
-import { type Rect, useMiniMapAnimation } from "@/components/minimap/useMiniMapAnimation";
-import { useMiniMapCamera } from "@/components/minimap/useMiniMapCamera";
-import {
-  MAP_BUTTON_GAP,
-  MAP_BUTTON_SIZE,
-  MAP_BUTTON_TOP_OFFSET,
-} from "@/components/minimap/fullScreenMapLayout";
+} from "./minimapShared";
+import { type Rect, useMiniMapAnimation } from "./useMiniMapAnimation";
+import { useMiniMapCamera } from "./useMiniMapCamera";
 import { Camera, LineLayer, LocationPuck, MapView, VectorSource } from "@rnmapbox/maps";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
-import type { PageMiniMap as PageMiniMapConfig } from "ropegeo-common/models";
+import {
+  DownloadedPageMiniMap,
+  MiniMapType,
+  type PageMiniMap as PageMiniMapConfig,
+} from "ropegeo-common/models";
 
-function localVectorTileTemplate(rootUri: string, layerId: string): string {
-  const base = rootUri.endsWith("/") ? rootUri : `${rootUri}/`;
-  return `${base}tiles/${layerId}/{z}/{x}/{y}.pbf`;
-}
+export type PageMiniMapTileProps = PageMiniMapConfig | DownloadedPageMiniMap;
 
 export function PageMiniMap({
   miniMap,
-  pageName,
   mountNativeMap,
   expanded,
   anchorRect,
@@ -36,11 +36,9 @@ export function PageMiniMap({
   scrollY,
   onExpand,
   onCollapse,
-  localTileRootUri,
   mapDirections,
 }: {
-  miniMap: PageMiniMapConfig;
-  pageName: string;
+  miniMap: PageMiniMapTileProps;
   mountNativeMap: boolean;
   expanded: boolean;
   anchorRect: Rect | null;
@@ -48,16 +46,14 @@ export function PageMiniMap({
   scrollY: SharedValue<number>;
   onExpand: () => void;
   onCollapse: () => void;
-  /** When set, load vector tiles from the offline bundle (`file://` root) instead of the remote template. */
-  localTileRootUri?: string | null;
   /** When set, show Apple/Google directions icon buttons on the collapsed minimap (bottom-left). */
   mapDirections?: { lat: number; lon: number } | null;
 }) {
   const b = miniMap.bounds;
   const tileTemplate =
-    localTileRootUri != null && localTileRootUri.length > 0
-      ? localVectorTileTemplate(localTileRootUri, miniMap.layerId)
-      : miniMap.tilesTemplate;
+    miniMap.miniMapType === MiniMapType.DownloadedTilesTemplate
+      ? (miniMap as DownloadedPageMiniMap).downloadedTilesTemplate
+      : (miniMap as PageMiniMapConfig).tilesTemplate;
   const {
     cameraRef,
     fitToBounds,
@@ -188,7 +184,7 @@ export function PageMiniMap({
       {expanded && (
         <>
           <MiniMapHeader
-            title={pageName}
+            title={miniMap.title}
             onBack={onCollapse}
             top={insets.top + 8}
           />

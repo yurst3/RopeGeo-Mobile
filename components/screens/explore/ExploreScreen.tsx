@@ -287,6 +287,7 @@ export function ExploreScreen() {
                 routesParams={routesParamsForExploreMap}
                 onStateChange={setRoutesState}
                 cameraRef={cameraRef}
+                focusedRouteId={focusedRouteId}
                 onRoutePress={(routeId) => {
                   setFollowCurrentPosition(false);
                   setFocusedRouteId(routeId);

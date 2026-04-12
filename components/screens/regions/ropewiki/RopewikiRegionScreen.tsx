@@ -2,7 +2,7 @@ import { BackButton } from "@/components/buttons/BackButton";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/components/expandedImage/types";
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
-import { RegionMiniMap } from "./RegionMiniMap";
+import { RegionMiniMap } from "@/components/minimap/RegionMiniMap";
 import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
@@ -152,7 +152,6 @@ function RegionScreenBody({
       bannerUrl: s.bannerUrl,
       captionHtml: s.captionHtml,
     }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedModalVisible]);
 
   const handleBannerTap = useCallback(() => {
@@ -307,7 +306,7 @@ function RegionScreenBody({
       ) : null}
       {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.GeoJson ? (
         <RegionMiniMap
-          regionName={data.name}
+          regionMiniMap={data.miniMap}
           regionId={regionId}
           source={PageDataSource.Ropewiki}
           mountNativeMap={mountMiniMapNative}

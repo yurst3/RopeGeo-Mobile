@@ -1,14 +1,5 @@
 import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
 import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import { MiniMapHeader } from "@/components/minimap/MiniMapHeader";
-import { miniMapHostStyles } from "@/components/minimap/miniMapHostStyles";
-import {
-  CAMERA_PADDING,
-  MiniMapExpandButton,
-  minimapStyles,
-} from "@/components/minimap/minimapShared";
-import { type Rect, useMiniMapAnimation } from "@/components/minimap/useMiniMapAnimation";
-import { useMiniMapCamera } from "@/components/minimap/useMiniMapCamera";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
@@ -18,29 +9,32 @@ import {
 } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
-  Method,
-  RopeGeoHttpRequest,
-  Service,
-} from "ropegeo-common/components";
-import {
   HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
   MAP_BUTTON_GAP,
   MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
-} from "@/components/minimap/fullScreenMapLayout";
+} from "./fullScreenMapLayout";
+import { MiniMapHeader } from "./MiniMapHeader";
+import { miniMapHostStyles } from "./miniMapHostStyles";
+import {
+  CAMERA_PADDING,
+  MiniMapExpandButton,
+  minimapStyles,
+} from "./minimapShared";
+import { type Rect, useMiniMapAnimation } from "./useMiniMapAnimation";
+import { useMiniMapCamera } from "./useMiniMapCamera";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import {
-  Bounds,
   PageDataSource,
   RouteFilter,
   RoutesParams,
   type PagePreview as PagePreviewType,
-  type RoutesGeojson,
+  type RegionMiniMap as RegionMiniMapConfig,
   RouteType,
 } from "ropegeo-common/models";
 
@@ -51,23 +45,18 @@ type RegionFitBounds = {
   west: number;
 };
 
-function isNonNullBounds(b: unknown): b is RegionFitBounds {
-  if (b == null || typeof b !== "object") return false;
-  const o = b as Record<string, unknown>;
-  return (
-    typeof o.north === "number" &&
-    typeof o.south === "number" &&
-    typeof o.east === "number" &&
-    typeof o.west === "number" &&
-    !Number.isNaN(o.north) &&
-    !Number.isNaN(o.south) &&
-    !Number.isNaN(o.east) &&
-    !Number.isNaN(o.west)
-  );
+function boundsToFit(b: RegionMiniMapConfig["bounds"]): RegionFitBounds | null {
+  if (b == null) return null;
+  return {
+    north: b.north,
+    south: b.south,
+    east: b.east,
+    west: b.west,
+  };
 }
 
-type RegionMiniMapProps = {
-  regionName: string;
+export type RegionMiniMapProps = {
+  regionMiniMap: RegionMiniMapConfig;
   regionId: string;
   source: PageDataSource;
   mountNativeMap: boolean;
@@ -80,50 +69,12 @@ type RegionMiniMapProps = {
   onRoutesStateChange?: (state: RoutesState) => void;
 };
 
-type RegionMiniMapBodyProps = RegionMiniMapProps & {
-  regionFitBounds: RegionFitBounds | null;
-};
-
 /**
- * Region minimap: outer shell loads GET /ropewiki/region/{id}/bounds when the native map is mounted;
- * {@link RegionMiniMapBody} receives fit bounds as props (same pattern as RopewikiPageScreen + PageScreenBody).
+ * Region minimap: fits the camera to API {@link RegionMiniMap.bounds} when present and loads
+ * route markers via GET /routes using merged filter + {@link RegionMiniMap.routesParams}.
  */
-export function RegionMiniMap(props: RegionMiniMapProps) {
-  const { anchorRect, mountNativeMap, regionId, ...bodyRest } = props;
-
-  if (!anchorRect) return null;
-
-  if (!mountNativeMap) {
-    return <RegionMiniMapBody {...props} regionFitBounds={null} />;
-  }
-
-  return (
-    <RopeGeoHttpRequest<Bounds>
-      key={regionId}
-      service={Service.WEBSCRAPER}
-      method={Method.GET}
-      path="/ropewiki/region/:id/bounds"
-      pathParams={{ id: regionId }}
-    >
-      {({ data, errors }) => {
-        const regionFitBounds =
-          errors != null || data == null || !isNonNullBounds(data) ? null : data;
-        return (
-          <RegionMiniMapBody
-            {...bodyRest}
-            anchorRect={anchorRect}
-            mountNativeMap={mountNativeMap}
-            regionId={regionId}
-            regionFitBounds={regionFitBounds}
-          />
-        );
-      }}
-    </RopeGeoHttpRequest>
-  );
-}
-
-function RegionMiniMapBody({
-  regionName,
+export function RegionMiniMap({
+  regionMiniMap,
   regionId,
   source,
   mountNativeMap,
@@ -133,10 +84,10 @@ function RegionMiniMapBody({
   scrollY,
   onExpand,
   onCollapse,
-  regionFitBounds,
   onRoutesStateChange,
-}: RegionMiniMapBodyProps) {
+}: RegionMiniMapProps) {
   const router = useRouter();
+  const regionFitBounds = boundsToFit(regionMiniMap.bounds);
 
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,
@@ -166,19 +117,24 @@ function RegionMiniMapBody({
 
   const regionRoutesParams = useMemo((): RoutesParams => {
     const base = regionRouteFilter.toRoutesParams();
+    const server = regionMiniMap.routesParams;
+    const reg = server.region;
+    if (reg == null) {
+      throw new Error("RegionMiniMap.routesParams.region is required");
+    }
     const catalogue =
       regionRouteFilter.sources != null && regionRouteFilter.sources.length > 0
         ? regionRouteFilter.sources[0]
         : source;
     return new RoutesParams({
-      region: { id: regionId, source: catalogue },
+      region: { id: reg.id, source: catalogue },
       sources: null,
-      routeTypes: base.routeTypes,
-      difficulty: base.difficulty,
-      limit: base.limit,
-      page: base.page,
+      routeTypes: base.routeTypes ?? server.routeTypes,
+      difficulty: base.difficulty ?? server.difficulty,
+      limit: server.limit,
+      page: server.page,
     });
-  }, [regionRouteFilter, regionId, source]);
+  }, [regionRouteFilter, regionMiniMap.routesParams, source]);
 
   const {
     cameraRef,
@@ -230,6 +186,8 @@ function RegionMiniMapBody({
     }
   };
 
+  if (!anchorRect) return null;
+
   return (
     <View style={miniMapHostStyles.root} pointerEvents="box-none">
       <Animated.View
@@ -270,6 +228,7 @@ function RegionMiniMapBody({
               routesParams={regionRoutesParams}
               onStateChange={handleRoutesStateChange}
               cameraRef={cameraRef}
+              focusedRouteId={expanded ? focusedRouteId : null}
               onRoutePress={(routeId) => {
                 if (!expanded) return;
                 setFocusedRouteId(routeId);
@@ -292,7 +251,7 @@ function RegionMiniMapBody({
       {expanded && (
         <>
           <MiniMapHeader
-            title={regionName}
+            title={regionMiniMap.title}
             onBack={onCollapse}
             top={insets.top + 8}
             rightSlot={

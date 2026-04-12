@@ -77,7 +77,7 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
               base.savedAt,
               out.downloadedPageView,
               out.downloadedImages,
-              out.downloadedMapData,
+              out.downloadedMiniMap,
             ),
           );
         },
@@ -109,7 +109,7 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
               base.savedAt,
               out.downloadedPageView,
               out.downloadedImages,
-              out.downloadedMapData,
+              out.downloadedMiniMap,
             ),
           );
         },

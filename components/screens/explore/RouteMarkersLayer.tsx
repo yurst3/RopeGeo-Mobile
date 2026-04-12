@@ -8,9 +8,21 @@ import {
   RopeGeoPaginationHttpRequest,
   Service,
 } from "ropegeo-common/components";
-import { Camera, Images, ShapeSource, SymbolLayer } from "@rnmapbox/maps";
+import {
+  Camera,
+  Images,
+  ShapeSource,
+  SymbolLayer,
+  type SymbolLayerStyle,
+} from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import {
+  ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+  ROUTE_MARKER_IMAGES,
+  unclusteredRouteMarkerIconImage,
+  unclusteredRouteMarkerIconSize,
+} from "./routeMarkerIcons";
 
 export type RoutesState = {
   loading: boolean;
@@ -22,14 +34,8 @@ export type RoutesState = {
   total: number | null;
 };
 
-/**
- * Route marker icon size (constant screen size at all zoom levels).
- * The zoom-22 value must be (ICON_SIZE_AT_ZOOM_0 * 2^-22) so the icon doesn't scale with zoom.
- */
-const ROUTE_ICON_SIZE_AT_ZOOM_0 = 0.05;
-const ROUTE_ICON_SIZE_AT_ZOOM_22 = ROUTE_ICON_SIZE_AT_ZOOM_0 * 2 ** -22;
-
-const CLUSTER_RADIUS = 50;
+/** Exported for minimaps that render clustered route markers with the same layout as this layer. */
+export const CLUSTER_RADIUS = 50;
 
 type RouteMarkersLayerProps = {
   onStateChange?: (state: RoutesState) => void;
@@ -40,6 +46,10 @@ type RouteMarkersLayerProps = {
   routesQueryParams?: Record<string, string | number | boolean | undefined>;
   /** Preferred: validated params object (global or region-scoped). */
   routesParams?: RoutesParams | null;
+  /** Marker uses selected icon when this route id is focused (e.g. tap / preview). */
+  focusedRouteId?: string | null;
+  /** Marker uses selected icon for this id even without tap focus (e.g. page centered route). */
+  accentRouteId?: string | null;
 };
 
 function RouteMarkersLayerContent({
@@ -52,13 +62,27 @@ function RouteMarkersLayerContent({
   cameraRef,
   onRoutePress,
   onRouteClusterPress,
+  focusedRouteId,
+  accentRouteId,
 }: RoutesState & {
   onStateChange?: (state: RoutesState) => void;
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
   onRoutePress?: (routeId: string, coordinates: [number, number]) => void;
   onRouteClusterPress?: () => void;
+  focusedRouteId?: string | null;
+  accentRouteId?: string | null;
 }) {
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
+
+  const unclusteredIconImage = useMemo(
+    () => unclusteredRouteMarkerIconImage(focusedRouteId, accentRouteId),
+    [focusedRouteId, accentRouteId],
+  );
+
+  const unclusteredIconSize = useMemo(
+    () => unclusteredRouteMarkerIconSize(focusedRouteId, accentRouteId),
+    [focusedRouteId, accentRouteId],
+  );
 
   useEffect(() => {
     onStateChange?.({ loading, data, errors, received, total });
@@ -113,6 +137,45 @@ function RouteMarkersLayerContent({
     return null;
   }
 
+  const unclusteredStyle: SymbolLayerStyle = {
+    iconImage: unclusteredIconImage,
+    iconSize: unclusteredIconSize,
+    iconAllowOverlap: true,
+    iconIgnorePlacement: true,
+    iconAnchor: "bottom",
+    textField: ["get", "name"],
+    textSize: 12,
+    textColor: "#333333",
+    textHaloColor: "#ffffff",
+    textHaloWidth: 1.5,
+    textOffset: [0, 0.2],
+    textAnchor: "top",
+    textAllowOverlap: true,
+    textIgnorePlacement: true,
+  };
+
+  const clusterStyle: SymbolLayerStyle = {
+    iconImage: "route-marker-cluster",
+    iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+    iconAllowOverlap: true,
+    iconIgnorePlacement: true,
+    iconAnchor: "bottom",
+    textField: [
+      "concat",
+      "(",
+      ["to-string", ["get", "point_count"]],
+      ")",
+    ],
+    textSize: 12,
+    textColor: "#333333",
+    textHaloColor: "#ffffff",
+    textHaloWidth: 1.5,
+    textOffset: [0, 0.2],
+    textAnchor: "top",
+    textAllowOverlap: true,
+    textIgnorePlacement: true,
+  };
+
   return (
     <ShapeSource
       ref={shapeSourceRef}
@@ -125,69 +188,14 @@ function RouteMarkersLayerContent({
       <SymbolLayer
         id="routes-symbol-layer-unclustered"
         filter={["!", ["has", "point_count"]]}
-        style={{
-          iconImage: "map-marker",
-          iconSize: [
-            "interpolate",
-            ["exponential", 2],
-            ["zoom"],
-            0,
-            ROUTE_ICON_SIZE_AT_ZOOM_0,
-            22,
-            ROUTE_ICON_SIZE_AT_ZOOM_22,
-          ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: "bottom",
-          textField: ["get", "name"],
-          textSize: 12,
-          textColor: "#333333",
-          textHaloColor: "#ffffff",
-          textHaloWidth: 1.5,
-          textOffset: [0, 0.2],
-          textAnchor: "top",
-          textAllowOverlap: true,
-          textIgnorePlacement: true,
-        }}
+        style={unclusteredStyle}
       />
       <SymbolLayer
         id="routes-symbol-layer-clusters"
         filter={["has", "point_count"]}
-        style={{
-          iconImage: "map-marker",
-          iconSize: [
-            "interpolate",
-            ["exponential", 2],
-            ["zoom"],
-            0,
-            ROUTE_ICON_SIZE_AT_ZOOM_0,
-            22,
-            ROUTE_ICON_SIZE_AT_ZOOM_22,
-          ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: "bottom",
-          textField: [
-            "concat",
-            "(",
-            ["to-string", ["get", "point_count"]],
-            ")",
-          ],
-          textSize: 12,
-          textColor: "#333333",
-          textHaloColor: "#ffffff",
-          textHaloWidth: 1.5,
-          textOffset: [0, 0.2],
-          textAnchor: "top",
-          textAllowOverlap: true,
-          textIgnorePlacement: true,
-        }}
+        style={clusterStyle}
       />
-      <Images
-        images={{
-          "map-marker": require("@/assets/images/icons/location-dot-solid.png"),
-        }}
-      />
+      <Images images={{ ...ROUTE_MARKER_IMAGES }} />
     </ShapeSource>
   );
 }
@@ -213,6 +221,8 @@ export function RouteMarkersLayer({
   onRouteClusterPress,
   routesQueryParams,
   routesParams,
+  focusedRouteId = null,
+  accentRouteId = null,
 }: RouteMarkersLayerProps) {
   const paginationParams = useMemo((): RoutesParams => {
     if (routesParams != null) return routesParams;
@@ -240,6 +250,8 @@ export function RouteMarkersLayer({
             cameraRef={cameraRef}
             onRoutePress={onRoutePress}
             onRouteClusterPress={onRouteClusterPress}
+            focusedRouteId={focusedRouteId}
+            accentRouteId={accentRouteId}
           />
         );
       }}

@@ -1,40 +1,31 @@
-import type { ImageVersions, RopewikiPageView } from "ropegeo-common/models";
+import type {
+  DownloadedCenteredRegionMiniMap,
+  DownloadedPageMiniMap,
+  ImageVersions,
+  RopewikiPageView,
+} from "ropegeo-common/models";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { getOfflinePageRootUri } from "@/lib/offline/paths";
 import { downloadPageJson } from "@/lib/downloadQueue/phases/downloadPageJson";
 import { downloadImages } from "@/lib/downloadQueue/phases/downloadImages";
 import { downloadMapboxPack } from "@/lib/downloadQueue/phases/downloadMapboxPack";
 import { downloadTrailTiles } from "@/lib/downloadQueue/phases/downloadTrailTiles";
+import { downloadRegionRoutes } from "@/lib/downloadQueue/phases/downloadRegionRoutes";
+import {
+  DownloadPhase,
+  PHASE_TITLE,
+  type ActiveDownloadPhase,
+  type DownloadProgressPayload,
+} from "@/lib/downloadQueue/downloadPhase";
 
-export enum DownloadPhase {
-  Queued = 0,
-  DownloadPage = 1,
-  DownloadImages = 2,
-  DownloadMapbox = 3,
-  DownloadTiles = 4,
-  Complete = 5,
-}
+export {
+  DownloadPhase,
+  PHASE_TITLE,
+  type ActiveDownloadPhase,
+  type DownloadProgressPayload,
+} from "@/lib/downloadQueue/downloadPhase";
 
-export const PHASE_TITLE: Record<DownloadPhase, string> = {
-  [DownloadPhase.Queued]: "Download queued",
-  [DownloadPhase.DownloadPage]: "Downloading page",
-  [DownloadPhase.DownloadImages]: "Downloading images",
-  [DownloadPhase.DownloadMapbox]: "Downloading Mapbox data",
-  [DownloadPhase.DownloadTiles]: "Downloading trail data",
-  [DownloadPhase.Complete]: "Complete",
-};
-
-type ActiveDownloadPhase =
-  | DownloadPhase.DownloadPage
-  | DownloadPhase.DownloadImages
-  | DownloadPhase.DownloadMapbox
-  | DownloadPhase.DownloadTiles;
-
-export type DownloadTaskState =
-  | "queued"
-  | "running"
-  | "success"
-  | "error";
+export type DownloadTaskState = "queued" | "running" | "success" | "error";
 
 export type DownloadTaskSnapshot = {
   pageId: string;
@@ -44,12 +35,6 @@ export type DownloadTaskSnapshot = {
   phaseProgress: number;
   state: DownloadTaskState;
   errorMessage: string | null;
-};
-
-export type DownloadProgressPayload = {
-  phase: ActiveDownloadPhase;
-  /** 0–1 progress within the current phase. */
-  phaseProgress: number;
 };
 
 export type DownloadContext = {
@@ -62,7 +47,7 @@ export type DownloadContext = {
 export type DownloadTaskResult = {
   downloadedPageView: string;
   downloadedImages: Record<string, ImageVersions>;
-  downloadedMapData: string | null;
+  downloadedMiniMap: DownloadedPageMiniMap | DownloadedCenteredRegionMiniMap | null;
 };
 
 /**
@@ -124,7 +109,8 @@ export class DownloadTask {
     let pageJsonUri: string | null = null;
     let view: RopewikiPageView | null = null;
     let downloadedImages: Record<string, ImageVersions> | null = null;
-    let downloadedMapData: string | null = null;
+    let downloadedMiniMap: DownloadedPageMiniMap | DownloadedCenteredRegionMiniMap | null =
+      null;
 
     const setPhase = (p: ActiveDownloadPhase): void => {
       this.phase = p;
@@ -163,7 +149,19 @@ export class DownloadTask {
           }
           case DownloadPhase.DownloadTiles: {
             setPhase(DownloadPhase.DownloadTiles);
-            downloadedMapData = await downloadTrailTiles(ctx, view!);
+            const tilesOut = await downloadTrailTiles(ctx, view!);
+            if (tilesOut != null) {
+              downloadedMiniMap = tilesOut;
+            }
+            phase = DownloadPhase.DownloadRegion;
+            break;
+          }
+          case DownloadPhase.DownloadRegion: {
+            setPhase(DownloadPhase.DownloadRegion);
+            const regionOut = await downloadRegionRoutes(ctx, view!);
+            if (regionOut != null) {
+              downloadedMiniMap = regionOut;
+            }
             phase = DownloadPhase.Complete;
             this.phase = DownloadPhase.Complete;
             this.phaseProgress = 1;
@@ -179,7 +177,7 @@ export class DownloadTask {
       return {
         downloadedPageView: pageJsonUri!,
         downloadedImages: downloadedImages!,
-        downloadedMapData,
+        downloadedMiniMap,
       };
     } catch (e) {
       await deleteOfflineBundleFiles(pageId);

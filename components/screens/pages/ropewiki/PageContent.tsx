@@ -67,6 +67,8 @@ export type PageContentProps = {
   onMomentumScrollEnd: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onCardHeightLayout: (height: number) => void;
   miniMapGateRef: React.RefObject<View | null>;
+  /** Gate placeholder in the scroll card; parent decides from API + offline minimap. */
+  showMiniMapPlaceholder: boolean;
   onMiniMapLayout: (width: number, height: number) => void;
   checkMiniMapInView: () => void;
 };
@@ -85,6 +87,7 @@ export function PageContent({
   onMomentumScrollEnd,
   onCardHeightLayout,
   miniMapGateRef,
+  showMiniMapPlaceholder,
   onMiniMapLayout,
   checkMiniMapInView,
 }: PageContentProps) {
@@ -97,8 +100,6 @@ export function PageContent({
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
-  const hasMiniMap = data.miniMap != null;
-
   return (
     <AnimatedScrollView
       style={styles.scrollView}
@@ -175,7 +176,7 @@ export function PageContent({
               descentElevGain={data.descentElevGain}
               exitElevGain={data.exitElevGain}
             />
-            {hasMiniMap ? (
+            {showMiniMapPlaceholder ? (
               <View
                 ref={miniMapGateRef}
                 collapsable={false}

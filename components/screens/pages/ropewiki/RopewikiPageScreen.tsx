@@ -11,7 +11,8 @@ import {
   Service,
 } from "ropegeo-common/components";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
-import { PageMiniMap } from "./PageMiniMap";
+import { CenteredRegionMiniMapView } from "@/components/minimap/CenteredRegionMiniMapView";
+import { PageMiniMap, type PageMiniMapTileProps } from "@/components/minimap/PageMiniMap";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
@@ -52,7 +53,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   MiniMapType,
   PageDataSource,
-  type PageMiniMap as PageMiniMapConfig,
   Result,
   type RopewikiPageView,
   RouteType,
@@ -78,7 +78,7 @@ function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
 const TOAST_STACK_GAP = 8;
 const TOAST_STACK_OFFSET = 44 + TOAST_STACK_GAP;
 
-const DOWNLOAD_PHASE_COUNT = 4;
+const DOWNLOAD_PHASE_COUNT = 5;
 
 /** Same tap thresholds as `RopewikiRegionScreen` hero layer (pans disabled for single-image page). */
 const TAP_MAX_DISPLACEMENT = 10;
@@ -278,12 +278,25 @@ function PageScreenBody({
   /** Prefer full-res URL; fall back to banner so expand works when API omits `fullUrl`. */
   const bannerExpandSourceUrl = bannerFullUrl ?? bannerUrl;
 
-  const hasMiniMap = data.miniMap != null;
-  const mapDirections =
-    data.coordinates != null &&
-    hasMiniMap &&
-    data.miniMap?.miniMapType === MiniMapType.TilesTemplate
+  const minimapForUi = savedEntry?.downloadedMiniMap ?? data.miniMap;
+  const hasMiniMap = minimapForUi != null;
+  const directionsFromPageCoords =
+    data.coordinates != null
       ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
+      : null;
+  const mapDirections =
+    directionsFromPageCoords != null &&
+    hasMiniMap &&
+    (minimapForUi.miniMapType === MiniMapType.TilesTemplate ||
+      minimapForUi.miniMapType === MiniMapType.DownloadedTilesTemplate)
+      ? directionsFromPageCoords
+      : null;
+  const centeredMiniMapDirections =
+    directionsFromPageCoords != null &&
+    hasMiniMap &&
+    (minimapForUi.miniMapType === MiniMapType.CenteredGeojson ||
+      minimapForUi.miniMapType === MiniMapType.DownloadedCenteredGeojson)
+      ? directionsFromPageCoords
       : null;
 
   useEffect(() => {
@@ -537,6 +550,7 @@ function PageScreenBody({
         onMomentumScrollEnd={onMomentumScrollEndPage}
         onCardHeightLayout={setCardHeight}
         miniMapGateRef={miniMapGateRef}
+        showMiniMapPlaceholder={minimapForUi != null}
         onMiniMapLayout={(width, height) => {
           setMiniMapAnchorRect((prev) =>
             prev == null
@@ -609,10 +623,11 @@ function PageScreenBody({
           />
         </>
       )}
-      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.TilesTemplate ? (
+      {hasMiniMap &&
+      (minimapForUi.miniMapType === MiniMapType.TilesTemplate ||
+        minimapForUi.miniMapType === MiniMapType.DownloadedTilesTemplate) ? (
         <PageMiniMap
-          miniMap={data.miniMap as PageMiniMapConfig}
-          pageName={data.name}
+          miniMap={minimapForUi as PageMiniMapTileProps}
           mountNativeMap={mountMiniMapNative}
           expanded={mapMode === "expanded"}
           anchorRect={miniMapAnchorRect}
@@ -620,8 +635,22 @@ function PageScreenBody({
           scrollY={scrollY}
           onExpand={openPageFullMap}
           onCollapse={closePageFullMap}
-          localTileRootUri={savedEntry?.downloadedMapData ?? null}
           mapDirections={mapDirections}
+        />
+      ) : null}
+      {hasMiniMap &&
+      (minimapForUi.miniMapType === MiniMapType.CenteredGeojson ||
+        minimapForUi.miniMapType === MiniMapType.DownloadedCenteredGeojson) ? (
+        <CenteredRegionMiniMapView
+          miniMap={minimapForUi}
+          mapDirections={centeredMiniMapDirections}
+          mountNativeMap={mountMiniMapNative}
+          expanded={mapMode === "expanded"}
+          anchorRect={miniMapAnchorRect}
+          baseScrollY={baseScrollYRef.current}
+          scrollY={scrollY}
+          onExpand={openPageFullMap}
+          onCollapse={closePageFullMap}
         />
       ) : null}
 

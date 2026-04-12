@@ -14,9 +14,14 @@ export function getOfflinePageJsonUri(pageId: string): string {
   return `${getOfflinePageRootUri(pageId)}page-response.json`;
 }
 
-/** Directory root for vector tiles (trailing slash); matches `downloadedMapData` field. */
+/** Directory root for vector tiles (trailing slash). */
 export function getOfflineMapDataRootUri(pageId: string): string {
   return `${getOfflinePageRootUri(pageId)}mapdata/`;
+}
+
+/** Merged routes GeoJSON for a centered-region page minimap (`file://` URI). */
+export function getOfflineRegionRoutesGeojsonUri(pageId: string, regionId: string): string {
+  return `${getOfflinePageRootUri(pageId)}regions/${regionId}/routes.geojson`;
 }
 
 export function getOfflineImageFileUri(pageId: string, imageId: string, slot: string): string {

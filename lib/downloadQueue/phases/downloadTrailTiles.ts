@@ -1,5 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import {
+  DownloadedPageMiniMap,
   MiniMapType,
   type PageMiniMap,
   type RopewikiPageView,
@@ -10,8 +11,14 @@ import { ensureParentDir } from "@/lib/downloadQueue/util/downloadUtils";
 import { fetchMapDataTileKeys } from "@/lib/downloadQueue/util/fetchMapDataTileKeys";
 import { relativePathFromTileUrl } from "@/lib/offline/tileUrlPaths";
 import type { DownloadContext } from "@/lib/downloadQueue/downloadTask";
+import { DownloadPhase } from "@/lib/downloadQueue/downloadPhase";
 
 const TILE_DOWNLOAD_BATCH_SIZE = 25;
+
+function localVectorTileTemplate(rootUri: string, layerId: string): string {
+  const base = rootUri.endsWith("/") ? rootUri : `${rootUri}/`;
+  return `${base}tiles/${layerId}/{z}/{x}/{y}.pbf`;
+}
 
 function getTilesMiniMap(view: RopewikiPageView): PageMiniMap | null {
   const m = view.miniMap;
@@ -45,7 +52,7 @@ async function getTiles(
           progress.bytesDone += info.size;
         }
         ctx.onProgress({
-          phase: 4,
+          phase: DownloadPhase.DownloadTiles,
           phaseProgress: Math.min(1, progress.bytesDone / totalBytesForTiles),
         });
       }),
@@ -56,10 +63,10 @@ async function getTiles(
 export async function downloadTrailTiles(
   ctx: DownloadContext,
   view: RopewikiPageView,
-): Promise<string | null> {
+): Promise<DownloadedPageMiniMap | null> {
   const mm = getTilesMiniMap(view);
   if (mm == null) {
-    ctx.onProgress({ phase: 4, phaseProgress: 1 });
+    ctx.onProgress({ phase: DownloadPhase.DownloadTiles, phaseProgress: 1 });
     return null;
   }
 
@@ -67,7 +74,7 @@ export async function downloadTrailTiles(
   const mapRoot = getOfflineMapDataRootUri(ctx.pageId);
   await FileSystem.makeDirectoryAsync(mapRoot, { intermediates: true });
 
-  ctx.onProgress({ phase: 4, phaseProgress: 0 });
+  ctx.onProgress({ phase: DownloadPhase.DownloadTiles, phaseProgress: 0 });
   const limit = 100;
   let page = 1;
   const progress: TileBytesProgress = { bytesDone: 0 };
@@ -92,6 +99,7 @@ export async function downloadTrailTiles(
     page += 1;
   }
 
-  ctx.onProgress({ phase: 4, phaseProgress: 1 });
-  return mapRoot;
+  ctx.onProgress({ phase: DownloadPhase.DownloadTiles, phaseProgress: 1 });
+  const template = localVectorTileTemplate(mapRoot, mm.layerId);
+  return new DownloadedPageMiniMap(mm.layerId, template, mm.bounds, mm.title);
 }
