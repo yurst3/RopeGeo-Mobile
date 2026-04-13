@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type RopewikiPageView, RouteType, SavedPage } from "ropegeo-common/models";
+import { type OnlinePageView, SavedPage } from "ropegeo-common/models";
 
 const STORAGE_KEY = "ropegeo:savedPages";
 
@@ -22,11 +22,7 @@ type SavedPagesContextValue = {
   replaceSaved: (entry: SavedPage) => void;
   removeSaved: (pageId: string) => void;
   removeDownloadBundle: (pageId: string) => Promise<void>;
-  toggleSaveFromRopewikiPage: (
-    data: RopewikiPageView,
-    routeType: RouteType,
-    apiPageId: string,
-  ) => void;
+  toggleSaveFromRopewikiPage: (data: OnlinePageView) => void;
 };
 
 const SavedPagesContext = createContext<SavedPagesContextValue | null>(null);
@@ -114,7 +110,7 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
     (pageId: string) => {
       setSavedEntries((prev) => {
         const entry = prev.find((e) => e.preview.id === pageId);
-        if (entry?.downloadedPageView != null) {
+        if (entry?.downloadedPageViewPath != null) {
           void deleteOfflineBundleFiles(pageId);
         }
         const next = prev.filter((e) => e.preview.id !== pageId);
@@ -128,14 +124,11 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
   const removeDownloadBundle = useCallback(
     async (pageId: string) => {
       const entry = savedEntriesRef.current.find((e) => e.preview.id === pageId);
-      if (entry == null || entry.downloadedPageView == null) return;
+      if (entry == null || entry.downloadedPageViewPath == null) return;
       await deleteOfflineBundleFiles(pageId);
       const cleared = new SavedPage(
         entry.preview,
-        entry.routeType,
         entry.savedAt,
-        null,
-        null,
         null,
       );
       setSavedEntries((prev) => {
@@ -148,18 +141,18 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleSaveFromRopewikiPage = useCallback(
-    (data: RopewikiPageView, routeType: RouteType, apiPageId: string) => {
+    (data: OnlinePageView) => {
       setSavedEntries((prev) => {
-        const existing = prev.find((e) => e.preview.id === apiPageId);
+        const existing = prev.find((e) => e.preview.id === data.id);
         if (existing != null) {
-          if (existing.downloadedPageView != null) {
-            void deleteOfflineBundleFiles(apiPageId);
+          if (existing.downloadedPageViewPath != null) {
+            void deleteOfflineBundleFiles(data.id);
           }
-          const next = prev.filter((e) => e.preview.id !== apiPageId);
+          const next = prev.filter((e) => e.preview.id !== data.id);
           schedulePersist(next);
           return next;
         }
-        const next = [...prev, SavedPage.fromRopewikiPageView(data, routeType, apiPageId)];
+        const next = [...prev, data.toSavedPage()];
         schedulePersist(next);
         return next;
       });

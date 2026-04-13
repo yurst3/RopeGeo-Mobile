@@ -20,7 +20,8 @@ export type PageSeamButtonsProps = {
   mapExpanded: boolean;
   isDownloaded: boolean;
   downloading: boolean;
-  downloadPhase: number;
+  downloadDisplayStep: number;
+  downloadDisplayTotal: number;
   downloadPhaseProgress: number;
   onDownloadPress: () => void;
   onRemoveDownloadPress: () => void;
@@ -33,7 +34,8 @@ export function PageSeamButtons({
   mapExpanded,
   isDownloaded,
   downloading,
-  downloadPhase,
+  downloadDisplayStep,
+  downloadDisplayTotal,
   downloadPhaseProgress,
   onDownloadPress,
   onRemoveDownloadPress,
@@ -66,7 +68,8 @@ export function PageSeamButtons({
       <DownloadButton
         isDownloaded={isDownloaded}
         downloading={downloading}
-        downloadPhase={downloadPhase}
+        downloadDisplayStep={downloadDisplayStep}
+        downloadDisplayTotal={downloadDisplayTotal}
         downloadPhaseProgress={downloadPhaseProgress}
         onDownloadPress={onDownloadPress}
         onRemovePress={onRemoveDownloadPress}

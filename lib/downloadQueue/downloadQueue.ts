@@ -2,16 +2,16 @@ import {
   DownloadTask,
   DownloadPhase,
   type DownloadTaskSnapshot,
-  type DownloadTaskResult,
 } from "@/lib/downloadQueue/downloadTask";
+import { SavedPage, type OnlinePageView } from "ropegeo-common/models";
 
 export type QueueDownloadPhase = DownloadPhase;
 export type { DownloadTaskSnapshot };
 
 type QueueEntry = {
-  pageId: string;
-  apiPageId: string;
-  onSuccess: (result: DownloadTaskResult) => Promise<void> | void;
+  data: OnlinePageView;
+  savedAt?: number;
+  onSuccess: (savedPage: SavedPage) => Promise<void> | void;
 };
 
 type Listener = (snapshots: Record<string, DownloadTaskSnapshot>) => void;
@@ -25,8 +25,14 @@ export class DownloadQueue {
 
   private readonly onSuccessByPageId = new Map<
     string,
-    (result: DownloadTaskResult) => Promise<void> | void
+    (savedPage: SavedPage) => Promise<void> | void
   >();
+
+  private readonly onlineViewByPageId = new Map<string, OnlinePageView>();
+
+  private readonly displayPlanByPageId = new Map<string, DownloadPhase[]>();
+
+  private readonly savedAtByPageId = new Map<string, number>();
 
   private readonly listeners = new Set<Listener>();
 
@@ -64,22 +70,30 @@ export class DownloadQueue {
   }
 
   enqueue(entry: QueueEntry): void {
-    const existing = this.tasks.get(entry.pageId)?.getSnapshot();
+    const pageId = entry.data.id;
+    const existing = this.tasks.get(pageId)?.getSnapshot();
     if (existing != null && (existing.state === "queued" || existing.state === "running")) {
       return;
     }
 
-    const task = new DownloadTask(entry.pageId, entry.apiPageId, () => {
+    const task = new DownloadTask(pageId, entry.data.pageViewType, () => {
       this.emit();
     });
+    const displayPlan = DownloadTask.buildDisplayPlanForView(entry.data);
 
     this.clearCleanupTimer(task.pageId);
     task.phase = DownloadPhase.Queued;
     task.phaseProgress = 0;
     task.state = "queued";
     task.errorMessage = null;
+    task.displayStep = 0;
+    task.displayTotal = displayPlan.length;
+    task.displayPlan = [...displayPlan];
     this.queue.push(task);
     this.tasks.set(task.pageId, task);
+    this.onlineViewByPageId.set(task.pageId, entry.data);
+    this.displayPlanByPageId.set(task.pageId, displayPlan);
+    this.savedAtByPageId.set(task.pageId, entry.savedAt ?? Date.now());
     this.onSuccessByPageId.set(task.pageId, entry.onSuccess);
     this.emit();
     void this.process();
@@ -93,10 +107,15 @@ export class DownloadQueue {
         const task = this.queue.shift();
         if (task == null) break;
         const onSuccess = this.onSuccessByPageId.get(task.pageId);
-        if (onSuccess == null) continue;
+        const view = this.onlineViewByPageId.get(task.pageId);
+        const displayPlan = this.displayPlanByPageId.get(task.pageId);
+        const savedAt = this.savedAtByPageId.get(task.pageId);
+        if (onSuccess == null || view == null || displayPlan == null || savedAt == null) continue;
+        const viewSaved = view.toSavedPage();
+        const savedPage = new SavedPage(viewSaved.preview, savedAt, viewSaved.downloadedPageViewPath);
 
         try {
-          const result = await task.run();
+          const result = await task.run(savedPage, displayPlan);
           await onSuccess(result);
           this.emit();
           this.scheduleCleanup(task.pageId, 2000);
@@ -116,6 +135,9 @@ export class DownloadQueue {
       this.cleanupTimers.delete(pageId);
       this.tasks.delete(pageId);
       this.onSuccessByPageId.delete(pageId);
+      this.onlineViewByPageId.delete(pageId);
+      this.displayPlanByPageId.delete(pageId);
+      this.savedAtByPageId.delete(pageId);
       this.emit();
     }, timeoutMs);
     this.cleanupTimers.set(pageId, timer);

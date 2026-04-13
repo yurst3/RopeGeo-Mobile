@@ -20,7 +20,8 @@ import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { StarRating } from "@/components/StarRating";
 import {
   AcaDifficulty,
-  type PagePreview,
+  type OnlinePagePreview,
+  type OfflinePagePreview,
   RouteType,
 } from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
@@ -38,7 +39,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_MARGIN_H = 16;
 const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
 
-function hasDifficultyInfo(difficulty: PagePreview["difficulty"]): boolean {
+type PreviewCardData = OnlinePagePreview | OfflinePagePreview;
+
+function hasDifficultyInfo(difficulty: PreviewCardData["difficulty"]): boolean {
   if (!(difficulty instanceof AcaDifficulty)) return false;
   return (
     difficulty.technical != null ||
@@ -49,7 +52,7 @@ function hasDifficultyInfo(difficulty: PagePreview["difficulty"]): boolean {
 }
 
 function showBadges(
-  preview: PagePreview,
+  preview: PreviewCardData,
   routeType?: RouteType | null,
 ): boolean {
   return (
@@ -66,12 +69,14 @@ function SinglePreviewCard({
   badgeScale = 0.65,
   onPress,
 }: {
-  preview: PagePreview;
+  preview: PreviewCardData;
   routeType?: RouteType | null;
   badgeScale?: number;
-  onPress?: (preview: PagePreview) => void;
+  onPress?: (preview: PreviewCardData) => void;
 }) {
-  const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
+  const previewImageUri =
+    preview.fetchType === "online" ? preview.imageUrl : preview.downloadedImagePath;
+  const [imageLoading, setImageLoading] = useState(!!previewImageUri);
   const rating = preview.rating ?? 0;
   const ratingCount = preview.ratingCount ?? 0;
   const location = preview.regions?.length
@@ -104,7 +109,7 @@ function SinglePreviewCard({
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <View style={styles.imageContainer}>
-          {preview.imageUrl ? (
+          {previewImageUri ? (
             <>
               {imageLoading && (
                 <View style={styles.imageLoadingOverlay}>
@@ -112,7 +117,7 @@ function SinglePreviewCard({
                 </View>
               )}
               <Image
-                source={preview.imageUrl}
+                source={previewImageUri}
                 style={styles.image}
                 contentFit="cover"
                 onLoadStart={() => setImageLoading(true)}
@@ -165,9 +170,9 @@ function CurrentPreviewNotifier({
   onCurrentPreviewChange,
 }: {
   loading: boolean;
-  data: PagePreview[] | null;
+  data: PreviewCardData[] | null;
   currentIndex: number;
-  onCurrentPreviewChange?: (preview: PagePreview | null) => void;
+  onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
 }) {
   useEffect(() => {
     if (!onCurrentPreviewChange) return;
@@ -186,9 +191,9 @@ type RoutePreviewProps = {
   /** Route type from map/list (e.g. Cave, POI) so the preview can show the correct badge. */
   routeType?: RouteType | null;
   /** Called when the currently viewed preview page changes (initial load or swipe). Use to sync mapData for TrailsLayer. */
-  onCurrentPreviewChange?: (preview: PagePreview | null) => void;
+  onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
   /** Called when the user presses the preview card. Receives the tapped preview. */
-  onPreviewPress?: (preview: PagePreview) => void;
+  onPreviewPress?: (preview: PreviewCardData) => void;
   /** Scale factor for difficulty badges (e.g. 0.65 for 65%). Default 0.65. */
   badgeScale?: number;
 };
@@ -199,7 +204,7 @@ export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange
   const { isSaved } = useSavedPages();
 
   return (
-    <RopeGeoHttpRequest<PagePreview[]>
+    <RopeGeoHttpRequest<OnlinePagePreview[]>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/route/:routeId/preview"

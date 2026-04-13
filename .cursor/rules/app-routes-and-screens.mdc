@@ -24,7 +24,7 @@ Route components must **not** contain screen UI or business logic; that stays in
 ## Param handling
 
 - **Parse** params from the router (handle `string | string[] | undefined` as needed).
-- **Validate** required params: if missing or invalid, render an error state or message instead of the screen (e.g. “Missing source”, “Invalid routeType”).
+- **Validate** required params: if missing or invalid, render an error state or message instead of the screen (e.g. “Missing source”).
 - Use shared enums/types (e.g. from `ropegeo-common`) for param values and validate against them before passing to the screen.
 
 ## Example
@@ -32,21 +32,17 @@ Route components must **not** contain screen UI or business logic; that stays in
 ```tsx
 // app/(tabs)/explore/[id]/page/index.tsx — Route component
 export default function PageRoute() {
-  const params = useLocalSearchParams<{ id: string; source: string; routeType: string }>();
+  const params = useLocalSearchParams<{ id: string; source: string }>();
   const id = typeof params.id === "string" ? params.id : "";
   const source = normalizeStringParam(params.source);
-  const routeType = normalizeStringParam(params.routeType);
 
   if (!isPageDataSource(source)) {
     return <ParamError message={source ? `Invalid source: ${source}` : "Missing source."} />;
   }
-  if (!isRouteType(routeType)) {
-    return <ParamError message={routeType ? `Invalid routeType: ${routeType}` : "Missing routeType."} />;
-  }
 
   return (
     <View style={{ flex: 1 }}>
-      <RopewikiPageScreen pageId={id} routeType={routeType} />
+      <RopewikiPageScreen pageId={id} />
     </View>
   );
 }

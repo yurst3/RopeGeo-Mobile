@@ -2,7 +2,6 @@ import { MiniDownloadButton } from "@/components/buttons/MiniDownloadButton";
 import { StarRating } from "@/components/StarRating";
 import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
-import { DownloadPhase } from "@/lib/downloadQueue/downloadTask";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Image } from "expo-image";
@@ -15,9 +14,9 @@ import {
 } from "react-native";
 import {
   AcaDifficulty,
+  type OfflinePagePreview,
+  type OnlinePagePreview,
   PageDataSource,
-  type PagePreview as PagePreviewData,
-  RouteType,
 } from "ropegeo-common/models";
 
 const IMAGE_SIZE = 96;
@@ -25,9 +24,6 @@ const NO_IMAGE_ICON_SIZE = 36;
 /** Matches `RegionPreview` thumbnail badge sizing. */
 const SOURCE_ICON_OVERLAY_SIZE = 28;
 const REGION_MAX = 3;
-/** Denominator for `(n/4)` label; numerator 0 = queued, 1–4 = active phases. */
-const DOWNLOAD_STEP_COUNT = 4;
-
 function formatPageDifficulty(d: AcaDifficulty): string {
   const main = [d.technical, d.water]
     .filter((x): x is NonNullable<typeof x> => x != null)
@@ -48,11 +44,9 @@ function sourceIcon(source: PageDataSource): number | null {
 }
 
 type Props = {
-  preview: PagePreviewData;
+  preview: OnlinePagePreview | OfflinePagePreview;
   /** `explore` (default): `/(tabs)/explore/[id]/page`. `saved`: `/(tabs)/saved/[id]/page`. */
   pageHref?: "explore" | "saved";
-  /** When omitted, uses stored route type if saved, else `Unknown`. */
-  routeType?: RouteType;
   /**
    * When true: Ropewiki badge is overlaid on the thumbnail and `MiniDownloadButton` sits in
    * the trailing column. When false: matches `RegionPreview` (source logo in the right column,
@@ -64,44 +58,43 @@ type Props = {
 export function PagePreview({
   preview,
   pageHref = "explore",
-  routeType: routeTypeProp,
   showMiniDownload = false,
 }: Props) {
   const router = useRouter();
   const { savedEntries, removeDownloadBundle } = useSavedPages();
   const { getTaskSnapshot, enqueueSavedPageDownload } = useDownloadQueue();
-  const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
+  const previewImageUri =
+    preview.fetchType === "online"
+      ? preview.imageUrl
+      : preview.downloadedImagePath;
+  const [imageLoading, setImageLoading] = useState(!!previewImageUri);
   const stored = savedEntries.find((e) => e.preview.id === preview.id);
-  const routeForNav = routeTypeProp ?? stored?.routeType ?? RouteType.Unknown;
 
   let miniDownloadState: {
     downloading: boolean;
     isDownloaded: boolean;
     phaseProgress: number;
-    /** 0 = queued; 1–4 = active steps (matches `DownloadTask` phases 1–4). */
     phaseStepForLabel: number | null;
+    phaseTotalForLabel: number | null;
   } | null = null;
   if (showMiniDownload && stored != null) {
     const task = getTaskSnapshot(preview.id);
     const downloading =
       task?.state === "queued" || task?.state === "running";
-    const isDownloaded = stored.downloadedPageView != null;
+    const isDownloaded = stored.downloadedPageViewPath != null;
     const phaseProgress =
       task != null &&
       (task.state === "queued" || task.state === "running")
         ? task.phaseProgress
         : 0;
-    const phaseStepForLabel =
-      downloading && task != null
-        ? task.phase === DownloadPhase.Queued
-          ? 0
-          : Math.max(1, Math.min(DOWNLOAD_STEP_COUNT, task.phase))
-        : null;
+    const showStepLabel =
+      downloading && task != null && task.displayTotal > 0;
     miniDownloadState = {
       downloading,
       isDownloaded,
       phaseProgress,
-      phaseStepForLabel,
+      phaseStepForLabel: showStepLabel ? task.displayStep : null,
+      phaseTotalForLabel: showStepLabel ? task.displayTotal : null,
     };
   }
 
@@ -129,7 +122,6 @@ export function PagePreview({
     const params = {
       id: preview.id,
       source: PageDataSource.Ropewiki,
-      routeType: routeForNav,
     };
     if (pageHref === "saved") {
       router.push({
@@ -151,7 +143,7 @@ export function PagePreview({
         style={({ pressed }) => [styles.cardMain, pressed && styles.cardPressed]}
       >
         <View style={styles.imageWrap}>
-          {preview.imageUrl ? (
+          {previewImageUri ? (
             <>
               {imageLoading && (
                 <View style={styles.imageLoadingOverlay}>
@@ -159,7 +151,7 @@ export function PagePreview({
                 </View>
               )}
               <Image
-                source={preview.imageUrl}
+                source={previewImageUri}
                 style={styles.image}
                 contentFit="cover"
                 onLoadStart={() => setImageLoading(true)}
@@ -222,9 +214,10 @@ export function PagePreview({
             onDownloadPress={onMiniDownloadPress}
             onRemovePress={onMiniRemovePress}
           />
-          {miniDownloadState.phaseStepForLabel != null ? (
+          {miniDownloadState.phaseStepForLabel != null &&
+          miniDownloadState.phaseTotalForLabel != null ? (
             <Text style={styles.downloadPhaseLabel}>
-              ({miniDownloadState.phaseStepForLabel}/{DOWNLOAD_STEP_COUNT})
+              {`(${miniDownloadState.phaseStepForLabel}/${miniDownloadState.phaseTotalForLabel})`}
             </Text>
           ) : null}
         </View>

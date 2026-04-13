@@ -31,7 +31,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
-  Animated as RNAnimated,
   BackHandler,
   Dimensions,
   type NativeScrollEvent,
@@ -40,7 +39,6 @@ import {
   Platform,
   Share,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated, {
@@ -53,9 +51,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   MiniMapType,
   PageDataSource,
-  Result,
-  type RopewikiPageView,
-  RouteType,
+  OfflineRopewikiPageView,
+  type OnlineRopewikiPageView,
+  type OfflineRopewikiPageView as OfflineRopewikiPageViewType,
   SavedPage,
 } from "ropegeo-common/models";
 
@@ -78,8 +76,6 @@ function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
 const TOAST_STACK_GAP = 8;
 const TOAST_STACK_OFFSET = 44 + TOAST_STACK_GAP;
 
-const DOWNLOAD_PHASE_COUNT = 5;
-
 /** Same tap thresholds as `RopewikiRegionScreen` hero layer (pans disabled for single-image page). */
 const TAP_MAX_DISPLACEMENT = 10;
 const TAP_MAX_DURATION_MS = 300;
@@ -89,8 +85,6 @@ const DEBUG_BANNER_EXPAND_HIT_OUTLINE = false;
 
 export type RopewikiPageScreenProps = {
   pageId: string;
-  /** Route type for badge display (e.g. Canyon, Cave, POI). */
-  routeType?: RouteType;
 };
 
 function ErrorEffect({ error }: { error: Error }) {
@@ -110,11 +104,9 @@ function ErrorEffect({ error }: { error: Error }) {
 function PageScreenBody({
   pageId,
   data,
-  routeType,
 }: {
   pageId: string;
-  data: RopewikiPageView;
-  routeType?: RouteType;
+  data: OnlineRopewikiPageView | OfflineRopewikiPageViewType;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -130,26 +122,35 @@ function PageScreenBody({
   const { showShareDimmer, hideShareDimmer } = useShareSheetDimmer();
   const saved = isSaved(pageId);
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
-  const isDownloaded = savedEntry?.downloadedPageView != null;
-  const routeTypeResolved = routeType ?? RouteType.Unknown;
+  const isDownloaded = savedEntry?.downloadedPageViewPath != null;
+  const routeTypeResolved = data.routeType;
   const downloadTask = getTaskSnapshot(pageId);
   const downloading =
     downloadTask?.state === "queued" || downloadTask?.state === "running";
-  const downloadUi: 
+  const downloadUi:
     | { kind: "idle" }
-    | { kind: "progress"; phase: number; phaseTitle: string; phaseProgress: number }
-    | { kind: "success" }
+    | {
+        kind: "progress";
+        phaseTitle: string;
+        phaseProgress: number;
+        displayStep: number;
+        displayTotal: number;
+      }
+    | { kind: "success"; displayTotal: number }
     | { kind: "error" } = (() => {
     if (downloadTask == null) return { kind: "idle" };
     if (downloadTask.state === "queued" || downloadTask.state === "running") {
       return {
         kind: "progress",
-        phase: downloadTask.phase,
         phaseTitle: downloadTask.phaseTitle,
         phaseProgress: downloadTask.phaseProgress,
+        displayStep: downloadTask.displayStep,
+        displayTotal: downloadTask.displayTotal,
       };
     }
-    if (downloadTask.state === "success") return { kind: "success" };
+    if (downloadTask.state === "success") {
+      return { kind: "success", displayTotal: downloadTask.displayTotal };
+    }
     return { kind: "error" };
   })();
 
@@ -193,7 +194,9 @@ function PageScreenBody({
       removeSaved(pageId);
       return;
     }
-    toggleSaveFromRopewikiPage(data, routeTypeResolved, pageId);
+    if (data.fetchType === "online") {
+      toggleSaveFromRopewikiPage(data);
+    }
     showSavedToast();
   };
   /** True until `Share.share` settles; keeps page non-interactive even if the dimmer was dismissed. */
@@ -213,15 +216,14 @@ function PageScreenBody({
     }
   }, [pageId, showShareDimmer, hideShareDimmer]);
   const onDownloadPress = useCallback(() => {
-    if (downloading || isDownloaded) return;
+    if (downloading || isDownloaded || data.fetchType !== "online") return;
+    const onlineData = data as OnlineRopewikiPageView;
     if (!saved) {
       showSavedToast();
     }
     enqueuePageDownload({
       pageId,
-      apiPageId: pageId,
-      data,
-      routeType: routeTypeResolved,
+      data: onlineData,
     });
   }, [
     data,
@@ -229,13 +231,17 @@ function PageScreenBody({
     enqueuePageDownload,
     isDownloaded,
     pageId,
-    routeTypeResolved,
     saved,
     showSavedToast,
   ]);
   const [bannerAspectRatio, setBannerAspectRatio] = useState<number | null>(null);
   const [bannerImageLoading, setBannerImageLoading] = useState(true);
-  const bannerUrl = data.bannerImage?.bannerUrl ?? null;
+  const bannerUrl =
+    data.bannerImage == null
+      ? null
+      : data.bannerImage.fetchType === "online"
+        ? data.bannerImage.bannerUrl
+        : data.bannerImage.downloadedBannerPath;
   const hasBannerImageObject = data.bannerImage != null;
 
   const scrollY = useSharedValue(0);
@@ -245,6 +251,12 @@ function PageScreenBody({
   const baseScrollYRef = useRef(0);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
+  const onBannerImageLoad = useCallback((width: number, height: number) => {
+    if (width <= 0 || height <= 0) return;
+    const ratio = width / height;
+    setBannerAspectRatio(ratio);
+    aspectRatioSv.value = ratio;
+  }, [aspectRatioSv, pageId]);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
@@ -274,11 +286,16 @@ function PageScreenBody({
   const [bannerExpanded, setBannerExpanded] = useState(false);
   const [bannerExpandAnchor, setBannerExpandAnchor] =
     useState<ExpandedImageAnchorRect | null>(null);
-  const bannerFullUrl = data.bannerImage?.fullUrl ?? null;
+  const bannerFullUrl =
+    data.bannerImage == null
+      ? null
+      : data.bannerImage.fetchType === "online"
+        ? data.bannerImage.fullUrl
+        : data.bannerImage.downloadedFullPath;
   /** Prefer full-res URL; fall back to banner so expand works when API omits `fullUrl`. */
   const bannerExpandSourceUrl = bannerFullUrl ?? bannerUrl;
 
-  const minimapForUi = savedEntry?.downloadedMiniMap ?? data.miniMap;
+  const minimapForUi = data.miniMap;
   const hasMiniMap = minimapForUi != null;
   const directionsFromPageCoords =
     data.coordinates != null
@@ -286,16 +303,16 @@ function PageScreenBody({
       : null;
   const mapDirections =
     directionsFromPageCoords != null &&
-    hasMiniMap &&
-    (minimapForUi.miniMapType === MiniMapType.TilesTemplate ||
-      minimapForUi.miniMapType === MiniMapType.DownloadedTilesTemplate)
+    minimapForUi != null &&
+    (minimapForUi.miniMapType === MiniMapType.OnlineTilesTemplate ||
+      minimapForUi.miniMapType === MiniMapType.OfflineTilesTemplate)
       ? directionsFromPageCoords
       : null;
   const centeredMiniMapDirections =
     directionsFromPageCoords != null &&
-    hasMiniMap &&
-    (minimapForUi.miniMapType === MiniMapType.CenteredGeojson ||
-      minimapForUi.miniMapType === MiniMapType.DownloadedCenteredGeojson)
+    minimapForUi != null &&
+    (minimapForUi.miniMapType === MiniMapType.OnlineCenteredGeojson ||
+      minimapForUi.miniMapType === MiniMapType.OfflineCenteredGeojson)
       ? directionsFromPageCoords
       : null;
 
@@ -491,6 +508,7 @@ function PageScreenBody({
         hasBannerImageObject={hasBannerImageObject}
         bannerImageLoading={bannerImageLoading}
         bannerFullRectRef={bannerFullRectRef}
+        onBannerImageLoad={onBannerImageLoad}
         onBannerImageLoadEnd={() => setBannerImageLoading(false)}
       />
 
@@ -568,7 +586,12 @@ function PageScreenBody({
         mapExpanded={mapMode === "expanded"}
         isDownloaded={isDownloaded}
         downloading={downloading}
-        downloadPhase={downloadUi.kind === "progress" ? downloadUi.phase : 1}
+        downloadDisplayStep={
+          downloadUi.kind === "progress" ? downloadUi.displayStep : 0
+        }
+        downloadDisplayTotal={
+          downloadUi.kind === "progress" ? downloadUi.displayTotal : 0
+        }
         downloadPhaseProgress={
           downloadUi.kind === "progress" ? downloadUi.phaseProgress : 0
         }
@@ -597,9 +620,13 @@ function PageScreenBody({
               kind={downloadUi.kind}
               title={
                 downloadUi.kind === "progress"
-                  ? `(${downloadUi.phase}/${DOWNLOAD_PHASE_COUNT}) ${downloadUi.phaseTitle}`
+                  ? downloadUi.displayTotal > 0
+                    ? `(${downloadUi.displayStep}/${downloadUi.displayTotal}) ${downloadUi.phaseTitle}`
+                    : downloadUi.phaseTitle
                   : downloadUi.kind === "success"
-                    ? `(${DOWNLOAD_PHASE_COUNT}/${DOWNLOAD_PHASE_COUNT}) Download complete`
+                    ? downloadUi.displayTotal > 0
+                      ? `(${downloadUi.displayTotal}/${downloadUi.displayTotal}) Download complete`
+                      : "Download complete"
                     : "Download failed"
               }
               progress={
@@ -624,8 +651,8 @@ function PageScreenBody({
         </>
       )}
       {hasMiniMap &&
-      (minimapForUi.miniMapType === MiniMapType.TilesTemplate ||
-        minimapForUi.miniMapType === MiniMapType.DownloadedTilesTemplate) ? (
+      (minimapForUi.miniMapType === MiniMapType.OnlineTilesTemplate ||
+        minimapForUi.miniMapType === MiniMapType.OfflineTilesTemplate) ? (
         <PageMiniMap
           miniMap={minimapForUi as PageMiniMapTileProps}
           mountNativeMap={mountMiniMapNative}
@@ -639,8 +666,8 @@ function PageScreenBody({
         />
       ) : null}
       {hasMiniMap &&
-      (minimapForUi.miniMapType === MiniMapType.CenteredGeojson ||
-        minimapForUi.miniMapType === MiniMapType.DownloadedCenteredGeojson) ? (
+      (minimapForUi.miniMapType === MiniMapType.OnlineCenteredGeojson ||
+        minimapForUi.miniMapType === MiniMapType.OfflineCenteredGeojson) ? (
         <CenteredRegionMiniMapView
           miniMap={minimapForUi}
           mapDirections={centeredMiniMapDirections}
@@ -679,7 +706,6 @@ function PageScreenBody({
 
 export function RopewikiPageScreen({
   pageId,
-  routeType,
 }: RopewikiPageScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -687,9 +713,9 @@ export function RopewikiPageScreen({
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
   const [preferOfflineForSession, setPreferOfflineForSession] = useState(false);
   const shouldUseOffline =
-    preferOfflineForSession && savedEntry?.downloadedPageView != null;
+    preferOfflineForSession && savedEntry?.downloadedPageViewPath != null;
 
-  const [offlineData, setOfflineData] = useState<RopewikiPageView | null>(null);
+  const [offlineData, setOfflineData] = useState<OfflineRopewikiPageViewType | null>(null);
   const [offlineError, setOfflineError] = useState<Error | null>(null);
   const [offlineLoading, setOfflineLoading] = useState(false);
 
@@ -697,7 +723,7 @@ export function RopewikiPageScreen({
     // Lock source mode when entering a page so finishing a download in-place
     // does not switch from HTTP -> offline until the next visit.
     if (savedPagesLoading) return;
-    setPreferOfflineForSession(savedEntry?.downloadedPageView != null);
+    setPreferOfflineForSession(savedEntry?.downloadedPageViewPath != null);
     // Intentionally omit savedEntry from deps: source mode is chosen on entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, savedPagesLoading]);
@@ -712,7 +738,7 @@ export function RopewikiPageScreen({
     let cancelled = false;
     setOfflineLoading(true);
     void (async () => {
-      const path = savedEntry.downloadedPageView;
+      const path = savedEntry.downloadedPageViewPath;
       if (path == null) return;
       try {
         let info: Awaited<ReturnType<typeof FileSystem.getInfoAsync>> | null = null;
@@ -725,10 +751,7 @@ export function RopewikiPageScreen({
           replaceSaved(
             new SavedPage(
               savedEntry.preview,
-              savedEntry.routeType,
               savedEntry.savedAt,
-              null,
-              null,
               null,
             ),
           );
@@ -737,11 +760,9 @@ export function RopewikiPageScreen({
         }
         const text = await FileSystem.readAsStringAsync(path);
         const raw = JSON.parse(text) as unknown;
-        const parsed = Result.fromResponseBody(raw);
-        const view = parsed.result as RopewikiPageView;
-        const patched = savedEntry.applyDownloadedImagesToPageView(view);
+        const view = OfflineRopewikiPageView.fromResult(raw);
         if (!cancelled) {
-          setOfflineData(patched);
+          setOfflineData(view);
           setOfflineError(null);
         }
       } catch (e) {
@@ -752,10 +773,7 @@ export function RopewikiPageScreen({
           replaceSaved(
             new SavedPage(
               savedEntry.preview,
-              savedEntry.routeType,
               savedEntry.savedAt,
-              null,
-              null,
               null,
             ),
           );
@@ -777,8 +795,7 @@ export function RopewikiPageScreen({
   }, [
     pageId,
     shouldUseOffline,
-    savedEntry?.downloadedPageView,
-    savedEntry?.downloadedImages,
+    savedEntry?.downloadedPageViewPath,
     replaceSaved,
   ]);
 
@@ -796,11 +813,11 @@ export function RopewikiPageScreen({
         </View>
       );
     }
-    return <PageScreenBody pageId={pageId} data={offlineData} routeType={routeType} />;
+    return <PageScreenBody pageId={pageId} data={offlineData} />;
   }
 
   return (
-    <RopeGeoHttpRequest<RopewikiPageView>
+    <RopeGeoHttpRequest<OnlineRopewikiPageView>
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/ropewiki/page/:id"
@@ -824,7 +841,7 @@ export function RopewikiPageScreen({
           return null;
         }
         return (
-          <PageScreenBody pageId={pageId} data={data} routeType={routeType} />
+          <PageScreenBody pageId={pageId} data={data} />
         );
       }}
     </RopeGeoHttpRequest>

@@ -17,6 +17,7 @@ export type PageBannerProps = {
   bannerImageLoading: boolean;
   /** For `measureInWindow` when expanding the banner image. */
   bannerFullRectRef: React.RefObject<View | null>;
+  onBannerImageLoad: (width: number, height: number) => void;
   onBannerImageLoadEnd: () => void;
 };
 
@@ -29,21 +30,21 @@ export function PageBanner({
   hasBannerImageObject,
   bannerImageLoading,
   bannerFullRectRef,
+  onBannerImageLoad,
   onBannerImageLoadEnd,
 }: PageBannerProps) {
   return (
     <Animated.View pointerEvents="none" style={[styles.bannerWrap, imageFrameStyle]}>
       {bannerUrl ? (
         <>
-          <View
-            ref={bannerFullRectRef}
-            style={StyleSheet.absoluteFill}
-            collapsable={false}
-          >
+          <View ref={bannerFullRectRef} style={StyleSheet.absoluteFill} collapsable={false}>
             <Image
               source={bannerUrl}
               style={styles.bannerImage}
               contentFit="contain"
+              onLoad={(event) => {
+                onBannerImageLoad(event.source.width, event.source.height);
+              }}
               onLoadEnd={onBannerImageLoadEnd}
             />
           </View>

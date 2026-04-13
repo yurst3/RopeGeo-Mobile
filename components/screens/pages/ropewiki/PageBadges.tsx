@@ -47,7 +47,8 @@ import {
   AcaTimeRating,
   AcaWaterRating,
   PermitStatus,
-  type RopewikiPageView,
+  type OfflineRopewikiPageView,
+  type OnlineRopewikiPageView,
 } from "ropegeo-common/models";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -164,7 +165,7 @@ const VEHICLE_BADGES: Record<
 };
 
 export type PageBadgesProps = {
-  data: RopewikiPageView;
+  data: OnlineRopewikiPageView | OfflineRopewikiPageView;
   /** Route type for badge display (e.g. "Canyon", "Cave", "POI"). */
   routeType?: string | null;
 };

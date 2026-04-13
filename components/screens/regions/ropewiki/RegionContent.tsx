@@ -24,8 +24,13 @@ import Animated, {
   runOnJS,
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
-import type { RopewikiRegionView } from "ropegeo-common/models";
-import { PageDataSource, Preview, RopewikiRegionPreviewsParams } from "ropegeo-common/models";
+import {
+  type OnlinePagePreview,
+  type RopewikiRegionView,
+  PageDataSource,
+  Preview,
+  RopewikiRegionPreviewsParams,
+} from "ropegeo-common/models";
 
 const PREVIEWS_PAGE_LIMIT = 10;
 const LOAD_MORE_THRESHOLD = 100;
@@ -288,7 +293,7 @@ export function RegionContent({
                         item.isPagePreview() ? (
                           <PagePreview
                             key={`page-${item.id}-${index}`}
-                            preview={item}
+                            preview={item as OnlinePagePreview}
                           />
                         ) : item.isRegionPreview() ? (
                           <RegionPreview

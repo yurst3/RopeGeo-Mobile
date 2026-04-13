@@ -13,13 +13,18 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type RopewikiPageView, RouteType, SavedPage } from "ropegeo-common/models";
+import {
+  PageDataSource,
+  PageViewType,
+  Result,
+  type OnlinePageView,
+  SavedPage,
+} from "ropegeo-common/models";
+import { SERVICE_BASE_URL, Service } from "ropegeo-common/components";
 
 type EnqueuePageDownloadInput = {
   pageId: string;
-  apiPageId: string;
-  data: RopewikiPageView;
-  routeType: RouteType;
+  data: OnlinePageView;
 };
 
 export type EnqueueSavedPageDownloadInput = {
@@ -37,6 +42,7 @@ type DownloadQueueContextValue = {
 const DownloadQueueContext = createContext<DownloadQueueContextValue | null>(null);
 
 export function DownloadQueueProvider({ children }: { children: ReactNode }) {
+  const webBase = SERVICE_BASE_URL[Service.WEBSCRAPER];
   const queue = useMemo(() => DownloadQueue.getInstance(), []);
   const { savedEntries, addSaved, replaceSaved } = useSavedPages();
   const savedEntriesRef = useRef(savedEntries);
@@ -50,36 +56,30 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => queue.subscribe(setSnapshots), [queue]);
 
+  const pageViewTypeFromSavedPage = useCallback((savedPage: SavedPage): PageViewType => {
+    switch (savedPage.preview.source) {
+      case PageDataSource.Ropewiki:
+        return PageViewType.Ropewiki;
+      default:
+        throw new Error(`Unsupported source for page view type: ${savedPage.preview.source}`);
+    }
+  }, []);
+
   const enqueuePageDownload = useCallback(
     (input: EnqueuePageDownloadInput) => {
       const existingAtEnqueue = savedEntriesRef.current.find(
         (e) => e.preview.id === input.pageId,
       );
-      const baseAtEnqueue =
-        existingAtEnqueue ??
-        SavedPage.fromRopewikiPageView(input.data, input.routeType, input.apiPageId);
+      const baseAtEnqueue = existingAtEnqueue ?? input.data.toSavedPage();
       if (existingAtEnqueue == null) {
         addSaved(baseAtEnqueue);
       }
 
       queue.enqueue({
-        pageId: input.pageId,
-        apiPageId: input.apiPageId,
-        onSuccess: async (out) => {
-          const existing = savedEntriesRef.current.find(
-            (e) => e.preview.id === input.pageId,
-          );
-          const base = existing ?? baseAtEnqueue;
-          replaceSaved(
-            new SavedPage(
-              base.preview,
-              base.routeType,
-              base.savedAt,
-              out.downloadedPageView,
-              out.downloadedImages,
-              out.downloadedMiniMap,
-            ),
-          );
+        data: input.data,
+        savedAt: baseAtEnqueue.savedAt,
+        onSuccess: async (updatedSavedPage) => {
+          replaceSaved(updatedSavedPage);
         },
       });
     },
@@ -94,28 +94,36 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
       if (saved == null) {
         return;
       }
-      queue.enqueue({
-        pageId: input.pageId,
-        apiPageId: input.pageId,
-        onSuccess: async (out) => {
-          const existing = savedEntriesRef.current.find(
-            (e) => e.preview.id === input.pageId,
+      const pageViewType = pageViewTypeFromSavedPage(saved);
+      void (async () => {
+        const pageUrl = `${webBase}/${encodeURIComponent(pageViewType)}/page/${encodeURIComponent(input.pageId)}`;
+        const res = await fetch(pageUrl, { headers: { Accept: "application/json" } });
+        if (!res.ok) {
+          throw new Error(`Page request failed: HTTP ${res.status}`);
+        }
+        const pageText = await res.text();
+        const wrapped = Result.fromResponseBody(JSON.parse(pageText) as unknown);
+        const onlineView = wrapped.result as OnlinePageView;
+        if (onlineView.fetchType !== "online") {
+          throw new Error(`Expected online page view but got fetchType=${onlineView.fetchType}`);
+        }
+        if (onlineView.pageViewType !== pageViewType) {
+          throw new Error(
+            `Expected pageViewType ${pageViewType} but received ${onlineView.pageViewType}`,
           );
-          const base = existing ?? saved;
-          replaceSaved(
-            new SavedPage(
-              base.preview,
-              base.routeType,
-              base.savedAt,
-              out.downloadedPageView,
-              out.downloadedImages,
-              out.downloadedMiniMap,
-            ),
-          );
-        },
+        }
+        queue.enqueue({
+          data: onlineView,
+          savedAt: saved.savedAt,
+          onSuccess: async (updatedSavedPage) => {
+            replaceSaved(updatedSavedPage);
+          },
+        });
+      })().catch((error: unknown) => {
+        console.warn("[DownloadQueue] failed to enqueue saved-page download", error);
       });
     },
-    [queue, replaceSaved],
+    [pageViewTypeFromSavedPage, queue, replaceSaved, webBase],
   );
 
   const getTaskSnapshot = useCallback(

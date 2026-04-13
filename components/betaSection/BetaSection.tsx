@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import RenderHtml from "react-native-render-html";
-import type { BetaSection as BetaSectionType } from "ropegeo-common/models";
+import type {
+  OfflineBetaSection,
+  OnlineBetaSection,
+} from "ropegeo-common/models";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import { BetaSectionImages } from "./BetaSectionImages";
@@ -28,7 +31,7 @@ const HTML_TAGS_STYLES = {
 };
 
 export type BetaSectionProps = {
-  section: BetaSectionType;
+  section: OnlineBetaSection | OfflineBetaSection;
   /** Page or region name for expanded image header (bold top line). */
   pageTitle: string;
 };
@@ -36,7 +39,7 @@ export type BetaSectionProps = {
 export function BetaSection({ section, pageTitle }: BetaSectionProps) {
   const [textExpanded, setTextExpanded] = useState(false);
   const [showExpandButton, setShowExpandButton] = useState(false);
-  const hasImages = section.images != null && section.images.length > 0;
+  const hasImages = section.images.length > 0;
   const sortedImages = hasImages
     ? [...section.images].sort((a, b) => a.order - b.order)
     : [];

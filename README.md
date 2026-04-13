@@ -7,7 +7,7 @@
 | `/` | Redirects to `/(tabs)/explore` (explore tab). |
 | `/explore` | Explore tab: map, route markers, search bar; tapping a route shows a preview. |
 | `/explore/search` | Full-screen search; results are page and region previews. |
-| `/explore/[id]/page` | Page detail screen. Requires query params `source` (PageDataSource) and `routeType` (RouteType). Renders e.g. Ropewiki page when `source=ropewiki`. |
+| `/explore/[id]/page` | Page detail screen. Requires query param `source` (PageDataSource). Route type is read from the fetched page view model. |
 | `/explore/[id]/region` | Region detail screen. Requires query param `source` (PageDataSource). Renders e.g. Ropewiki region when `source=ropewiki`. |
 | `/explore/shuttle-info` | Info screen for shuttle requirement badges; optional `highlightedShuttle` param. |
 | `/explore/permit-info` | Info screen for permit status badges. |

@@ -28,6 +28,7 @@ import {
   Preview,
   SearchFilter,
   SearchParams,
+  type OnlinePagePreview,
   type SearchParamsPosition,
 } from "ropegeo-common/models";
 
@@ -443,7 +444,7 @@ export function SearchScreen() {
                         item.isPagePreview() ? (
                           <PagePreview
                             key={`page-${item.id}-${index}`}
-                            preview={item}
+                            preview={item as OnlinePagePreview}
                           />
                         ) : item.isRegionPreview() ? (
                           <RegionPreview

@@ -17,7 +17,10 @@ import {
   View,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
-import type { BetaSectionImage } from "ropegeo-common/models";
+import type {
+  OfflineBetaSectionImage,
+  OnlineBetaSectionImage,
+} from "ropegeo-common/models";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type {
   ExpandedImageAnchorRect,
@@ -51,8 +54,8 @@ const HTML_TAGS_STYLES = {
 };
 
 type BetaSectionImageSlideProps = {
-  item: BetaSectionImage;
-  onOpenExpand: (item: BetaSectionImage) => void;
+  item: OnlineBetaSectionImage | OfflineBetaSectionImage;
+  onOpenExpand: (item: OnlineBetaSectionImage | OfflineBetaSectionImage) => void;
   onLayoutRef: (key: string, el: View | null) => void;
 };
 
@@ -65,7 +68,10 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   onLayoutRef,
 }: BetaSectionImageSlideProps) {
   const itemKey = item.linkUrl + item.order;
-  const canExpand = item.fullUrl != null;
+  const fullUrl = item.fetchType === "online" ? item.fullUrl : item.downloadedFullPath;
+  const bannerUrl =
+    item.fetchType === "online" ? item.bannerUrl : item.downloadedBannerPath;
+  const canExpand = fullUrl != null;
 
   const captionSource = useMemo(
     () =>
@@ -104,9 +110,9 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
           style={styles.imageContainerInner}
           collapsable={false}
         >
-          {item.bannerUrl != null ? (
+          {bannerUrl != null ? (
             <Image
-              source={item.bannerUrl}
+              source={bannerUrl}
               style={styles.image}
               contentFit="cover"
             />
@@ -137,14 +143,15 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
 });
 
 export type BetaSectionImagesProps = {
-  images: BetaSectionImage[];
+  images: (OnlineBetaSectionImage | OfflineBetaSectionImage)[];
   /** Ropewiki page (or region) name — bold top line in expanded image header. */
   pageTitle: string;
   /** Same label as `BetaSection`’s heading (smaller line below page name). */
   sectionTitle: string;
 };
 
-const keyExtractor = (item: BetaSectionImage) => item.linkUrl + item.order;
+const keyExtractor = (item: OnlineBetaSectionImage | OfflineBetaSectionImage) =>
+  item.linkUrl + item.order;
 
 const getItemLayout = (_: unknown, index: number) => ({
   length: SCREEN_WIDTH,
@@ -167,16 +174,26 @@ export function BetaSectionImages({
   const [anchorRect, setAnchorRect] = useState<ExpandedImageAnchorRect | null>(
     null,
   );
-  const [expandedItem, setExpandedItem] = useState<BetaSectionImage | null>(null);
+  const [expandedItem, setExpandedItem] = useState<
+    OnlineBetaSectionImage | OfflineBetaSectionImage | null
+  >(null);
 
   const itemRefs = useRef<Map<string, View>>(new Map());
-  const flatListRef = useRef<FlatList<BetaSectionImage> | null>(null);
+  const flatListRef = useRef<
+    FlatList<OnlineBetaSectionImage | OfflineBetaSectionImage> | null
+  >(null);
   /** Inner rAF id for anchor remeasure (see effect cleanup). */
   const anchorMeasureRaf2Ref = useRef<number | undefined>(undefined);
 
   /** Keep collapse animation aligned with the thumbnail for the image currently shown (including after next/prev swipe). */
   useEffect(() => {
-    if (!modalVisible || expandedItem == null || expandedItem.fullUrl == null) {
+    const expandedFullUrl =
+      expandedItem == null
+        ? null
+        : expandedItem.fetchType === "online"
+          ? expandedItem.fullUrl
+          : expandedItem.downloadedFullPath;
+    if (!modalVisible || expandedItem == null || expandedFullUrl == null) {
       return;
     }
 
@@ -221,11 +238,15 @@ export function BetaSectionImages({
   const galleryPages = useMemo((): ExpandedImageGalleryPage[] => {
     const out: ExpandedImageGalleryPage[] = [];
     for (const img of sortedImages) {
-      if (img.fullUrl == null) continue;
+      const fullUrl =
+        img.fetchType === "online" ? img.fullUrl : img.downloadedFullPath;
+      const bannerUrl =
+        img.fetchType === "online" ? img.bannerUrl : img.downloadedBannerPath;
+      if (fullUrl == null) continue;
       out.push({
         itemKey: img.linkUrl + img.order,
-        fullUrl: img.fullUrl,
-        bannerUrl: img.bannerUrl,
+        fullUrl,
+        bannerUrl,
         captionHtml: img.caption ?? null,
       });
     }
@@ -266,8 +287,11 @@ export function BetaSectionImages({
     }
   }, []);
 
-  const handleOpenExpand = useCallback((item: BetaSectionImage) => {
-    if (item.fullUrl == null) return;
+  const handleOpenExpand = useCallback(
+    (item: OnlineBetaSectionImage | OfflineBetaSectionImage) => {
+      const fullUrl =
+        item.fetchType === "online" ? item.fullUrl : item.downloadedFullPath;
+      if (fullUrl == null) return;
     const key = item.linkUrl + item.order;
     const node = itemRefs.current.get(key);
     if (node == null) return;
@@ -276,7 +300,9 @@ export function BetaSectionImages({
       setAnchorRect({ x, y, width, height });
       setModalVisible(true);
     });
-  }, []);
+    },
+    [],
+  );
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
@@ -290,7 +316,9 @@ export function BetaSectionImages({
   }).current;
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<BetaSectionImage>) => (
+    ({
+      item,
+    }: ListRenderItemInfo<OnlineBetaSectionImage | OfflineBetaSectionImage>) => (
       <BetaSectionImageSlide
         item={item}
         onOpenExpand={handleOpenExpand}
@@ -329,7 +357,9 @@ export function BetaSectionImages({
       {modalVisible &&
       anchorRect != null &&
       expandedItem != null &&
-      expandedItem.fullUrl != null ? (
+      (expandedItem.fetchType === "online"
+        ? expandedItem.fullUrl != null
+        : expandedItem.downloadedFullPath != null) ? (
         <ExpandedImageModal
           anchorRect={anchorRect}
           pages={galleryPages}

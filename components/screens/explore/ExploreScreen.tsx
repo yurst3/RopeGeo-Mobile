@@ -21,10 +21,9 @@ import { TrailsLayer } from "./TrailsLayer";
 import {
   PageDataSource,
   RouteFilter,
-  type PagePreview,
-  type RoutesGeojson,
+  type OnlinePagePreview,
+  type OfflinePagePreview,
   type RoutesParams,
-  RouteType,
 } from "ropegeo-common/models";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
@@ -97,7 +96,9 @@ export function ExploreScreen() {
   });
   const prevExploreRoutesKeyRef = useRef<string | null>(null);
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
-  const [currentPreview, setCurrentPreview] = useState<PagePreview | null>(null);
+  const [currentPreview, setCurrentPreview] = useState<
+    OnlinePagePreview | OfflinePagePreview | null
+  >(null);
 
   useEffect(() => {
     const prev = prevExploreRoutesKeyRef.current;
@@ -321,10 +322,6 @@ export function ExploreScreen() {
                     params: {
                       id: preview.id,
                       source: PageDataSource.Ropewiki,
-                      routeType:
-                        routesState.data?.features?.find(
-                          (f) => f.properties?.id === focusedRouteId
-                        )?.properties?.type ?? RouteType.Unknown,
                     },
                   } as unknown as Parameters<typeof router.push>[0]);
                 } else {

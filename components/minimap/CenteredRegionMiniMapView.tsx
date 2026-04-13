@@ -52,15 +52,14 @@ import {
   SymbolLayer,
 } from "@rnmapbox/maps";
 import {
-  CenteredRegionMiniMap,
-  DownloadedCenteredRegionMiniMap,
-  MiniMapType,
+  type OfflineCenteredRegionMiniMap,
+  type OnlineCenteredRegionMiniMap,
   PageDataSource,
   RouteFilter,
   RoutesGeojson,
   RoutesParams,
-  type PagePreview as PagePreviewType,
-  RouteType,
+  type OfflinePagePreview,
+  type OnlinePagePreview,
 } from "ropegeo-common/models";
 
 /** Default map center when `mapDirections` is null (Moab, UT). [lng, lat]. */
@@ -69,7 +68,7 @@ const DEFAULT_ZOOM = 13;
 const FOCUSED_ROUTE_ZOOM = 13;
 
 function mergeCenteredRoutesParams(
-  miniMap: CenteredRegionMiniMap,
+  miniMap: OnlineCenteredRegionMiniMap,
   regionRouteFilter: RouteFilter,
   fallbackSource: PageDataSource,
 ): RoutesParams {
@@ -94,7 +93,7 @@ function mergeCenteredRoutesParams(
 }
 
 export type CenteredRegionMiniMapViewProps = {
-  miniMap: CenteredRegionMiniMap | DownloadedCenteredRegionMiniMap;
+  miniMap: OnlineCenteredRegionMiniMap | OfflineCenteredRegionMiniMap;
   /**
    * When set, used for the initial camera center (before the centered route is located) and for
    * Apple/Google directions on the collapsed minimap (mirrors the tile page minimap).
@@ -138,7 +137,7 @@ export function CenteredRegionMiniMapView({
   const [offlineShape, setOfflineShape] = useState<RoutesGeojson | null>(null);
   const [offlineLoadError, setOfflineLoadError] = useState<Error | null>(null);
 
-  const isOffline = miniMap.miniMapType === MiniMapType.DownloadedCenteredGeojson;
+  const isOffline = miniMap.fetchType === "offline";
 
   useEffect(() => {
     if (!isOffline || !mountNativeMap) {
@@ -146,7 +145,7 @@ export function CenteredRegionMiniMapView({
       setOfflineLoadError(null);
       return;
     }
-    const path = (miniMap as DownloadedCenteredRegionMiniMap).downloadedGeojson;
+    const path = (miniMap as OfflineCenteredRegionMiniMap).downloadedGeojson;
     let cancelled = false;
     void (async () => {
       try {
@@ -169,12 +168,9 @@ export function CenteredRegionMiniMapView({
     };
   }, [isOffline, miniMap, mountNativeMap]);
 
-  const centeredRouteId =
-    miniMap.miniMapType === MiniMapType.CenteredGeojson
-      ? (miniMap as CenteredRegionMiniMap).centeredRouteId
-      : (miniMap as DownloadedCenteredRegionMiniMap).centeredRouteId;
+  const centeredRouteId = miniMap.centeredRouteId;
 
-  const liveMiniMap = miniMap.miniMapType === MiniMapType.CenteredGeojson ? miniMap : null;
+  const liveMiniMap = miniMap.fetchType === "online" ? miniMap : null;
 
   const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
     () => new RouteFilter([PageDataSource.Ropewiki]),
@@ -187,7 +183,9 @@ export function CenteredRegionMiniMapView({
   }, [liveMiniMap, regionRouteFilter]);
 
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
-  const [currentPreview, setCurrentPreview] = useState<PagePreviewType | null>(null);
+  const [currentPreview, setCurrentPreview] = useState<
+    OnlinePagePreview | OfflinePagePreview | null
+  >(null);
   /** While expanded, suppress auto-recenter on the page route after user picked another marker until collapse. */
   const userFocusedNonCenteredRouteRef = useRef(false);
 
@@ -555,9 +553,6 @@ export function CenteredRegionMiniMapView({
                       params: {
                         id: preview.id,
                         source: PageDataSource.Ropewiki,
-                        routeType:
-                          displayGeojson?.features?.find((f) => f.properties?.id === focusedRouteId)
-                            ?.properties?.type ?? RouteType.Unknown,
                       },
                     } as unknown as Parameters<typeof router.push>[0]);
                   } else {

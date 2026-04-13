@@ -117,7 +117,6 @@ export function SavedScreen() {
               key={entry.preview.id}
               preview={entry.preview}
               pageHref="saved"
-              routeType={entry.routeType}
               showMiniDownload
             />
           ))

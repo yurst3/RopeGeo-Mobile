@@ -5,7 +5,10 @@ import Svg, { Circle } from "react-native-svg";
 export type DownloadButtonProps = {
   isDownloaded: boolean;
   downloading: boolean;
-  downloadPhase: number;
+  /** 1-based visible step; 0 while queued before the first progress tick. */
+  downloadDisplayStep: number;
+  /** Total visible steps; 0 while queued. */
+  downloadDisplayTotal: number;
   downloadPhaseProgress: number;
   onDownloadPress: () => void;
   /** Shown beside the pill when `isDownloaded` is true. Omit to hide remove. */
@@ -19,14 +22,18 @@ export type DownloadButtonProps = {
 export function DownloadButton({
   isDownloaded,
   downloading,
-  downloadPhase,
+  downloadDisplayStep,
+  downloadDisplayTotal,
   downloadPhaseProgress,
   onDownloadPress,
   onRemovePress,
 }: DownloadButtonProps) {
   const showRemove = isDownloaded && onRemovePress != null;
-  const phaseForLabel = Math.max(1, Math.min(4, downloadPhase));
   const progress01 = Math.max(0, Math.min(1, downloadPhaseProgress));
+  const stepForLabel =
+    downloadDisplayTotal > 0
+      ? Math.max(1, Math.min(downloadDisplayTotal, downloadDisplayStep || 1))
+      : null;
   const progressSize = 18;
   const progressStroke = 2.25;
   const progressRadius = (progressSize - progressStroke) / 2;
@@ -35,7 +42,9 @@ export function DownloadButton({
   const labelText = isDownloaded
     ? "Downloaded"
     : downloading
-      ? `(${phaseForLabel}/4) Downloading`
+      ? stepForLabel != null
+        ? `(${stepForLabel}/${downloadDisplayTotal}) Downloading`
+        : "Downloading"
       : "Download";
 
   return (

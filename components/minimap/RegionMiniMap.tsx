@@ -30,12 +30,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import {
+  type OfflinePagePreview,
+  type OnlinePagePreview,
   PageDataSource,
   RouteFilter,
   RoutesParams,
-  type PagePreview as PagePreviewType,
   type RegionMiniMap as RegionMiniMapConfig,
-  RouteType,
 } from "ropegeo-common/models";
 
 type RegionFitBounds = {
@@ -105,7 +105,9 @@ export function RegionMiniMap({
     [onRoutesStateChange],
   );
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
-  const [currentPreview, setCurrentPreview] = useState<PagePreviewType | null>(null);
+  const [currentPreview, setCurrentPreview] = useState<
+    OnlinePagePreview | OfflinePagePreview | null
+  >(null);
   const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
     () => new RouteFilter([source]),
   );
@@ -279,9 +281,6 @@ export function RegionMiniMap({
                       params: {
                         id: preview.id,
                         source: PageDataSource.Ropewiki,
-                        routeType:
-                          routesState.data?.features?.find((f) => f.properties?.id === focusedRouteId)
-                            ?.properties?.type ?? RouteType.Unknown,
                       },
                     } as unknown as Parameters<typeof router.push>[0]);
                   } else {

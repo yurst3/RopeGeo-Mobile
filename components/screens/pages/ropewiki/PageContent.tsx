@@ -20,8 +20,9 @@ import {
 import Animated from "react-native-reanimated";
 import {
   AcaDifficulty,
+  type OfflineRopewikiPageView,
   PageDataSource,
-  type RopewikiPageView,
+  type OnlineRopewikiPageView,
   RouteType,
 } from "ropegeo-common/models";
 
@@ -57,7 +58,7 @@ function formatLastUpdated(revisionDate: Date | string): string {
 }
 
 export type PageContentProps = {
-  data: RopewikiPageView;
+  data: OnlineRopewikiPageView | OfflineRopewikiPageView;
   routeTypeResolved: RouteType;
   insets: { top: number; bottom: number };
   paddingTop: number;

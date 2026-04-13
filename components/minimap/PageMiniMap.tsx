@@ -20,12 +20,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import Animated, { type SharedValue } from "react-native-reanimated";
 import {
-  DownloadedPageMiniMap,
-  MiniMapType,
-  type PageMiniMap as PageMiniMapConfig,
+  type OfflinePageMiniMap,
+  type OnlinePageMiniMap,
 } from "ropegeo-common/models";
 
-export type PageMiniMapTileProps = PageMiniMapConfig | DownloadedPageMiniMap;
+export type PageMiniMapTileProps = OnlinePageMiniMap | OfflinePageMiniMap;
 
 export function PageMiniMap({
   miniMap,
@@ -51,9 +50,9 @@ export function PageMiniMap({
 }) {
   const b = miniMap.bounds;
   const tileTemplate =
-    miniMap.miniMapType === MiniMapType.DownloadedTilesTemplate
-      ? (miniMap as DownloadedPageMiniMap).downloadedTilesTemplate
-      : (miniMap as PageMiniMapConfig).tilesTemplate;
+    miniMap.fetchType === "offline"
+      ? miniMap.offlineTilesTemplate
+      : miniMap.onlineTilesTemplate;
   const {
     cameraRef,
     fitToBounds,
