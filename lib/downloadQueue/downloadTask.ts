@@ -21,7 +21,15 @@ import {
   type OnlinePageView,
 } from "ropegeo-common/models";
 import { Method, SERVICE_BASE_URL, Service } from "ropegeo-common/components";
+import {
+  isAbortError,
+  mergeParentSignalWithDeadline,
+  NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+} from "ropegeo-common/helpers/network";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
+import { setDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
+import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
   getOfflineMapDataRootUri,
   getOfflinePageJsonUri,
@@ -101,6 +109,8 @@ export class DownloadTask {
 
   private readonly onProgressCallback: (p: DownloadProgressPayload) => void;
 
+  private runOuter?: AbortSignal;
+
   constructor(
     pageId: string,
     pageViewType: PageViewType,
@@ -143,9 +153,12 @@ export class DownloadTask {
     const mm = capable?.miniMap ?? null;
     if (mm != null) {
       plan.push(DownloadPhase.DownloadMapbox);
-      if (mm.miniMapType === MiniMapType.OnlineTilesTemplate) {
+      if (mm.miniMapType === MiniMapType.Page && mm.fetchType === "online") {
         plan.push(DownloadPhase.DownloadTiles);
-      } else if (mm.miniMapType === MiniMapType.OnlineCenteredGeojson) {
+      } else if (
+        mm.miniMapType === MiniMapType.CenteredRegion &&
+        mm.fetchType === "online"
+      ) {
         plan.push(DownloadPhase.DownloadRegion);
       }
     }
@@ -161,7 +174,12 @@ export class DownloadTask {
     return view as MiniMapCapableOnlinePageView;
   }
 
-  async run(savedPage: SavedPage, displayPlan: DownloadPhase[]): Promise<SavedPage> {
+  async run(
+    savedPage: SavedPage,
+    displayPlan: DownloadPhase[],
+    outerSignal: AbortSignal,
+  ): Promise<SavedPage> {
+    this.runOuter = outerSignal;
     try {
       this.displayPlan = [...displayPlan];
       this.displayStep = 0;
@@ -191,8 +209,9 @@ export class DownloadTask {
 
       const offlineView = view.toOffline(downloadedImages, offlineMiniMap);
       const pageJsonUri = await this.saveOfflinePageJson(offlineView);
-      const preview = offlineView.toPagePreview() as OnlinePagePreview | OfflinePagePreview;
+      const preview = offlineView.toPagePreview() as OfflinePagePreview;
       const finalSaved = new SavedPage(preview, savedPage.savedAt, pageJsonUri);
+      await setDownloadedRoutePreviewsForPage(this.pageId, [preview]);
 
       this.phase = DownloadPhase.Complete;
       this.phaseProgress = 1;
@@ -206,6 +225,32 @@ export class DownloadTask {
       this.state = "error";
       this.errorMessage = e instanceof Error ? e.message : String(e);
       throw e;
+    } finally {
+      this.runOuter = undefined;
+    }
+  }
+
+  private async fetchWithDeadline(url: string, init: RequestInit): Promise<Response> {
+    const outer = this.runOuter;
+    if (outer == null) {
+      throw new Error("DownloadTask.fetchWithDeadline: missing outer signal");
+    }
+    const merged = mergeParentSignalWithDeadline(
+      outer,
+      REQUEST_TIMEOUT_SECONDS * 1000,
+    );
+    try {
+      return await fetch(url, { ...init, signal: merged.signal });
+    } catch (e) {
+      if (merged.consumeDidTimeout()) {
+        throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+      }
+      if (isAbortError(e)) {
+        throw new Error(NO_NETWORK_MESSAGE);
+      }
+      throw e;
+    } finally {
+      merged.dispose();
     }
   }
 
@@ -230,7 +275,9 @@ export class DownloadTask {
       this.displayPlan = [DownloadPhase.DownloadPage];
     }
     this.reportDisplayed(DownloadPhase.DownloadPage, 0);
-    const res = await fetch(pageUrl, { headers: { Accept: "application/json" } });
+    const res = await this.fetchWithDeadline(pageUrl, {
+      headers: { Accept: "application/json" },
+    });
     if (!res.ok) {
       throw new Error(`Page request failed: HTTP ${res.status}`);
     }
@@ -360,7 +407,11 @@ export class DownloadTask {
       return null;
     }
     const miniMap = miniMapCapable.miniMap;
-    if (miniMap == null || miniMap.miniMapType !== MiniMapType.OnlineTilesTemplate) {
+    if (
+      miniMap == null ||
+      miniMap.miniMapType !== MiniMapType.Page ||
+      miniMap.fetchType !== "online"
+    ) {
       return null;
     }
     return miniMap as OnlinePageMiniMap;
@@ -447,6 +498,7 @@ export class DownloadTask {
         miniMap.layerId,
         page,
         TILE_DOWNLOAD_PAGE_LIMIT,
+        this.runOuter!,
       );
       if (page === 1) {
         totalBytesForTiles = Math.max(parsed.totalBytes, 1);
@@ -496,7 +548,11 @@ export class DownloadTask {
       return null;
     }
     const miniMap = miniMapCapable.miniMap;
-    if (miniMap == null || miniMap.miniMapType !== MiniMapType.OnlineCenteredGeojson) {
+    if (
+      miniMap == null ||
+      miniMap.miniMapType !== MiniMapType.CenteredRegion ||
+      miniMap.fetchType !== "online"
+    ) {
       return null;
     }
     return miniMap as OnlineCenteredRegionMiniMap;
@@ -542,16 +598,15 @@ export class DownloadTask {
 
     await ensureParentDir(dest);
     const limit = miniMap.routesParams.limit;
-    const baseInit: RequestInit = {
-      method: Method.GET,
-      headers: { "Content-Type": "application/json" },
-    };
     const fetchPage = async (pageNum: number): Promise<PaginationResults> => {
       const params = miniMap.routesParams.withPage(pageNum);
       const queryString = params.toQueryString();
       const fullPath = queryString ? `/routes?${queryString}` : "/routes";
       const url = new URL(fullPath, WEB_BASE).toString();
-      const res = await fetch(url, baseInit);
+      const res = await this.fetchWithDeadline(url, {
+        method: Method.GET,
+        headers: { "Content-Type": "application/json" },
+      });
       const text = await res.text();
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);

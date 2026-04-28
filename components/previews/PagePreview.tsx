@@ -30,7 +30,7 @@ function formatPageDifficulty(d: AcaDifficulty): string {
     .map((x) => String(x))
     .join("");
   const time = d.time != null ? ` ${String(d.time)}` : "";
-  const riskForDisplay = d.additionalRisk;
+  const riskForDisplay = d.additionalRisk ? d.effectiveRisk : null;
   const riskPart =
     riskForDisplay != null ? ` ${String(riskForDisplay)}` : "";
   return (main + time + riskPart).trim();

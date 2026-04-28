@@ -103,6 +103,8 @@ export default function SavedStackLayout() {
         name="[id]/page"
         options={{
           headerShown: false,
+          animation: "slide_from_right",
+          animationTypeForReplace: "pop"
         }}
       />
     </Stack>

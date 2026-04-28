@@ -6,6 +6,11 @@ import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,
 } from "ropegeo-common/models";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { useToast } from "@/context/ToastContext";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { usePathname } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -33,6 +38,10 @@ const IMAGES_PAGE_LIMIT = 10;
 const AUTO_ADVANCE_MS = 5000;
 const AUTO_ADVANCE_PAUSE_AFTER_SWIPE_MS = 5000;
 
+function regionBannerImagesErrorToastKey(regionId: string): string {
+  return `region-banner-images-error-${regionId}`;
+}
+
 type RegionBannerSlide = {
   id: string;
   bannerUrl: string | null;
@@ -52,6 +61,8 @@ function toSlides(data: RopewikiRegionImageView[]): RegionBannerSlide[] {
 }
 
 type RegionBannerCarouselProps = {
+  regionId: string;
+  regionName: string;
   /** Fixed width for paging (full screen); parent does not animate this. */
   layoutWidth: number;
   /**
@@ -66,6 +77,7 @@ type RegionBannerCarouselProps = {
   slides: RegionBannerSlide[];
   loadMore: () => void;
   hasMore: boolean;
+  errors: Error | null;
   verticalScrollActive: boolean;
   controlRef: React.RefObject<RegionBannerHandle | null>;
 };
@@ -86,6 +98,8 @@ export type RegionBannerHandle = {
 };
 
 function RegionBannerCarousel({
+  regionId,
+  regionName,
   layoutWidth,
   layoutHeight,
   imageFrameStyle,
@@ -94,9 +108,12 @@ function RegionBannerCarousel({
   slides,
   loadMore,
   hasMore,
+  errors,
   verticalScrollActive,
   controlRef,
 }: RegionBannerCarouselProps) {
+  const { upsertPill, dismiss } = useToast();
+  const pathname = usePathname();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [loadedIndices, setLoadedIndices] = useState<Set<number>>(() => new Set());
   const listRef = useRef<FlatList<RegionBannerSlide> | null>(null);
@@ -104,6 +121,48 @@ function RegionBannerCarousel({
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [autoAdvancePaused, setAutoAdvancePaused] = useState(false);
   const programmaticScrollRef = useRef(false);
+
+  const bannerImagesErrorToastKey = regionBannerImagesErrorToastKey(regionId);
+  const bannerLoadMoreError = errors != null && slides.length > 0 ? errors : null;
+
+  useEffect(() => {
+    if (bannerLoadMoreError != null) {
+      const subtitle = bannerLoadMoreError.message?.trim();
+      upsertPill({
+        key: bannerImagesErrorToastKey,
+        variant: "error",
+        message: `Error loading ${regionName} banner images`,
+        subtitle: subtitle === "" ? undefined : subtitle,
+        durationMs: null,
+        allowedRoutes: [pathname],
+        horizontalInset: TOAST_HORIZONTAL_INSET,
+      });
+    } else {
+      dismiss(bannerImagesErrorToastKey);
+    }
+    return () => {
+      dismiss(bannerImagesErrorToastKey);
+    };
+  }, [
+    bannerLoadMoreError,
+    regionName,
+    pathname,
+    upsertPill,
+    dismiss,
+    bannerImagesErrorToastKey,
+  ]);
+
+  useEffect(() => {
+    if (bannerLoadMoreError != null) {
+      setAutoAdvancePaused(true);
+      if (cooldownTimerRef.current != null) {
+        clearTimeout(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+    } else {
+      setAutoAdvancePaused(false);
+    }
+  }, [bannerLoadMoreError]);
 
   const pageWidthRef = useRef(layoutWidth);
   useEffect(() => {
@@ -491,6 +550,7 @@ function RegionBannerCarousel({
 
 export type RegionBannerProps = {
   regionId: string;
+  regionName: string;
   layoutWidth: number;
   /** Full-window height recommended so the parallax image can grow without hitting a short cell. */
   layoutHeight: number;
@@ -500,11 +560,13 @@ export type RegionBannerProps = {
 
 export const RegionBanner = forwardRef<RegionBannerHandle, RegionBannerProps>(function RegionBanner({
   regionId,
+  regionName,
   layoutWidth,
   layoutHeight,
   imageFrameStyle,
   verticalScrollActive = false,
 }, ref) {
+  const { isOnline } = useNetworkStatus();
   const queryParams = useMemo(
     () => new RopewikiRegionImagesParams(IMAGES_PAGE_LIMIT),
     []
@@ -531,17 +593,22 @@ export const RegionBanner = forwardRef<RegionBannerHandle, RegionBannerProps>(fu
       path="/ropewiki/region/:regionId/images"
       pathParams={pathParams}
       queryParams={queryParams}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
     >
-      {({ loading, loadingMore, data, loadMore, hasMore }) => (
+      {({ loading, loadingMore, data, errors, loadMore, hasMore }) => (
         <RegionBannerCarousel
+          regionId={regionId}
+          regionName={regionName}
           layoutWidth={layoutWidth}
           layoutHeight={layoutHeight}
           imageFrameStyle={imageFrameStyle}
           loading={loading}
           loadingMore={loadingMore}
-          slides={toSlides(data)}
+          slides={toSlides(data ?? [])}
           loadMore={loadMore}
           hasMore={hasMore}
+          errors={errors}
           verticalScrollActive={verticalScrollActive}
           controlRef={controlRef}
         />

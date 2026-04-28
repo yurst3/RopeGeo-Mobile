@@ -12,6 +12,12 @@ export const MAP_BUTTON_TOP_OFFSET = 8 + HEADER_BUTTON_SIZE + 8;
 export const MAP_BUTTON_SIZE = 48;
 export const MAP_BUTTON_GAP = 8;
 
+/**
+ * Distance from safe-area top to the first global stacked toast anchor on full-screen map UIs
+ * (Explore search row starts at `insets.top + 8`; this clears search + filter chrome).
+ */
+export const STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP = 56 + 8;
+
 export function boundsPaddingForFullScreenMap(insets: {
   top: number;
   bottom: number;
@@ -22,4 +28,17 @@ export function boundsPaddingForFullScreenMap(insets: {
     paddingLeft: 20,
     paddingRight: 20,
   } as const;
+}
+
+/**
+ * Bottom padding for a docked RoutePreview on an expanded minimap (full window). Matches Explore
+ * visually: tab screens lay out above the tab bar, so they use `insets.bottom + gap` only; overlays
+ * that cover the whole window must add the tab bar height.
+ */
+export function routePreviewDockedPaddingBottom(
+  safeBottomInset: number,
+  tabBarHeight: number,
+  gap: number = 8,
+): number {
+  return tabBarHeight + safeBottomInset + gap;
 }

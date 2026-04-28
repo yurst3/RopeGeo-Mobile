@@ -1,5 +1,5 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
-import { minimapStyles } from "@/components/minimap/minimapShared";
+import { minimapStyles } from "@/components/minimap/shared/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
 import { RappelInfoRow } from "@/components/RappelInfoRow";
 import { StarRating } from "@/components/StarRating";
@@ -58,6 +58,8 @@ function formatLastUpdated(revisionDate: Date | string): string {
 }
 
 export type PageContentProps = {
+  /** Current ropewiki page id (for region links return-to-saved behavior). */
+  pageId: string;
   data: OnlineRopewikiPageView | OfflineRopewikiPageView;
   routeTypeResolved: RouteType;
   insets: { top: number; bottom: number };
@@ -78,6 +80,7 @@ export type PageContentProps = {
  * Scrollable card and body over the parallax banner — same role as `RegionContent`.
  */
 export function PageContent({
+  pageId,
   data,
   routeTypeResolved,
   insets,
@@ -142,6 +145,7 @@ export function PageContent({
             <RegionLinks
               source={PageDataSource.Ropewiki}
               regions={displayRegions}
+              pageId={pageId}
               containerStyle={data.aka?.length ? styles.regionsAfterAka : undefined}
               numberOfLines={2}
             />

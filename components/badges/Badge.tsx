@@ -33,7 +33,8 @@ const SUB_RATIO = 2 / 5; // sub circle width : main circle width
 const DEFAULT_SIZE = 56;
 
 export type BadgeProps = {
-  icon: ImageSourcePropType;
+  /** When omitted, only the colored circle is shown (no main icon). */
+  icon?: ImageSourcePropType;
   backgroundColor: BadgeBackgroundColorType;
   /** When omitted, the sub badge is not rendered. */
   subIcon?: ImageSourcePropType;
@@ -46,6 +47,8 @@ export type BadgeProps = {
   label?: string;
   /** Tint color for the main icon only. Default black. */
   iconColor?: string;
+  /** When true (default), main and sub circles use a stroke border. */
+  outline?: boolean;
 };
 
 const ICON_SCALE_FACTOR = 0.6 * 1.25;
@@ -60,6 +63,7 @@ export function Badge({
   subIconScale = 1,
   label,
   iconColor = "#000",
+  outline = true,
 }: BadgeProps) {
   const subSize = size * SUB_RATIO;
   const mainRadius = size / 2;
@@ -74,6 +78,7 @@ export function Badge({
     <View
       style={[
         styles.mainCircle,
+        outline ? styles.mainCircleOutline : null,
         {
           width: size,
           height: size,
@@ -82,16 +87,19 @@ export function Badge({
         },
       ]}
     >
-      <Image
-        source={icon}
-        style={[styles.mainIcon, { width: iconSize, height: iconSize }]}
-        contentFit="contain"
-        tintColor={iconColor}
-      />
+      {icon != null ? (
+        <Image
+          source={icon}
+          style={[styles.mainIcon, { width: iconSize, height: iconSize }]}
+          contentFit="contain"
+          tintColor={iconColor}
+        />
+      ) : null}
       {subIcon != null && (
         <View
           style={[
             styles.sub,
+            outline ? styles.subOutline : null,
             {
               width: subSize,
               height: subSize,
@@ -138,19 +146,23 @@ const styles = StyleSheet.create({
     maxWidth: DEFAULT_SIZE + 16,
   },
   mainCircle: {
-    borderWidth: 1.5,
-    borderColor: "#000",
     alignItems: "center",
     justifyContent: "center",
+  },
+  mainCircleOutline: {
+    borderWidth: 1.5,
+    borderColor: "#000",
   },
   mainIcon: {},
   sub: {
     position: "absolute",
     backgroundColor: "#9ca3af",
-    borderWidth: 1.5,
-    borderColor: "#000",
     alignItems: "center",
     justifyContent: "center",
+  },
+  subOutline: {
+    borderWidth: 1.5,
+    borderColor: "#000",
   },
   subIcon: {
     tintColor: "#000",

@@ -1,10 +1,13 @@
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
+import { TOAST_KEY_NETWORK_OFFLINE } from "@/constants/toastArchetypes";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
+import { useToast } from "@/context/ToastContext";
 import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
-import { useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -21,6 +24,7 @@ const HEADER_BUTTON_GAP = 8;
 
 export function SavedScreen() {
   const insets = useSafeAreaInsets();
+  const { dismiss } = useToast();
   const { savedEntries } = useSavedPages();
   const {
     getEffectiveSavedPagesFilter,
@@ -50,6 +54,12 @@ export function SavedScreen() {
 
   const searchBarTop = insets.top + 8;
   const searchBarHeight = 48;
+
+  useFocusEffect(
+    useCallback(() => {
+      dismiss(TOAST_KEY_NETWORK_OFFLINE);
+    }, [dismiss]),
+  );
 
   const openFilterSheet = () => {
     const d = SavedPagesFilter.fromJsonString(

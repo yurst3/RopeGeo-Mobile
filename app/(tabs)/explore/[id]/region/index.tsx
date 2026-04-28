@@ -9,10 +9,26 @@ function isPageDataSource(value: unknown): value is PageDataSource {
   return typeof value === "string" && VALID_SOURCES.has(value);
 }
 
+function firstString(
+  v: string | string[] | undefined,
+): string | undefined {
+  if (v == null) return undefined;
+  return typeof v === "string" ? v : v[0];
+}
+
+function parseSavedPageId(
+  params: Record<string, string | string[] | undefined>,
+): string | null {
+  const pageId = firstString(params.savedPage);
+  if (pageId == null || pageId === "") return null;
+  return pageId;
+}
+
 export default function RegionRoute() {
   const params = useLocalSearchParams<{
     id: string;
     source: string;
+    savedPage?: string;
   }>();
   const regionId =
     typeof params.id === "string"
@@ -47,11 +63,17 @@ export default function RegionRoute() {
     );
   }
 
+  const savedPageId = parseSavedPageId(params);
+
   switch (source) {
     case PageDataSource.Ropewiki:
       return (
         <View style={{ flex: 1 }}>
-          <RopewikiRegionScreen regionId={regionId} />
+          <RopewikiRegionScreen
+            regionId={regionId}
+            source={source}
+            savedPageId={savedPageId}
+          />
         </View>
       );
   }

@@ -9,14 +9,18 @@ export type ExternalLinkButtonProps = {
   icon: ImageSourcePropType;
   link: string;
   accessibilityLabel?: string;
+  /** When true, the control is visible but does not open the browser. */
+  disabled?: boolean;
 };
 
 export function ExternalLinkButton({
   icon,
   link,
   accessibilityLabel = "Open in browser",
+  disabled = false,
 }: ExternalLinkButtonProps) {
   const handlePress = async () => {
+    if (disabled) return;
     try {
       await WebBrowser.openBrowserAsync(link);
     } catch {
@@ -28,7 +32,9 @@ export function ExternalLinkButton({
     <Pressable
       style={styles.button}
       onPress={handlePress}
+      disabled={disabled}
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
     >
       <Image source={icon} style={styles.icon} contentFit="contain" />
     </Pressable>

@@ -10,9 +10,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type OnlinePageView, SavedPage } from "ropegeo-common/models";
-
-const STORAGE_KEY = "ropegeo:savedPages";
+import {
+  type OnlinePageView,
+  SavedPage,
+  SAVED_PAGES_STORAGE_KEY,
+} from "ropegeo-common/models";
 
 type SavedPagesContextValue = {
   savedEntries: SavedPage[];
@@ -28,21 +30,39 @@ type SavedPagesContextValue = {
 const SavedPagesContext = createContext<SavedPagesContextValue | null>(null);
 
 async function loadEntries(): Promise<SavedPage[]> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  const raw = await AsyncStorage.getItem(SAVED_PAGES_STORAGE_KEY);
   if (raw == null || raw === "") return [];
-  const outer = JSON.parse(raw) as unknown;
-  if (!Array.isArray(outer)) {
-    console.warn("[SavedPages] expected string[] in storage, resetting");
+  let outer: unknown;
+  try {
+    outer = JSON.parse(raw) as unknown;
+  } catch {
     return [];
   }
-  return outer.map((s) =>
-    typeof s === "string" ? SavedPage.fromJsonString(s) : SavedPage.fromJsonString(JSON.stringify(s)),
-  );
+  if (outer == null || typeof outer !== "object") {
+    return [];
+  }
+  if (Array.isArray(outer)) {
+    return [];
+  }
+  const map = outer as Record<string, unknown>;
+  const out: SavedPage[] = [];
+  for (const val of Object.values(map)) {
+    try {
+      const s = typeof val === "string" ? val : JSON.stringify(val);
+      out.push(SavedPage.fromJsonString(s));
+    } catch {
+      /* skip invalid row */
+    }
+  }
+  return out;
 }
 
 async function persistEntries(entries: SavedPage[]): Promise<void> {
-  const serialized = entries.map((e) => e.toString());
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+  const map: Record<string, string> = {};
+  for (const e of entries) {
+    map[e.preview.id] = e.toString();
+  }
+  await AsyncStorage.setItem(SAVED_PAGES_STORAGE_KEY, JSON.stringify(map));
 }
 
 export function SavedPagesProvider({ children }: { children: ReactNode }) {

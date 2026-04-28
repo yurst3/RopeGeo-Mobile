@@ -47,7 +47,7 @@ export default function RopewikiPageRouteScreen() {
     case PageDataSource.Ropewiki:
       return (
         <View style={{ flex: 1 }}>
-          <RopewikiPageScreen pageId={pageId} />
+          <RopewikiPageScreen pageId={pageId} source={source} />
         </View>
       );
     default:

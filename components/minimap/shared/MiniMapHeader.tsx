@@ -4,7 +4,7 @@ import { BackButton } from "@/components/buttons/BackButton";
 import {
   HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
-} from "@/components/minimap/fullScreenMapLayout";
+} from "./fullScreenMapLayout";
 
 export function MiniMapHeader({
   title,

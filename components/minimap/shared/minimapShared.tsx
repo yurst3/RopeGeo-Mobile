@@ -3,6 +3,17 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { MiniMapType } from "ropegeo-common/models";
+
+/** True when the minimap is a page tile map ({@link MiniMapType.Page}). */
+export function isPageMiniMapType(t: MiniMapType): boolean {
+  return t === MiniMapType.Page;
+}
+
+/** True when the minimap is the centered-region fallback ({@link MiniMapType.CenteredRegion}). */
+export function isCenteredRegionMiniMapType(t: MiniMapType): boolean {
+  return t === MiniMapType.CenteredRegion;
+}
 
 export const MINI_MAP_BORDER_RADIUS = 12;
 export const EXPAND_BUTTON_SIZE = 40;
@@ -142,4 +153,3 @@ const directionsIconStyles = StyleSheet.create({
     height: DIRECTIONS_ICON_SIZE,
   },
 });
-

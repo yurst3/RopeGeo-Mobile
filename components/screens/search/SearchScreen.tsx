@@ -1,34 +1,33 @@
 import { BackButton } from "@/components/buttons/BackButton";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
+import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { TOAST_KEY_DISTANCE_GPS_TIMEOUT } from "@/constants/toastArchetypes";
 import {
-  Method,
-  RopeGeoCursorPaginationHttpRequest,
-  Service,
-} from "ropegeo-common/components";
-import { useAppToast } from "@/components/toast";
+  ToastKeyCollisionError,
+  ToastKeyNotFoundError,
+  useToast,
+} from "@/context/ToastContext";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { SearchHttpSection } from "@/components/screens/search/SearchHttpSection";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PagePreview } from "@/components/previews/PagePreview";
-import { RegionPreview } from "@/components/previews/RegionPreview";
 import {
-  Preview,
   SearchFilter,
   SearchParams,
-  type OnlinePagePreview,
   type SearchParamsPosition,
 } from "ropegeo-common/models";
 
@@ -66,13 +65,16 @@ function buildSearchParamsWhenValid(
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const {
     getEffectiveSearchFilter,
     searchPersisted,
     persistSearchFilter,
     revision,
   } = useSavedFilters();
-  const showToast = useAppToast();
+  const { showPill: showToast, updateToast } = useToast();
+  const { isOnline } = useNetworkStatus();
+  const offlineBaselineKeyRef = useRef<string | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef<TextInput>(null);
@@ -168,14 +170,33 @@ export function SearchScreen() {
       if (searchPosRef.current != null) return;
       if (effectiveSearchFilterRef.current.order !== "distance") return;
       persistSearchFilterRef.current(null);
-      showToast({
-        variant: "error",
-        message: DISTANCE_GPS_TIMEOUT_TOAST,
-        durationMs: 8000,
-      });
+      try {
+        showToast({
+          key: TOAST_KEY_DISTANCE_GPS_TIMEOUT,
+          variant: "error",
+          message: DISTANCE_GPS_TIMEOUT_TOAST,
+          durationMs: null,
+        });
+      } catch (error) {
+        if (!(error instanceof ToastKeyCollisionError)) {
+          throw error;
+        }
+        try {
+          updateToast(TOAST_KEY_DISTANCE_GPS_TIMEOUT, {
+            mode: "pill",
+            variant: "error",
+            message: DISTANCE_GPS_TIMEOUT_TOAST,
+            durationMs: null,
+          });
+        } catch (updateError) {
+          if (!(updateError instanceof ToastKeyNotFoundError)) {
+            throw updateError;
+          }
+        }
+      }
     }, DISTANCE_GPS_WAIT_MS);
     return () => clearTimeout(t);
-  }, [effectiveSearchFilter.order, searchPos, showToast]);
+  }, [effectiveSearchFilter.order, searchPos, showToast, updateToast]);
 
   const searchPersistedRef = useRef(searchPersisted);
   searchPersistedRef.current = searchPersisted;
@@ -301,11 +322,14 @@ export function SearchScreen() {
       const isNearBottom =
         contentOffset.y + layoutMeasurement.height >=
         contentSize.height - LOAD_MORE_THRESHOLD;
+      if (!isOnline) {
+        return;
+      }
       if (canScroll && isNearBottom) {
         loadMoreRef.current();
       }
     },
-    [],
+    [isOnline],
   );
 
   const loadMoreRef = useRef<() => void>(() => {});
@@ -319,6 +343,30 @@ export function SearchScreen() {
 
   const searchBarTop = insets.top + 8;
   const searchBarHeight = 48;
+
+  useNetworkRequestToasts({
+    loading: false,
+    errors: null,
+    timeoutCountdown: null,
+    resetKey: "search-connectivity",
+    offlineSurfaceActive: isFocused,
+  });
+
+  useEffect(() => {
+    if (isOnline) {
+      offlineBaselineKeyRef.current = null;
+      return;
+    }
+    if (offlineBaselineKeyRef.current === null) {
+      offlineBaselineKeyRef.current = searchParamsForRequest.toQueryString();
+    }
+  }, [isOnline, searchParamsForRequest]);
+
+  const refreshSearchOnReconnect =
+    isOnline &&
+    offlineBaselineKeyRef.current != null &&
+    offlineBaselineKeyRef.current !==
+      searchParamsForRequest.toQueryString();
 
   const openFilterSheet = useCallback(() => {
     searchOpeningSnapRef.current = {
@@ -388,82 +436,15 @@ export function SearchScreen() {
             <Text style={styles.locationWaitText}>Getting your location…</Text>
           </View>
         ) : (
-          <RopeGeoCursorPaginationHttpRequest<Preview>
-            service={Service.WEBSCRAPER}
-            method={Method.GET}
-            path="/search"
+          <SearchHttpSection
             queryParams={searchParamsForRequest}
-          >
-            {({ loading, loadingMore, data, errors, loadMore }) => {
-              loadMoreRef.current = loadMore;
-              const items = data;
-              return (
-                <>
-                  {loading && items.length === 0 && (
-                    <View
-                      style={[
-                        styles.centered,
-                        {
-                          paddingTop: searchBarTop + searchBarHeight + 12,
-                        },
-                      ]}
-                    >
-                      <ActivityIndicator size="large" />
-                    </View>
-                  )}
-                  {errors != null && !loading && items.length === 0 && (
-                    <View
-                      style={[
-                        styles.centered,
-                        {
-                          paddingTop: searchBarTop + searchBarHeight + 12,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.errorText}>{errors.message}</Text>
-                    </View>
-                  )}
-                  {!loading && errors == null && (
-                    <ScrollView
-                      style={styles.scroll}
-                      contentContainerStyle={[
-                        styles.scrollContent,
-                        { paddingTop: searchBarTop + searchBarHeight + 12 },
-                      ]}
-                      keyboardShouldPersistTaps="handled"
-                      keyboardDismissMode="on-drag"
-                      onScroll={handleScroll}
-                      scrollEventThrottle={16}
-                    >
-                      {items.length === 0 ? (
-                        <Text style={styles.hint}>
-                          No results. Try another term or change filters.
-                        </Text>
-                      ) : null}
-                      {items.map((item, index) =>
-                        item.isPagePreview() ? (
-                          <PagePreview
-                            key={`page-${item.id}-${index}`}
-                            preview={item as OnlinePagePreview}
-                          />
-                        ) : item.isRegionPreview() ? (
-                          <RegionPreview
-                            key={`region-${item.id}-${index}`}
-                            preview={item}
-                          />
-                        ) : null,
-                      )}
-                      {loadingMore ? (
-                        <View style={styles.loadMoreIndicator}>
-                          <ActivityIndicator size="small" />
-                        </View>
-                      ) : null}
-                    </ScrollView>
-                  )}
-                </>
-              );
-            }}
-          </RopeGeoCursorPaginationHttpRequest>
+            searchBarTop={searchBarTop}
+            searchBarHeight={searchBarHeight}
+            loadMoreRef={loadMoreRef}
+            onScroll={handleScroll}
+            isOnline={isOnline}
+            refreshOnReconnect={refreshSearchOnReconnect}
+          />
         )}
       </Pressable>
       <FilterBottomSheet

@@ -11,14 +11,17 @@ import {
 import {
   DOWNLOAD_FAIL_BG,
   DOWNLOAD_FAIL_TEXT,
+  DOWNLOAD_TOAST_BG,
+  DOWNLOAD_TOAST_TEXT,
   SAVED_TOAST_BG,
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
   SAVED_TOAST_TEXT,
   TOAST_HORIZONTAL_INSET,
-} from "./constants";
+  TOAST_STACK_REPOSITION_MS,
+} from "@/constants/toast";
 
-export type ToastVariant = "success" | "error";
+export type ToastVariant = "success" | "error" | "warning";
 
 const VARIANT_STYLES: Record<
   ToastVariant,
@@ -34,11 +37,14 @@ const VARIANT_STYLES: Record<
     primary: { color: DOWNLOAD_FAIL_TEXT },
     secondary: { color: DOWNLOAD_FAIL_TEXT },
   },
+  warning: {
+    inner: { backgroundColor: DOWNLOAD_TOAST_BG },
+    primary: { color: DOWNLOAD_TOAST_TEXT },
+    secondary: { color: DOWNLOAD_TOAST_TEXT },
+  },
 };
 
 export type ToastProps = {
-  /** When false, fades out then calls {@link onHidden}. */
-  visible: boolean;
   variant: ToastVariant;
   /** Primary line (e.g. title or single message). */
   message: string;
@@ -50,15 +56,17 @@ export type ToastProps = {
   zIndex?: number;
   fadeInMs?: number;
   fadeOutMs?: number;
+  /** When true, fades out then calls `onExitComplete`. */
+  exiting?: boolean;
+  /** Invoked once after exit fade finishes (unless the exit animation is cancelled). */
+  onExitComplete?: () => void;
   wrapStyle?: StyleProp<ViewStyle>;
-  onHidden?: () => void;
 };
 
 /**
- * Pill toast with RN Animated fade in/out. Used for “Page saved”, global errors, etc.
+ * Pill toast with RN Animated fade-in; fade-out while `exiting` before parent removes the row.
  */
 export function Toast({
-  visible,
   variant,
   message,
   subtitle,
@@ -67,32 +75,70 @@ export function Toast({
   zIndex = 3650,
   fadeInMs = SAVED_TOAST_FADE_IN_MS,
   fadeOutMs = SAVED_TOAST_FADE_OUT_MS,
+  exiting = false,
+  onExitComplete,
   wrapStyle,
-  onHidden,
 }: ToastProps) {
-  const opacity = useRef(new Animated.Value(visible ? 0 : 0)).current;
-  const onHiddenRef = useRef(onHidden);
-  onHiddenRef.current = onHidden;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const topAnim = useRef(new Animated.Value(top)).current;
+  const prevTopRef = useRef<number | null>(null);
+  const onExitCompleteRef = useRef(onExitComplete);
+  onExitCompleteRef.current = onExitComplete;
 
   useEffect(() => {
-    opacity.stopAnimation();
-    if (visible) {
-      opacity.setValue(0);
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: fadeInMs,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: fadeOutMs,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) onHiddenRef.current?.();
-      });
+    if (exiting) {
+      return;
     }
-  }, [visible, opacity, fadeInMs, fadeOutMs]);
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: fadeInMs,
+      useNativeDriver: true,
+    }).start();
+    return () => {
+      opacity.stopAnimation();
+    };
+  }, [exiting, fadeInMs, opacity]);
+
+  useEffect(() => {
+    if (!exiting) {
+      return;
+    }
+    opacity.stopAnimation();
+    Animated.timing(opacity, {
+      toValue: 0,
+      duration: fadeOutMs,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        onExitCompleteRef.current?.();
+      }
+    });
+    return () => {
+      opacity.stopAnimation();
+    };
+  }, [exiting, fadeOutMs, opacity]);
+
+  useEffect(() => {
+    if (prevTopRef.current === null) {
+      topAnim.setValue(top);
+      prevTopRef.current = top;
+    } else if (prevTopRef.current !== top) {
+      prevTopRef.current = top;
+      topAnim.stopAnimation();
+      Animated.timing(topAnim, {
+        toValue: top,
+        duration: TOAST_STACK_REPOSITION_MS,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [top, topAnim]);
+
+  useEffect(() => {
+    return () => {
+      topAnim.stopAnimation();
+    };
+  }, [topAnim]);
 
   const v = VARIANT_STYLES[variant];
 
@@ -102,25 +148,26 @@ export function Toast({
       style={[
         styles.wrap,
         {
-          top,
+          top: topAnim,
           left: horizontalInset,
           right: horizontalInset,
           zIndex,
-          opacity,
         },
         wrapStyle,
       ]}
     >
-      <View style={[styles.inner, v.inner]}>
-        <Text style={[styles.message, v.primary]} numberOfLines={3}>
-          {message}
-        </Text>
-        {subtitle != null && subtitle !== "" ? (
-          <Text style={[styles.subtitle, v.secondary]} numberOfLines={4}>
-            {subtitle}
+      <Animated.View style={[styles.opacityShell, { opacity }]}>
+        <View style={[styles.inner, v.inner]}>
+          <Text style={[styles.message, v.primary]} numberOfLines={3}>
+            {message}
           </Text>
-        ) : null}
-      </View>
+          {subtitle != null && subtitle !== "" ? (
+            <Text style={[styles.subtitle, v.secondary]} numberOfLines={4}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -128,9 +175,12 @@ export function Toast({
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    alignItems: "center",
     justifyContent: "center",
     minHeight: 44,
+  },
+  opacityShell: {
+    alignItems: "center",
+    alignSelf: "stretch",
   },
   inner: {
     paddingVertical: 10,

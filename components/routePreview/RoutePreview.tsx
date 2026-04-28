@@ -1,4 +1,10 @@
 import { SavedPageGlyph } from "@/components/buttons/SavedPageGlyph";
+import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toastArchetypes";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { loadDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
+import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
   Method,
   RopeGeoHttpRequest,
@@ -25,6 +31,7 @@ import {
   RouteType,
 } from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
+import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
 
 const CARD_BORDER_RADIUS = 12;
 const CARD_PADDING = 12;
@@ -198,125 +205,290 @@ type RoutePreviewProps = {
   badgeScale?: number;
 };
 
-export function RoutePreview({ routeId, routeType = null, onCurrentPreviewChange, onPreviewPress, badgeScale = 0.65 }: RoutePreviewProps) {
+function RoutePreviewDataView({
+  data,
+  loading,
+  routeType,
+  badgeScale,
+  onPreviewPress,
+  onCurrentPreviewChange,
+}: {
+  data: PreviewCardData[];
+  loading: boolean;
+  routeType?: RouteType | null;
+  badgeScale: number;
+  onPreviewPress?: (preview: PreviewCardData) => void;
+  onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
+}) {
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { isSaved } = useSavedPages();
 
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [data]);
+
+  const currentPreview =
+    data.length > 0
+      ? data.length === 1
+        ? data[0]
+        : data[Math.min(currentIndex, data.length - 1)] ?? data[0]
+      : null;
+  const showExternalLink =
+    currentPreview?.source === "ropewiki" &&
+    currentPreview?.externalLink != null;
+
+  return (
+    <View style={styles.previewWrapper}>
+      <CurrentPreviewNotifier
+        loading={loading}
+        data={data.length > 0 ? data : null}
+        currentIndex={currentIndex}
+        onCurrentPreviewChange={onCurrentPreviewChange}
+      />
+      {currentPreview != null && isSaved(currentPreview.id) && (
+        <View style={styles.savedGlyphWrap} pointerEvents="none">
+          <View style={styles.savedGlyphCircle} pointerEvents="none">
+            <SavedPageGlyph isSaved />
+          </View>
+        </View>
+      )}
+      {showExternalLink && currentPreview.externalLink != null && (
+          <View style={styles.externalLinkButtonWrap}>
+            <ExternalLinkButton
+              icon={require("@/assets/images/icons/ropewiki.png")}
+              link={currentPreview.externalLink}
+              accessibilityLabel="Open on RopeWiki"
+            />
+          </View>
+        )}
+      {data.length === 1 ? (
+        <View style={styles.outer}>
+          <SinglePreviewCard
+            preview={data[0]}
+            routeType={routeType}
+            badgeScale={badgeScale}
+            onPress={onPreviewPress ?? undefined}
+          />
+        </View>
+      ) : (
+        <View style={styles.outer}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const i = Math.round(
+                e.nativeEvent.contentOffset.x / CARD_WIDTH,
+              );
+              setCurrentIndex(Math.min(i, data.length - 1));
+            }}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {data.map((preview) => (
+              <View key={preview.id} style={styles.page}>
+                <SinglePreviewCard
+                  preview={preview}
+                  routeType={routeType}
+                  badgeScale={badgeScale}
+                  onPress={onPreviewPress ?? undefined}
+                />
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.dots}>
+            {data.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i === currentIndex ? styles.dotActive : styles.dotInactive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function RoutePreviewOnlineInner({
+  routeId,
+  routeType,
+  badgeScale,
+  onPreviewPress,
+  onCurrentPreviewChange,
+  isOnline,
+  diskPreviews,
+  diskLoading,
+  loading,
+  data,
+  errors,
+  timeoutCountdown,
+  onRetryRequest,
+}: {
+  routeId: string;
+  routeType?: RouteType | null;
+  badgeScale: number;
+  onPreviewPress?: (preview: PreviewCardData) => void;
+  onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
+  isOnline: boolean;
+  diskPreviews: OfflinePagePreview[] | null;
+  diskLoading: boolean;
+  loading: boolean;
+  data: OnlinePagePreview[] | null;
+  errors: Error | null;
+  timeoutCountdown: number | null;
+  onRetryRequest: () => void;
+}) {
+  useNetworkRequestToasts({
+    loading,
+    errors,
+    timeoutCountdown,
+    resetKey: routeId,
+    watchOffline: false,
+    errorToastKey: TOAST_KEY_ROUTE_PREVIEW_ERROR,
+    errorToastTitle: "Error loading route preview",
+    incrementErrorMultipleOnCollision: true,
+    onRetryRequest,
+  });
+
+  const isNoNetworkSoft = errors?.message === NO_NETWORK_MESSAGE;
+  const rows = data ?? [];
+
+  if (!isOnline) {
+    if (rows.length > 0 && (errors == null || isNoNetworkSoft)) {
+      return (
+        <RoutePreviewDataView
+          data={rows}
+          loading={false}
+          routeType={routeType}
+          badgeScale={badgeScale}
+          onPreviewPress={onPreviewPress}
+          onCurrentPreviewChange={onCurrentPreviewChange}
+        />
+      );
+    }
+    if (diskLoading) {
+      return <RoutePreviewPlaceholder />;
+    }
+    const fromDisk = diskPreviews ?? [];
+    if (fromDisk.length > 0) {
+      return (
+        <RoutePreviewDataView
+          data={fromDisk}
+          loading={false}
+          routeType={routeType}
+          badgeScale={badgeScale}
+          onPreviewPress={onPreviewPress}
+          onCurrentPreviewChange={onCurrentPreviewChange}
+        />
+      );
+    }
+    return (
+      <RoutePreviewPlaceholder errorMessage="No network connection" />
+    );
+  }
+
+  // Show placeholder for the whole in-flight fetch, including route switches: RopeGeoHttpRequest
+  // keeps previous `data` until the new response arrives, so we must not gate on empty data.
+  if (loading) {
+    return <RoutePreviewPlaceholder />;
+  }
+  if (errors != null && (data == null || data.length === 0)) {
+    const detail = errors.message.trim();
+    return (
+      <RoutePreviewPlaceholder
+        errorMessage={
+          detail !== ""
+            ? `Error loading preview\n${detail}`
+            : "Error loading preview"
+        }
+      />
+    );
+  }
+  if (data == null || data.length === 0) {
+    return (
+      <View style={styles.outer}>
+        <View style={[styles.card, styles.placeholderCard]}>
+          <Text style={styles.placeholderText}>No preview available</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <RoutePreviewDataView
+      data={data}
+      loading={false}
+      routeType={routeType}
+      badgeScale={badgeScale}
+      onPreviewPress={onPreviewPress}
+      onCurrentPreviewChange={onCurrentPreviewChange}
+    />
+  );
+}
+
+export function RoutePreview({
+  routeId,
+  routeType = null,
+  onCurrentPreviewChange,
+  onPreviewPress,
+  badgeScale = 0.65,
+}: RoutePreviewProps) {
+  const { isOnline } = useNetworkStatus();
+  const [diskPreviews, setDiskPreviews] = useState<OfflinePagePreview[] | null>(
+    null,
+  );
+  const [diskLoading, setDiskLoading] = useState(false);
+  useEffect(() => {
+    if (isOnline) {
+      setDiskPreviews(null);
+      setDiskLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setDiskLoading(true);
+    void loadDownloadedRoutePreviewsForPage(routeId).then((rows) => {
+      if (!cancelled) {
+        setDiskPreviews(rows);
+        setDiskLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOnline, routeId]);
+
   return (
     <RopeGeoHttpRequest<OnlinePagePreview[]>
+      key={routeId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/route/:routeId/preview"
       pathParams={{ routeId }}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
     >
-      {({ loading, data, errors }) => {
-        const currentPreview =
-          data && data.length > 0
-            ? data.length === 1
-              ? data[0]
-              : data[Math.min(currentIndex, data.length - 1)] ?? data[0]
-            : null;
-        const showExternalLink =
-          currentPreview?.source === "ropewiki" &&
-          currentPreview?.externalLink != null;
-
-        return (
-          <View style={styles.previewWrapper}>
-            <CurrentPreviewNotifier
-              loading={!!loading}
-              data={data ?? null}
-              currentIndex={currentIndex}
-              onCurrentPreviewChange={onCurrentPreviewChange}
-            />
-            {currentPreview != null && isSaved(currentPreview.id) && (
-              <View style={styles.savedGlyphWrap} pointerEvents="none">
-                <View style={styles.savedGlyphCircle} pointerEvents="none">
-                  <SavedPageGlyph isSaved />
-                </View>
-              </View>
-            )}
-            {showExternalLink && currentPreview.externalLink != null && (
-              <View style={styles.externalLinkButtonWrap}>
-                <ExternalLinkButton
-                  icon={require("@/assets/images/icons/ropewiki.png")}
-                  link={currentPreview.externalLink}
-                  accessibilityLabel="Open on RopeWiki"
-                />
-              </View>
-            )}
-            {loading ? (
-            <View style={styles.outer}>
-              <View style={[styles.card, styles.placeholderCard]}>
-                <ActivityIndicator size="large" color="#666" />
-                <Text style={[styles.placeholderText, styles.loadingText]}>
-                  Loading preview…
-                </Text>
-              </View>
-            </View>
-          ) : errors ? (
-            <View style={styles.outer}>
-              <View style={[styles.card, styles.placeholderCard]}>
-                <Text style={styles.errorText}>{errors.message}</Text>
-              </View>
-            </View>
-          ) : !data || data.length === 0 ? (
-            <View style={styles.outer}>
-              <View style={[styles.card, styles.placeholderCard]}>
-                <Text style={styles.placeholderText}>No preview available</Text>
-              </View>
-            </View>
-          ) : data.length === 1 ? (
-            <View style={styles.outer}>
-              <SinglePreviewCard
-                preview={data[0]}
-                routeType={routeType}
-                badgeScale={badgeScale}
-                onPress={onPreviewPress ?? undefined}
-              />
-            </View>
-          ) : (
-            <View style={styles.outer}>
-              <ScrollView
-                ref={scrollRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const i = Math.round(
-                    e.nativeEvent.contentOffset.x / CARD_WIDTH
-                  );
-                  setCurrentIndex(Math.min(i, data.length - 1));
-                }}
-                contentContainerStyle={styles.scrollContent}
-              >
-                {data.map((preview) => (
-                  <View key={preview.id} style={styles.page}>
-                    <SinglePreviewCard
-                      preview={preview}
-                      routeType={routeType}
-                      badgeScale={badgeScale}
-                      onPress={onPreviewPress ?? undefined}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-              <View style={styles.dots}>
-                {data.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.dot,
-                      i === currentIndex ? styles.dotActive : styles.dotInactive,
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-          </View>
-        );
-      }}
+      {({ loading, data, errors, timeoutCountdown, reload }) => (
+        <RoutePreviewOnlineInner
+          routeId={routeId}
+          routeType={routeType}
+          badgeScale={badgeScale}
+          onPreviewPress={onPreviewPress}
+          onCurrentPreviewChange={onCurrentPreviewChange}
+          isOnline={isOnline}
+          diskPreviews={diskPreviews}
+          diskLoading={diskLoading}
+          loading={loading}
+          data={data}
+          errors={errors}
+          timeoutCountdown={timeoutCountdown}
+          onRetryRequest={reload}
+        />
+      )}
     </RopeGeoHttpRequest>
   );
 }
@@ -380,19 +552,12 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 14,
   },
-  loadingText: {
-    marginTop: 8,
-  },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
-  },
-  errorText: {
-    color: "#c00",
-    fontSize: 14,
   },
   cardContent: {
     flexDirection: "row",

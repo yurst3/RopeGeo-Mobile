@@ -1,3 +1,4 @@
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import {
   DownloadQueue,
@@ -21,6 +22,13 @@ import {
   SavedPage,
 } from "ropegeo-common/models";
 import { SERVICE_BASE_URL, Service } from "ropegeo-common/components";
+import {
+  isAbortError,
+  mergeParentSignalWithDeadline,
+  NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+} from "ropegeo-common/helpers/network";
+import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 
 type EnqueuePageDownloadInput = {
   pageId: string;
@@ -44,6 +52,7 @@ const DownloadQueueContext = createContext<DownloadQueueContextValue | null>(nul
 export function DownloadQueueProvider({ children }: { children: ReactNode }) {
   const webBase = SERVICE_BASE_URL[Service.WEBSCRAPER];
   const queue = useMemo(() => DownloadQueue.getInstance(), []);
+  const { isOnline } = useNetworkStatus();
   const { savedEntries, addSaved, replaceSaved } = useSavedPages();
   const savedEntriesRef = useRef(savedEntries);
   const [snapshots, setSnapshots] = useState<Record<string, DownloadTaskSnapshot>>(
@@ -55,6 +64,10 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
   }, [savedEntries]);
 
   useEffect(() => queue.subscribe(setSnapshots), [queue]);
+
+  useEffect(() => {
+    queue.setOnline(isOnline);
+  }, [isOnline, queue]);
 
   const pageViewTypeFromSavedPage = useCallback((savedPage: SavedPage): PageViewType => {
     switch (savedPage.preview.source) {
@@ -97,7 +110,29 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
       const pageViewType = pageViewTypeFromSavedPage(saved);
       void (async () => {
         const pageUrl = `${webBase}/${encodeURIComponent(pageViewType)}/page/${encodeURIComponent(input.pageId)}`;
-        const res = await fetch(pageUrl, { headers: { Accept: "application/json" } });
+        const hold = new AbortController();
+        const merged = mergeParentSignalWithDeadline(
+          hold.signal,
+          REQUEST_TIMEOUT_SECONDS * 1000,
+        );
+        let res: Response;
+        try {
+          res = await fetch(pageUrl, {
+            headers: { Accept: "application/json" },
+            signal: merged.signal,
+          });
+        } catch (e) {
+          const timedOut = merged.consumeDidTimeout();
+          if (timedOut) {
+            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+          }
+          if (isAbortError(e)) {
+            throw new Error(NO_NETWORK_MESSAGE);
+          }
+          throw e;
+        } finally {
+          merged.dispose();
+        }
         if (!res.ok) {
           throw new Error(`Page request failed: HTTP ${res.status}`);
         }

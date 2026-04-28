@@ -9,7 +9,7 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { boundsPaddingForFullScreenMap } from "@/components/minimap/fullScreenMapLayout";
+import { boundsPaddingForFullScreenMap } from "./fullScreenMapLayout";
 
 export type Rect = { x: number; y: number; width: number; height: number };
 

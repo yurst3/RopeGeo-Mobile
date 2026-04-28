@@ -40,6 +40,20 @@ export class DownloadQueue {
 
   private processing = false;
 
+  private online = true;
+
+  private runAbort: AbortController | null = null;
+
+  /** Called when device reachability changes (e.g. from {@link NetworkStatusProvider}). */
+  setOnline(online: boolean): void {
+    this.online = online;
+    if (!online) {
+      this.runAbort?.abort();
+    } else if (!this.processing && this.queue.length > 0) {
+      void this.process();
+    }
+  }
+
   static getInstance(): DownloadQueue {
     if (DownloadQueue.instance == null) {
       DownloadQueue.instance = new DownloadQueue();
@@ -104,6 +118,9 @@ export class DownloadQueue {
     this.processing = true;
     try {
       while (this.queue.length > 0) {
+        if (!this.online) {
+          break;
+        }
         const task = this.queue.shift();
         if (task == null) break;
         const onSuccess = this.onSuccessByPageId.get(task.pageId);
@@ -114,14 +131,21 @@ export class DownloadQueue {
         const viewSaved = view.toSavedPage();
         const savedPage = new SavedPage(viewSaved.preview, savedAt, viewSaved.downloadedPageViewPath);
 
+        this.runAbort = new AbortController();
         try {
-          const result = await task.run(savedPage, displayPlan);
+          const result = await task.run(
+            savedPage,
+            displayPlan,
+            this.runAbort.signal,
+          );
           await onSuccess(result);
           this.emit();
           this.scheduleCleanup(task.pageId, 2000);
         } catch {
           this.emit();
           this.scheduleCleanup(task.pageId, 4000);
+        } finally {
+          this.runAbort = null;
         }
       }
     } finally {

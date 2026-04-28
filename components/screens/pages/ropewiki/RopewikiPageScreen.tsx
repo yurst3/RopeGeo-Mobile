@@ -11,26 +11,39 @@ import {
   Service,
 } from "ropegeo-common/components";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
-import { CenteredRegionMiniMapView } from "@/components/minimap/CenteredRegionMiniMapView";
-import { PageMiniMap, type PageMiniMapTileProps } from "@/components/minimap/PageMiniMap";
+import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
+import type { MiniMapHandle } from "@/components/minimap/miniMapHandle";
+import {
+  isCenteredRegionMiniMapType,
+  isPageMiniMapType,
+} from "@/components/minimap/shared/minimapShared";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
 import { PageContent as PageScrollContent } from "./PageContent";
 import { PageSeamButtons } from "./PageSeamButtons";
+import { RopewikiPagePlaceholder } from "./RopewikiPagePlaceholder";
 import {
-  ProgressToast,
-  SAVED_TOAST_DURATION_MS,
-  Toast,
   TOAST_HORIZONTAL_INSET,
-  useAppToast,
-} from "@/components/toast";
+} from "@/constants/toast";
+import {
+  getToastArchetypeForKey,
+  TOAST_KEY_PAGE_ERROR,
+  TOAST_KEY_PAGE_SAVED,
+} from "@/constants/toastArchetypes";
+import {
+  pageDownloadUiFromTaskSnapshot,
+  useDownloadProgressToasts,
+} from "@/components/toast/useDownloadProgressToasts";
+import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import { useRouter } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
-  ActivityIndicator,
   BackHandler,
   Dimensions,
   type NativeScrollEvent,
@@ -49,7 +62,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  MiniMapType,
   PageDataSource,
   OfflineRopewikiPageView,
   type OnlineRopewikiPageView,
@@ -73,9 +85,6 @@ const HEADER_BUTTON_STACK_GAP = 8;
 function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
   return `https://mobile.ropegeo.com/explore/${encodeURIComponent(pageId)}/page?source=${encodeURIComponent(source)}`;
 }
-const TOAST_STACK_GAP = 8;
-const TOAST_STACK_OFFSET = 44 + TOAST_STACK_GAP;
-
 /** Same tap thresholds as `RopewikiRegionScreen` hero layer (pans disabled for single-image page). */
 const TAP_MAX_DISPLACEMENT = 10;
 const TAP_MAX_DURATION_MS = 300;
@@ -85,21 +94,8 @@ const DEBUG_BANNER_EXPAND_HIT_OUTLINE = false;
 
 export type RopewikiPageScreenProps = {
   pageId: string;
+  source: PageDataSource;
 };
-
-function ErrorEffect({ error }: { error: Error }) {
-  const router = useRouter();
-  const showToast = useAppToast();
-  useEffect(() => {
-    router.back();
-    showToast({
-      variant: "error",
-      message: "Error",
-      subtitle: error.message,
-    });
-  }, [error, router, showToast]);
-  return null;
-}
 
 function PageScreenBody({
   pageId,
@@ -109,6 +105,7 @@ function PageScreenBody({
   data: OnlineRopewikiPageView | OfflineRopewikiPageViewType;
 }) {
   const insets = useSafeAreaInsets();
+  const { showPill, dismiss, upsertPill } = useToast();
   const router = useRouter();
   const { enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
   const { setHighlightSavedTab } = useSavedTabHighlight();
@@ -127,66 +124,55 @@ function PageScreenBody({
   const downloadTask = getTaskSnapshot(pageId);
   const downloading =
     downloadTask?.state === "queued" || downloadTask?.state === "running";
-  const downloadUi:
-    | { kind: "idle" }
-    | {
-        kind: "progress";
-        phaseTitle: string;
-        phaseProgress: number;
-        displayStep: number;
-        displayTotal: number;
-      }
-    | { kind: "success"; displayTotal: number }
-    | { kind: "error" } = (() => {
-    if (downloadTask == null) return { kind: "idle" };
-    if (downloadTask.state === "queued" || downloadTask.state === "running") {
-      return {
-        kind: "progress",
-        phaseTitle: downloadTask.phaseTitle,
-        phaseProgress: downloadTask.phaseProgress,
-        displayStep: downloadTask.displayStep,
-        displayTotal: downloadTask.displayTotal,
-      };
-    }
-    if (downloadTask.state === "success") {
-      return { kind: "success", displayTotal: downloadTask.displayTotal };
-    }
-    return { kind: "error" };
-  })();
-
+  const downloadUi = useMemo(
+    () => pageDownloadUiFromTaskSnapshot(downloadTask),
+    [downloadTask],
+  );
   const onRemoveDownloadPress = useCallback(async () => {
     if (!isDownloaded) return;
     await removeDownloadBundle(pageId);
   }, [isDownloaded, pageId, removeDownloadBundle]);
 
-  const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [savedToastVisible, setSavedToastVisible] = useState(false);
-
   const dismissSavedToastImmediate = useCallback(() => {
-    if (savedToastTimerRef.current != null) {
-      clearTimeout(savedToastTimerRef.current);
-      savedToastTimerRef.current = null;
-    }
-    setSavedToastVisible(false);
+    dismiss(TOAST_KEY_PAGE_SAVED);
     setHighlightSavedTab(false);
-  }, [setHighlightSavedTab]);
+  }, [dismiss, setHighlightSavedTab]);
 
   const showSavedToast = useCallback(() => {
-    if (savedToastTimerRef.current != null) {
-      clearTimeout(savedToastTimerRef.current);
-      savedToastTimerRef.current = null;
-    }
+    const savedToastDurationMs =
+      getToastArchetypeForKey(TOAST_KEY_PAGE_SAVED)?.durationMs ?? null;
+    const pageAllowedRoutes = [`/explore/${pageId}/page`, `/saved/${pageId}/page`];
+    dismiss(TOAST_KEY_PAGE_SAVED);
     setHighlightSavedTab(true);
-    setSavedToastVisible(true);
-    savedToastTimerRef.current = setTimeout(() => {
-      savedToastTimerRef.current = null;
-      setSavedToastVisible(false);
-    }, SAVED_TOAST_DURATION_MS);
-  }, [setHighlightSavedTab]);
-
-  const handleSavedToastHidden = useCallback(() => {
-    setHighlightSavedTab(false);
-  }, [setHighlightSavedTab]);
+    try {
+      showPill({
+        key: TOAST_KEY_PAGE_SAVED,
+        variant: "success",
+        message: "Page saved",
+        durationMs: savedToastDurationMs,
+        allowedRoutes: pageAllowedRoutes,
+        horizontalInset: TOAST_HORIZONTAL_INSET,
+        onDismissed: () => {
+          setHighlightSavedTab(false);
+        },
+      });
+    } catch (error) {
+      if (!(error instanceof ToastKeyCollisionError)) {
+        throw error;
+      }
+      upsertPill({
+        key: TOAST_KEY_PAGE_SAVED,
+        variant: "success",
+        message: "Page saved",
+        durationMs: savedToastDurationMs,
+        allowedRoutes: pageAllowedRoutes,
+        horizontalInset: TOAST_HORIZONTAL_INSET,
+        onDismissed: () => {
+          setHighlightSavedTab(false);
+        },
+      });
+    }
+  }, [dismiss, pageId, setHighlightSavedTab, showPill, upsertPill]);
 
   const onSavePress = () => {
     if (saved) {
@@ -259,6 +245,7 @@ function PageScreenBody({
   }, [aspectRatioSv, pageId]);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
   const miniMapGateRef = useRef<View>(null);
+  const miniMapRef = useRef<MiniMapHandle>(null);
   const miniMapUnlockedRef = useRef(false);
   const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
   const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
@@ -268,6 +255,13 @@ function PageScreenBody({
     width: number;
     height: number;
   } | null>(null);
+
+  useDownloadProgressToasts({
+    downloadUi,
+    resetKey: pageId,
+    toastVisible: mapMode !== "expanded",
+    horizontalInset: TOAST_HORIZONTAL_INSET,
+  });
 
   /** Full banner bounds for expand animation (`measureInWindow`). Hit testing uses a clipped overlay. */
   const bannerFullRectRef = useRef<View>(null);
@@ -304,15 +298,13 @@ function PageScreenBody({
   const mapDirections =
     directionsFromPageCoords != null &&
     minimapForUi != null &&
-    (minimapForUi.miniMapType === MiniMapType.OnlineTilesTemplate ||
-      minimapForUi.miniMapType === MiniMapType.OfflineTilesTemplate)
+    isPageMiniMapType(minimapForUi.miniMapType)
       ? directionsFromPageCoords
       : null;
   const centeredMiniMapDirections =
     directionsFromPageCoords != null &&
     minimapForUi != null &&
-    (minimapForUi.miniMapType === MiniMapType.OnlineCenteredGeojson ||
-      minimapForUi.miniMapType === MiniMapType.OfflineCenteredGeojson)
+    isCenteredRegionMiniMapType(minimapForUi.miniMapType)
       ? directionsFromPageCoords
       : null;
 
@@ -326,6 +318,12 @@ function PageScreenBody({
     lastBannerHitScrollRef.current = 0;
     dismissSavedToastImmediate();
   }, [pageId, dismissSavedToastImmediate]);
+
+  useEffect(() => {
+    if (mapMode === "expanded") {
+      dismiss(TOAST_KEY_PAGE_SAVED);
+    }
+  }, [mapMode, dismiss]);
 
   const checkMiniMapInView = useCallback(() => {
     if (!hasMiniMap) return;
@@ -558,6 +556,7 @@ function PageScreenBody({
       ) : null}
 
       <PageScrollContent
+        pageId={pageId}
         data={data}
         routeTypeResolved={routeTypeResolved}
         insets={insets}
@@ -602,42 +601,6 @@ function PageScreenBody({
       {mapMode !== "expanded" && (
         <>
           <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
-          <Toast
-            visible={savedToastVisible}
-            variant="success"
-            message="Page saved"
-            top={
-              insets.top +
-              HEADER_ROW_TOP +
-              (savedToastVisible && downloadUi.kind !== "idle" ? TOAST_STACK_OFFSET : 0)
-            }
-            horizontalInset={TOAST_HORIZONTAL_INSET}
-            zIndex={3650}
-            onHidden={handleSavedToastHidden}
-          />
-          {downloadUi.kind !== "idle" ? (
-            <ProgressToast
-              kind={downloadUi.kind}
-              title={
-                downloadUi.kind === "progress"
-                  ? downloadUi.displayTotal > 0
-                    ? `(${downloadUi.displayStep}/${downloadUi.displayTotal}) ${downloadUi.phaseTitle}`
-                    : downloadUi.phaseTitle
-                  : downloadUi.kind === "success"
-                    ? downloadUi.displayTotal > 0
-                      ? `(${downloadUi.displayTotal}/${downloadUi.displayTotal}) Download complete`
-                      : "Download complete"
-                    : "Download failed"
-              }
-              progress={
-                downloadUi.kind === "progress"
-                  ? downloadUi.phaseProgress
-                  : undefined
-              }
-              top={insets.top + HEADER_ROW_TOP}
-              horizontalInset={TOAST_HORIZONTAL_INSET}
-            />
-          ) : null}
           <SaveButton saved={saved} onPress={onSavePress} top={insets.top + HEADER_ROW_TOP} />
           <ShareButton
             onPress={onSharePress}
@@ -650,34 +613,22 @@ function PageScreenBody({
           />
         </>
       )}
-      {hasMiniMap &&
-      (minimapForUi.miniMapType === MiniMapType.OnlineTilesTemplate ||
-        minimapForUi.miniMapType === MiniMapType.OfflineTilesTemplate) ? (
-        <PageMiniMap
-          miniMap={minimapForUi as PageMiniMapTileProps}
-          mountNativeMap={mountMiniMapNative}
-          expanded={mapMode === "expanded"}
-          anchorRect={miniMapAnchorRect}
-          baseScrollY={baseScrollYRef.current}
-          scrollY={scrollY}
-          onExpand={openPageFullMap}
-          onCollapse={closePageFullMap}
-          mapDirections={mapDirections}
-        />
-      ) : null}
-      {hasMiniMap &&
-      (minimapForUi.miniMapType === MiniMapType.OnlineCenteredGeojson ||
-        minimapForUi.miniMapType === MiniMapType.OfflineCenteredGeojson) ? (
-        <CenteredRegionMiniMapView
-          miniMap={minimapForUi}
-          mapDirections={centeredMiniMapDirections}
-          mountNativeMap={mountMiniMapNative}
-          expanded={mapMode === "expanded"}
-          anchorRect={miniMapAnchorRect}
-          baseScrollY={baseScrollYRef.current}
-          scrollY={scrollY}
-          onExpand={openPageFullMap}
-          onCollapse={closePageFullMap}
+      {hasMiniMap ? (
+        <MiniMap
+          ref={miniMapRef}
+          {...({
+            miniMap: minimapForUi,
+            mountNativeMap: mountMiniMapNative,
+            expanded: mapMode === "expanded",
+            anchorRect: miniMapAnchorRect,
+            baseScrollY: baseScrollYRef.current,
+            scrollY,
+            onExpand: openPageFullMap,
+            onCollapse: closePageFullMap,
+            mapDirections: isPageMiniMapType(minimapForUi.miniMapType)
+              ? mapDirections
+              : centeredMiniMapDirections,
+          } as MiniMapProps)}
         />
       ) : null}
 
@@ -704,11 +655,74 @@ function PageScreenBody({
   );
 }
 
+function RopewikiPageOnlineInner({
+  pageId,
+  source,
+  backTop,
+  loading,
+  data,
+  errors,
+  timeoutCountdown,
+  onLoaded,
+  onRetryRequest,
+}: {
+  pageId: string;
+  source: PageDataSource;
+  backTop: number;
+  loading: boolean;
+  data: OnlineRopewikiPageView | null;
+  errors: Error | null;
+  timeoutCountdown: number | null;
+  onLoaded: (d: OnlineRopewikiPageView) => void;
+  onRetryRequest: () => void;
+}) {
+  useNetworkRequestToasts({
+    loading,
+    errors,
+    timeoutCountdown,
+    resetKey: pageId,
+    errorToastKey: TOAST_KEY_PAGE_ERROR,
+    errorToastTitle: "Error loading page",
+    incrementErrorMultipleOnCollision: true,
+    onRetryRequest,
+  });
+
+  useEffect(() => {
+    if (!loading && errors == null && data != null) {
+      onLoaded(data);
+    }
+  }, [loading, errors, data, onLoaded]);
+
+  if (errors != null) {
+    return (
+      <RopewikiPagePlaceholder
+        backTop={backTop}
+        source={source}
+        errorMessage={errors.message}
+      />
+    );
+  }
+  if (loading) {
+    return (
+      <RopewikiPagePlaceholder backTop={backTop} source={source} />
+    );
+  }
+  if (data == null) {
+    return null;
+  }
+  return <PageScreenBody pageId={pageId} data={data} />;
+}
+
 export function RopewikiPageScreen({
   pageId,
+  source,
 }: RopewikiPageScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isOnline } = useNetworkStatus();
+  const [onlineStash, setOnlineStash] = useState<OnlineRopewikiPageView | null>(
+    null,
+  );
   const { savedEntries, replaceSaved, isLoading: savedPagesLoading } = useSavedPages();
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
   const [preferOfflineForSession, setPreferOfflineForSession] = useState(false);
@@ -718,6 +732,14 @@ export function RopewikiPageScreen({
   const [offlineData, setOfflineData] = useState<OfflineRopewikiPageViewType | null>(null);
   const [offlineError, setOfflineError] = useState<Error | null>(null);
   const [offlineLoading, setOfflineLoading] = useState(false);
+
+  useEffect(() => {
+    setOnlineStash(null);
+  }, [pageId]);
+
+  const onOnlineLoaded = useCallback((d: OnlineRopewikiPageView) => {
+    setOnlineStash(d);
+  }, []);
 
   useEffect(() => {
     // Lock source mode when entering a page so finishing a download in-place
@@ -800,50 +822,62 @@ export function RopewikiPageScreen({
   ]);
 
   if (shouldUseOffline) {
+    const backTopOffline = insets.top + HEADER_ROW_TOP;
     if (offlineError != null) {
-      return <ErrorEffect error={offlineError} />;
+      return (
+        <RopewikiPagePlaceholder
+          backTop={backTopOffline}
+          source={source}
+          errorMessage={offlineError.message}
+        />
+      );
     }
     if (offlineLoading || offlineData == null) {
       return (
-        <View style={styles.container}>
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#666" />
-          </View>
-          <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
-        </View>
+        <RopewikiPagePlaceholder backTop={backTopOffline} source={source} />
       );
     }
     return <PageScreenBody pageId={pageId} data={offlineData} />;
   }
 
+  const backTop = insets.top + HEADER_ROW_TOP;
+
+  if (!isOnline && onlineStash != null) {
+    return <PageScreenBody pageId={pageId} data={onlineStash} />;
+  }
+  if (!isOnline && onlineStash == null) {
+    return (
+      <RopewikiPagePlaceholder
+        backTop={backTop}
+        source={source}
+        errorMessage="No network connection"
+      />
+    );
+  }
+
   return (
     <RopeGeoHttpRequest<OnlineRopewikiPageView>
+      key={pageId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/ropewiki/page/:id"
       pathParams={{ id: pageId }}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
     >
-      {({ loading, data, errors }) => {
-        if (errors != null) {
-          return <ErrorEffect error={errors} />;
-        }
-        if (loading) {
-          return (
-            <View style={styles.container}>
-              <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#666" />
-              </View>
-              <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
-            </View>
-          );
-        }
-        if (data == null) {
-          return null;
-        }
-        return (
-          <PageScreenBody pageId={pageId} data={data} />
-        );
-      }}
+      {({ loading, data, errors, timeoutCountdown, reload }) => (
+        <RopewikiPageOnlineInner
+          pageId={pageId}
+          source={source}
+          backTop={backTop}
+          loading={loading}
+          data={data}
+          errors={errors}
+          timeoutCountdown={timeoutCountdown}
+          onLoaded={onOnlineLoaded}
+          onRetryRequest={reload}
+        />
+      )}
     </RopeGeoHttpRequest>
   );
 }
@@ -852,12 +886,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#e5e7eb",
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
   },
   heroBannerLayer: {
     position: "absolute",

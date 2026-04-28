@@ -17,6 +17,8 @@ import {
 } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
   ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
   ROUTE_MARKER_IMAGES,
@@ -26,12 +28,18 @@ import {
 
 export type RoutesState = {
   loading: boolean;
+  /** Background refetch while showing last successful markers (ropegeo-common `refreshing`). */
+  refreshing: boolean;
   data: RoutesGeojson | null;
   errors: Error | null;
   /** Items merged from completed pages so far. */
   received: number;
   /** Total from API when known; `null` until the first page returns. */
   total: number | null;
+  /** Seconds until request timeout from {@link RopeGeoPaginationHttpRequest}; `null` when idle. */
+  timeoutCountdown: number | null;
+  /** Re-fetch all route pages (ropegeo-common pagination `reload`). */
+  reload?: () => void;
 };
 
 /** Exported for minimaps that render clustered route markers with the same layout as this layer. */
@@ -50,29 +58,56 @@ type RouteMarkersLayerProps = {
   focusedRouteId?: string | null;
   /** Marker uses selected icon for this id even without tap focus (e.g. page centered route). */
   accentRouteId?: string | null;
+  /**
+   * When `true`, refetch after reconnect even if cached markers exist (e.g. filters changed while offline).
+   * @default false
+   */
+  refreshOnReconnect?: boolean;
 };
 
-function RouteMarkersLayerContent({
-  loading,
-  data,
-  errors,
-  received,
-  total,
-  onStateChange,
-  cameraRef,
-  onRoutePress,
-  onRouteClusterPress,
-  focusedRouteId,
-  accentRouteId,
-}: RoutesState & {
+type RouteMarkersLayerContentProps = {
+  loading: boolean;
+  refreshing: boolean;
+  /** Raw features from pagination; wrapped in {@link RoutesGeojson} with a stable memo. */
+  rawRouteFeatures: RouteGeoJsonFeature[] | null;
+  errors: Error | null;
+  received: number;
+  total: number | null;
+  timeoutCountdown: number | null;
+  reload: () => void;
   onStateChange?: (state: RoutesState) => void;
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
   onRoutePress?: (routeId: string, coordinates: [number, number]) => void;
   onRouteClusterPress?: () => void;
   focusedRouteId?: string | null;
   accentRouteId?: string | null;
-}) {
+};
+
+function RouteMarkersLayerContent({
+  loading,
+  refreshing,
+  rawRouteFeatures,
+  errors,
+  received,
+  total,
+  timeoutCountdown,
+  reload,
+  onStateChange,
+  cameraRef,
+  onRoutePress,
+  onRouteClusterPress,
+  focusedRouteId,
+  accentRouteId,
+}: RouteMarkersLayerContentProps) {
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
+
+  const data = useMemo(
+    () =>
+      rawRouteFeatures != null
+        ? new RoutesGeojson(rawRouteFeatures)
+        : null,
+    [rawRouteFeatures],
+  );
 
   const unclusteredIconImage = useMemo(
     () => unclusteredRouteMarkerIconImage(focusedRouteId, accentRouteId),
@@ -85,8 +120,27 @@ function RouteMarkersLayerContent({
   );
 
   useEffect(() => {
-    onStateChange?.({ loading, data, errors, received, total });
-  }, [loading, data, errors, received, total, onStateChange]);
+    onStateChange?.({
+      loading,
+      refreshing,
+      data,
+      errors,
+      received,
+      total,
+      timeoutCountdown,
+      reload,
+    });
+  }, [
+    loading,
+    refreshing,
+    data,
+    errors,
+    received,
+    total,
+    timeoutCountdown,
+    reload,
+    onStateChange,
+  ]);
 
   const handlePress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
@@ -223,7 +277,9 @@ export function RouteMarkersLayer({
   routesParams,
   focusedRouteId = null,
   accentRouteId = null,
+  refreshOnReconnect = false,
 }: RouteMarkersLayerProps) {
+  const { isOnline } = useNetworkStatus();
   const paginationParams = useMemo((): RoutesParams => {
     if (routesParams != null) return routesParams;
     return queryRecordToRoutesParams(routesQueryParams ?? {});
@@ -235,26 +291,37 @@ export function RouteMarkersLayer({
       method={Method.GET}
       path="/routes"
       queryParams={paginationParams}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
+      refreshOnReconnect={refreshOnReconnect}
     >
-      {({ loading, data, errors, received, total }) => {
-        const geojson =
-          data != null ? new RoutesGeojson(data) : null;
-        return (
-          <RouteMarkersLayerContent
-            loading={loading}
-            data={geojson}
-            errors={errors}
-            received={received}
-            total={total}
-            onStateChange={onStateChange}
-            cameraRef={cameraRef}
-            onRoutePress={onRoutePress}
-            onRouteClusterPress={onRouteClusterPress}
-            focusedRouteId={focusedRouteId}
-            accentRouteId={accentRouteId}
-          />
-        );
-      }}
+      {({
+        loading,
+        refreshing,
+        data,
+        errors,
+        received,
+        total,
+        timeoutCountdown,
+        reload,
+      }) => (
+        <RouteMarkersLayerContent
+          loading={loading}
+          refreshing={refreshing}
+          rawRouteFeatures={data}
+          errors={errors}
+          received={received}
+          total={total}
+          timeoutCountdown={timeoutCountdown}
+          reload={reload}
+          onStateChange={onStateChange}
+          cameraRef={cameraRef}
+          onRoutePress={onRoutePress}
+          onRouteClusterPress={onRouteClusterPress}
+          focusedRouteId={focusedRouteId}
+          accentRouteId={accentRouteId}
+        />
+      )}
     </RopeGeoPaginationHttpRequest>
   );
 }

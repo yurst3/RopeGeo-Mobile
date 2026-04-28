@@ -7,15 +7,15 @@ import {
   MAP_BUTTON_GAP,
   MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
-} from "@/components/minimap/fullScreenMapLayout";
+} from "@/components/minimap/shared/fullScreenMapLayout";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
-import {
-  ProgressToast,
-  TOAST_HORIZONTAL_INSET,
-  useRoutesLoadToastDisplay,
-} from "@/components/toast";
+import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toastArchetypes";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { RouteMarkersLayer, type RoutesState } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
 import {
@@ -29,9 +29,10 @@ import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import type { ComponentRef } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -41,9 +42,35 @@ const DEFAULT_ZOOM = 12.1;
 
 const SEARCH_BAR_SIDE_WIDTH = HEADER_SIDE_SLOT_WIDTH;
 
+function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
+  // `reload` is intentionally ignored — stable ref from ropegeo-common; explore retry uses a ref.
+  if (
+    prev.loading !== next.loading ||
+    prev.refreshing !== next.refreshing ||
+    prev.received !== next.received ||
+    prev.total !== next.total ||
+    prev.timeoutCountdown !== next.timeoutCountdown ||
+    prev.data !== next.data
+  ) {
+    return false;
+  }
+  if (prev.errors === next.errors) {
+    return true;
+  }
+  if (prev.errors == null || next.errors == null) {
+    return false;
+  }
+  return (
+    prev.errors.message === next.errors.message &&
+    prev.errors.name === next.errors.name
+  );
+}
+
 export function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const { isOnline } = useNetworkStatus();
   const {
     exploreRoutesParams,
     explorePersisted,
@@ -69,13 +96,24 @@ export function ExploreScreen() {
   >(undefined);
   const [cameraZoom, setCameraZoom] = useState<number | undefined>(undefined);
   const [followCurrentPosition, setFollowCurrentPosition] = useState(true);
+  const exploreOfflineBaselineKeyRef = useRef<string | null>(null);
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,
+    refreshing: false,
     data: null,
     errors: null,
     received: 0,
     total: null,
+    timeoutCountdown: null,
   });
+  const routesReloadRef = useRef<(() => void) | null>(null);
+
+  const onRoutesStateChange = useCallback((next: RoutesState) => {
+    routesReloadRef.current = next.reload ?? null;
+    setRoutesState((prev) =>
+      isSameRoutesState(prev, next) ? prev : next,
+    );
+  }, []);
   const routesParamsForExploreMap = useMemo(() => {
     if (routeFilterSheetOpen && frozenExploreRoutesParams != null) {
       return frozenExploreRoutesParams;
@@ -91,8 +129,40 @@ export function ExploreScreen() {
     () => routesParamsForExploreMap.toQueryString(),
     [routesParamsForExploreMap],
   );
-  const routesToast = useRoutesLoadToastDisplay(routesState, {
+
+  useEffect(() => {
+    if (isOnline) {
+      exploreOfflineBaselineKeyRef.current = null;
+      return;
+    }
+    if (exploreOfflineBaselineKeyRef.current === null) {
+      exploreOfflineBaselineKeyRef.current = exploreRoutesKey;
+    }
+  }, [isOnline, exploreRoutesKey]);
+
+  const refreshExploreRoutesOnReconnect =
+    isOnline &&
+    exploreOfflineBaselineKeyRef.current != null &&
+    exploreOfflineBaselineKeyRef.current !== exploreRoutesKey;
+
+  useRoutesProgressToast(routesState, {
     resetKey: exploreRoutesKey,
+    horizontalInset: TOAST_HORIZONTAL_INSET,
+    surfaceActive: isFocused,
+  });
+
+  useNetworkRequestToasts({
+    loading: routesState.loading,
+    errors: routesState.errors,
+    timeoutCountdown: routesState.timeoutCountdown,
+    resetKey: exploreRoutesKey,
+    offlineSurfaceActive: isFocused,
+    errorToastKey: TOAST_KEY_ROUTES_ERROR,
+    errorToastTitle: "Error loading routes",
+    incrementErrorMultipleOnCollision: true,
+    onRetryRequest: () => {
+      routesReloadRef.current?.();
+    },
   });
   const prevExploreRoutesKeyRef = useRef<string | null>(null);
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
@@ -237,15 +307,6 @@ export function ExploreScreen() {
             />
           </View>
         </View>
-        {routesToast.visible ? (
-          <ProgressToast
-            kind={routesToast.kind}
-            title={routesToast.title}
-            progress={routesToast.progress}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET}
-            horizontalInset={TOAST_HORIZONTAL_INSET}
-          />
-        ) : null}
         <MapView
               styleURL="mapbox://styles/mapbox/outdoors-v12"
               style={styles.map}
@@ -286,7 +347,8 @@ export function ExploreScreen() {
               />
               <RouteMarkersLayer
                 routesParams={routesParamsForExploreMap}
-                onStateChange={setRoutesState}
+                refreshOnReconnect={refreshExploreRoutesOnReconnect}
+                onStateChange={onRoutesStateChange}
                 cameraRef={cameraRef}
                 focusedRouteId={focusedRouteId}
                 onRoutePress={(routeId) => {

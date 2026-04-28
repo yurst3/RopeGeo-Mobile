@@ -103,12 +103,16 @@ export default function ExploreLayout() {
         name="[id]/page"
         options={{
           headerShown: false,
+          animation: "slide_from_right",
+          animationTypeForReplace: "pop"
         }}
       />
       <Stack.Screen
         name="[id]/region"
         options={{
           headerShown: false,
+          animation: "slide_from_right",
+          animationTypeForReplace: "pop"
         }}
       />
       <Stack.Screen

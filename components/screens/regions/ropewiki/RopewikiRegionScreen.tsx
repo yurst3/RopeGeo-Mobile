@@ -2,7 +2,8 @@ import { BackButton } from "@/components/buttons/BackButton";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/components/expandedImage/types";
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
-import { RegionMiniMap } from "@/components/minimap/RegionMiniMap";
+import { MiniMap } from "@/components/minimap/MiniMap";
+import type { MiniMapHandle } from "@/components/minimap/miniMapHandle";
 import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
@@ -11,10 +12,11 @@ import {
   Service,
 } from "ropegeo-common/components";
 
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { RopewikiRegionPlaceholder } from "./RopewikiRegionPlaceholder";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   BackHandler,
   Dimensions,
   PanResponder,
@@ -23,12 +25,17 @@ import {
 } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
 import {
-  ProgressToast,
-  TOAST_HORIZONTAL_INSET,
-  useAppToast,
-  useRoutesLoadToastDisplay,
-} from "@/components/toast";
+  TOAST_KEY_REGION_ERROR,
+  TOAST_KEY_ROUTES_ERROR,
+} from "@/constants/toastArchetypes";
+import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { isPageIdKeyInSavedPagesStorage } from "@/lib/savedPages/isPageIdKeyInSavedPagesStorage";
 import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/models";
 
@@ -45,29 +52,19 @@ const TAP_MAX_DURATION_MS = 300;
 /** Matches {@link RopewikiPageScreen} header row / back button inset. */
 const HEADER_ROW_TOP = 8;
 
-function ErrorEffect({ error }: { error: Error }) {
-  const router = useRouter();
-  const showToast = useAppToast();
-  useEffect(() => {
-    router.back();
-    showToast({
-      variant: "error",
-      message: "Error",
-      subtitle: error.message,
-    });
-  }, [error, router, showToast]);
-  return null;
-}
-
 function RegionScreenBody({
   data,
   regionId,
+  onBackPress,
+  onRetryRequest,
 }: {
   data: RopewikiRegionView;
   regionId: string;
+  onBackPress: () => void;
+  onRetryRequest: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const isFocused = useIsFocused();
   const scrollY = useSharedValue(0);
   const paddingTopSv = useSharedValue(STARTING_HEIGHT);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
@@ -93,13 +90,30 @@ function RegionScreenBody({
   const [expandedInitialIndex, setExpandedInitialIndex] = useState(0);
   const [regionRoutesState, setRegionRoutesState] = useState<RoutesState>({
     loading: false,
+    refreshing: false,
     data: null,
     errors: null,
     received: 0,
     total: null,
+    timeoutCountdown: null,
   });
-  const regionRoutesToast = useRoutesLoadToastDisplay(regionRoutesState, {
+  const miniMapRef = useRef<MiniMapHandle>(null);
+
+  useRoutesProgressToast(regionRoutesState, {
     resetKey: regionId,
+    horizontalInset: TOAST_HORIZONTAL_INSET,
+    surfaceActive: isFocused,
+  });
+
+  useNetworkRequestToasts({
+    loading: regionRoutesState.loading,
+    errors: regionRoutesState.errors,
+    timeoutCountdown: regionRoutesState.timeoutCountdown,
+    resetKey: regionId,
+    errorToastKey: TOAST_KEY_ROUTES_ERROR,
+    errorToastTitle: `Error loading ${data.name} routes`,
+    incrementErrorMultipleOnCollision: true,
+    onRetryRequest,
   });
 
   const hasMiniMap = data.miniMap != null;
@@ -209,6 +223,15 @@ function RegionScreenBody({
   }, [mapMode]);
 
   useEffect(() => {
+    if (mapMode === "expanded") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBackPress();
+      return true;
+    });
+    return () => sub.remove();
+  }, [mapMode, onBackPress]);
+
+  useEffect(() => {
     if (mapMode === "expanded") {
       setRegionPageVerticalScrollActive(false);
     }
@@ -233,6 +256,7 @@ function RegionScreenBody({
       <RegionBanner
         ref={bannerRef}
         regionId={regionId}
+        regionName={data.name}
         layoutWidth={SCREEN_WIDTH}
         layoutHeight={BANNER_HEIGHT_MAX}
         imageFrameStyle={bannerImageFrameStyle}
@@ -291,22 +315,14 @@ function RegionScreenBody({
 
       {mapMode !== "expanded" && (
         <BackButton
-          onPress={() => router.back()}
+          onPress={onBackPress}
           top={insets.top + HEADER_ROW_TOP}
         />
       )}
-      {regionRoutesToast.visible ? (
-        <ProgressToast
-          kind={regionRoutesToast.kind}
-          title={regionRoutesToast.title}
-          progress={regionRoutesToast.progress}
-          top={insets.top + HEADER_ROW_TOP}
-          horizontalInset={TOAST_HORIZONTAL_INSET}
-        />
-      ) : null}
-      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.GeoJson ? (
-        <RegionMiniMap
-          regionMiniMap={data.miniMap}
+      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.Region ? (
+        <MiniMap
+          ref={miniMapRef}
+          miniMap={data.miniMap}
           regionId={regionId}
           source={PageDataSource.Ropewiki}
           mountNativeMap={mountMiniMapNative}
@@ -336,41 +352,170 @@ function RegionScreenBody({
 
 export type RopewikiRegionScreenProps = {
   regionId: string;
+  source: PageDataSource;
+  /**
+   * Ropewiki page id from route param `savedPage` when opening region from the Saved tab.
+   * Back replaces onto that saved page only if the id is still a key in saved-pages storage.
+   */
+  savedPageId?: string | null;
 };
 
-export function RopewikiRegionScreen({ regionId }: RopewikiRegionScreenProps) {
+function RopewikiRegionOnlineInner({
+  regionId,
+  source,
+  backTop,
+  isOnline,
+  loading,
+  data,
+  errors,
+  timeoutCountdown,
+  onBackPress,
+  onRetryRequest,
+}: {
+  regionId: string;
+  source: PageDataSource;
+  backTop: number;
+  isOnline: boolean;
+  loading: boolean;
+  data: RopewikiRegionView | null;
+  errors: Error | null;
+  timeoutCountdown: number | null;
+  onBackPress: () => void;
+  onRetryRequest: () => void;
+}) {
+  useNetworkRequestToasts({
+    loading,
+    errors,
+    timeoutCountdown,
+    resetKey: regionId,
+    watchOffline: false,
+    errorToastKey: TOAST_KEY_REGION_ERROR,
+    errorToastTitle: "Error loading region",
+    incrementErrorMultipleOnCollision: true,
+    onRetryRequest,
+  });
+
+  const offlineSoftError =
+    !isOnline && errors?.message === NO_NETWORK_MESSAGE;
+  const hasRegionData =
+    data != null && (errors == null || offlineSoftError);
+
+  if (hasRegionData) {
+    return (
+      <RegionScreenBody
+        data={data}
+        regionId={regionId}
+        onBackPress={onBackPress}
+        onRetryRequest={onRetryRequest}
+      />
+    );
+  }
+  if (errors != null && !offlineSoftError) {
+    return (
+      <RopewikiRegionPlaceholder
+        backTop={backTop}
+        source={source}
+        errorMessage={errors.message}
+        onBackPress={onBackPress}
+      />
+    );
+  }
+  if (loading) {
+    return (
+      <RopewikiRegionPlaceholder
+        backTop={backTop}
+        source={source}
+        onBackPress={onBackPress}
+      />
+    );
+  }
+  if (data == null && offlineSoftError) {
+    return (
+      <RopewikiRegionPlaceholder
+        backTop={backTop}
+        source={source}
+        errorMessage="No network connection"
+        onBackPress={onBackPress}
+      />
+    );
+  }
+  return null;
+}
+
+export function RopewikiRegionScreen({
+  regionId,
+  source,
+  savedPageId,
+}: RopewikiRegionScreenProps) {
   const insets = useSafeAreaInsets();
+  const { isOnline } = useNetworkStatus();
+  const backTop = insets.top + HEADER_ROW_TOP;
+
+  return (
+    <RopewikiRegionScreenWithBack
+      regionId={regionId}
+      source={source}
+      savedPageId={savedPageId ?? null}
+      backTop={backTop}
+      isOnline={isOnline}
+    />
+  );
+}
+
+function RopewikiRegionScreenWithBack({
+  regionId,
+  source,
+  savedPageId,
+  backTop,
+  isOnline,
+}: RopewikiRegionScreenProps & {
+  backTop: number;
+  isOnline: boolean;
+}) {
   const router = useRouter();
+  const handleBack = useCallback(() => {
+    void (async () => {
+      if (savedPageId != null && savedPageId !== "") {
+        const stillSaved = await isPageIdKeyInSavedPagesStorage(savedPageId);
+        if (stillSaved) {
+          router.replace({
+            pathname: "/(tabs)/saved/[id]/page",
+            params: {
+              id: savedPageId,
+              source: String(PageDataSource.Ropewiki),
+            },
+          } as unknown as Parameters<typeof router.replace>[0]);
+          return;
+        }
+      }
+      router.back();
+    })();
+  }, [router, savedPageId]);
 
   return (
     <RopeGeoHttpRequest<RopewikiRegionView>
+      key={regionId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
       path="/ropewiki/region/:id"
       pathParams={{ id: regionId }}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
     >
-      {({ loading, data, errors }) => {
-        if (errors != null) {
-          return <ErrorEffect error={errors} />;
-        }
-        if (loading) {
-          return (
-            <View style={styles.container}>
-              <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#666" />
-              </View>
-              <BackButton
-                onPress={() => router.back()}
-                top={insets.top + HEADER_ROW_TOP}
-              />
-            </View>
-          );
-        }
-        if (data == null) {
-          return null;
-        }
-        return <RegionScreenBody data={data} regionId={regionId} />;
-      }}
+      {({ loading, data, errors, timeoutCountdown, reload }) => (
+        <RopewikiRegionOnlineInner
+          regionId={regionId}
+          source={source}
+          backTop={backTop}
+          isOnline={isOnline}
+          loading={loading}
+          data={data}
+          errors={errors}
+          timeoutCountdown={timeoutCountdown}
+          onBackPress={handleBack}
+          onRetryRequest={reload}
+        />
+      )}
     </RopeGeoHttpRequest>
   );
 }
@@ -386,11 +531,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 2000,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
   },
 });

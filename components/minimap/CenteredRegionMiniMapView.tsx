@@ -1,7 +1,5 @@
 import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
 import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   CLUSTER_RADIUS,
@@ -16,21 +14,18 @@ import {
 } from "@/components/screens/explore/routeMarkerIcons";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
-  HEADER_BUTTON_SIZE,
-  HEADER_SIDE_SLOT_WIDTH,
   MAP_BUTTON_GAP,
   MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
-} from "./fullScreenMapLayout";
-import { MiniMapHeader } from "./MiniMapHeader";
-import { miniMapHostStyles } from "./miniMapHostStyles";
-import {
-  MiniMapDirectionsButtons,
-  MiniMapExpandButton,
-  minimapStyles,
-} from "./minimapShared";
-import { type Rect, useMiniMapAnimation } from "./useMiniMapAnimation";
-import { useMiniMapCamera } from "./useMiniMapCamera";
+  routePreviewDockedPaddingBottom,
+} from "./shared/fullScreenMapLayout";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { MiniMapHeader } from "./shared/MiniMapHeader";
+import { miniMapHostStyles } from "./shared/miniMapHostStyles";
+import { minimapStyles } from "./shared/minimapShared";
+import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
+import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+import { useMiniMapCamera } from "./shared/useMiniMapCamera";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
 import {
@@ -41,8 +36,7 @@ import {
   useState,
   type ComponentRef,
 } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
-import Animated, { type SharedValue } from "react-native-reanimated";
+import { Platform, StyleSheet, View } from "react-native";
 import {
   Camera,
   Images,
@@ -99,26 +93,18 @@ export type CenteredRegionMiniMapViewProps = {
    * Apple/Google directions on the collapsed minimap (mirrors the tile page minimap).
    */
   mapDirections?: { lat: number; lon: number } | null;
-  mountNativeMap: boolean;
-  expanded: boolean;
-  anchorRect: Rect | null;
-  baseScrollY: number;
-  scrollY: SharedValue<number>;
-  onExpand: () => void;
   onCollapse: () => void;
+  reloadRegisterRef?: MiniMapReloadRegisterRef;
 };
 
 export function CenteredRegionMiniMapView({
   miniMap,
   mapDirections = null,
-  mountNativeMap,
-  expanded,
-  anchorRect,
-  baseScrollY,
-  scrollY,
-  onExpand,
   onCollapse,
+  reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
+  const shell = useMiniMapShell();
+  const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
   const defaultCenter = useMemo((): [number, number] => {
     return mapDirections != null
@@ -128,10 +114,12 @@ export function CenteredRegionMiniMapView({
 
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,
+    refreshing: false,
     data: null,
     errors: null,
     received: 0,
     total: null,
+    timeoutCountdown: null,
   });
 
   const [offlineShape, setOfflineShape] = useState<RoutesGeojson | null>(null);
@@ -140,7 +128,7 @@ export function CenteredRegionMiniMapView({
   const isOffline = miniMap.fetchType === "offline";
 
   useEffect(() => {
-    if (!isOffline || !mountNativeMap) {
+    if (!isOffline || !shell.mountNativeMap) {
       setOfflineShape(null);
       setOfflineLoadError(null);
       return;
@@ -166,32 +154,30 @@ export function CenteredRegionMiniMapView({
     return () => {
       cancelled = true;
     };
-  }, [isOffline, miniMap, mountNativeMap]);
+  }, [isOffline, miniMap, shell.mountNativeMap]);
 
   const centeredRouteId = miniMap.centeredRouteId;
 
   const liveMiniMap = miniMap.fetchType === "online" ? miniMap : null;
 
-  const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
+  const defaultRegionRouteFilter = useMemo(
     () => new RouteFilter([PageDataSource.Ropewiki]),
+    [],
   );
-  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
 
   const liveRoutesParams = useMemo((): RoutesParams | null => {
     if (liveMiniMap == null) return null;
-    return mergeCenteredRoutesParams(liveMiniMap, regionRouteFilter, PageDataSource.Ropewiki);
-  }, [liveMiniMap, regionRouteFilter]);
+    return mergeCenteredRoutesParams(liveMiniMap, defaultRegionRouteFilter, PageDataSource.Ropewiki);
+  }, [liveMiniMap, defaultRegionRouteFilter]);
 
   const [focusedRouteId, setFocusedRouteId] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<
     OnlinePagePreview | OfflinePagePreview | null
   >(null);
-  /** While expanded, suppress auto-recenter on the page route after user picked another marker until collapse. */
   const userFocusedNonCenteredRouteRef = useRef(false);
 
-  /** Collapsed: always highlight page route. Expanded: highlight centered route only until user focuses another marker. */
   const markerAccentRouteId =
-    !expanded ||
+    !shell.expanded ||
     focusedRouteId == null ||
     focusedRouteId === centeredRouteId
       ? centeredRouteId
@@ -200,19 +186,19 @@ export function CenteredRegionMiniMapView({
   const offlineUnclusteredIconImage = useMemo(
     () =>
       unclusteredRouteMarkerIconImage(
-        expanded ? focusedRouteId : null,
+        shell.expanded ? focusedRouteId : null,
         markerAccentRouteId,
       ),
-    [expanded, focusedRouteId, markerAccentRouteId],
+    [shell.expanded, focusedRouteId, markerAccentRouteId],
   );
 
   const offlineUnclusteredIconSize = useMemo(
     () =>
       unclusteredRouteMarkerIconSize(
-        expanded ? focusedRouteId : null,
+        shell.expanded ? focusedRouteId : null,
         markerAccentRouteId,
       ),
-    [expanded, focusedRouteId, markerAccentRouteId],
+    [shell.expanded, focusedRouteId, markerAccentRouteId],
   );
 
   const {
@@ -222,14 +208,10 @@ export function CenteredRegionMiniMapView({
     onCameraChanged,
     compassVisible,
     positionButtonVisible,
-  } = useMiniMapCamera({ expanded, initialHomeCenter: defaultCenter });
+  } = useMiniMapCamera({ expanded: shell.expanded, initialHomeCenter: defaultCenter });
 
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
-  /**
-   * Avoid calling setCamera on every `anchorRect` remeasure (scroll/layout); only re-apply the
-   * collapsed “home” camera after expand→collapse or when `defaultCenter` changes.
-   */
   const collapsedHomeCameraRef = useRef<{
     applied: boolean;
     appliedCenterKey: string;
@@ -242,56 +224,57 @@ export function CenteredRegionMiniMapView({
     resetPitchAndHeading();
   }, [resetPitchAndHeading]);
 
-  const { cardStyle, insets } = useMiniMapAnimation({
-    anchorRect,
-    baseScrollY,
-    scrollY,
-    expanded,
-    onCollapseTransition: collapseCleanup,
-  });
+  useEffect(() => {
+    shell.registerCollapseCleanup(collapseCleanup);
+    return () => shell.registerCollapseCleanup(null);
+  }, [shell.registerCollapseCleanup, collapseCleanup]);
 
   const displayGeojson = isOffline ? offlineShape : routesState.data;
+  const centeredRouteCoordinate = useMemo((): [number, number] | null => {
+    if (displayGeojson == null || displayGeojson.features.length === 0) return null;
+    const f = displayGeojson.features.find((feat) => feat.properties?.id === centeredRouteId);
+    const g = f?.geometry;
+    if (g?.type !== "Point" || !Array.isArray(g.coordinates)) return null;
+    return g.coordinates as [number, number];
+  }, [displayGeojson, centeredRouteId]);
 
   useEffect(() => {
-    if (displayGeojson == null || displayGeojson.features.length === 0) return;
+    if (centeredRouteCoordinate == null) return;
     if (
-      expanded &&
+      shell.expanded &&
       focusedRouteId != null &&
       focusedRouteId !== centeredRouteId
     ) {
       return;
     }
     if (
-      expanded &&
+      shell.expanded &&
       focusedRouteId == null &&
       userFocusedNonCenteredRouteRef.current
     ) {
       return;
     }
-    const f = displayGeojson.features.find((feat) => feat.properties?.id === centeredRouteId);
-    const g = f?.geometry;
-    if (g?.type !== "Point" || !Array.isArray(g.coordinates)) return;
-    const coords = g.coordinates as [number, number];
     const t = setTimeout(() => {
       cameraRef.current?.setCamera({
-        centerCoordinate: coords,
+        centerCoordinate: centeredRouteCoordinate,
         zoomLevel: FOCUSED_ROUTE_ZOOM,
         animationDuration: 300,
       });
     }, 120);
     return () => clearTimeout(t);
-  }, [displayGeojson, centeredRouteId, expanded, focusedRouteId]);
+  }, [centeredRouteCoordinate, shell.expanded, focusedRouteId]);
 
   useEffect(() => {
-    if (!mountNativeMap) {
+    if (!shell.mountNativeMap) {
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: "" };
       return;
     }
-    if (!anchorRect) return;
+    if (!shell.anchorRect) return;
 
-    const centerKey = `${defaultCenter[0]},${defaultCenter[1]}`;
+    const collapseCenter = centeredRouteCoordinate ?? defaultCenter;
+    const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
 
-    if (expanded) {
+    if (shell.expanded) {
       captureHome();
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: centerKey };
       return;
@@ -303,7 +286,7 @@ export function CenteredRegionMiniMapView({
 
     const timer = setTimeout(() => {
       cameraRef.current?.setCamera({
-        centerCoordinate: defaultCenter,
+        centerCoordinate: collapseCenter,
         zoomLevel: DEFAULT_ZOOM,
         animationDuration: 260,
       });
@@ -313,15 +296,16 @@ export function CenteredRegionMiniMapView({
       };
     }, 260);
     return () => clearTimeout(timer);
-  }, [anchorRect, captureHome, expanded, mountNativeMap, defaultCenter]);
+  }, [shell.anchorRect, captureHome, shell.expanded, shell.mountNativeMap, defaultCenter, centeredRouteCoordinate]);
 
   const resetPosition = () => {
     userFocusedNonCenteredRouteRef.current = false;
     setFocusedRouteId(null);
     setCurrentPreview(null);
     captureHome();
+    const resetCenter = centeredRouteCoordinate ?? defaultCenter;
     cameraRef.current?.setCamera({
-      centerCoordinate: defaultCenter,
+      centerCoordinate: resetCenter,
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: 300,
     });
@@ -362,7 +346,7 @@ export function CenteredRegionMiniMapView({
     }
 
     const routeId = props?.id;
-    if (routeId && expanded) {
+    if (routeId && shell.expanded) {
       if (routeId !== centeredRouteId) {
         userFocusedNonCenteredRouteRef.current = true;
       } else {
@@ -377,168 +361,191 @@ export function CenteredRegionMiniMapView({
     }
   };
 
-  const routesLoading = isOffline
-    ? offlineShape == null && offlineLoadError == null
-    : routesState.loading;
+  const onlineInitialLoading =
+    !isOffline &&
+    routesState.loading &&
+    routesState.data == null &&
+    routesState.errors == null;
+  const offlineInitialLoading =
+    isOffline && offlineShape == null && offlineLoadError == null;
 
-  const showMapLoading = !mountNativeMap || routesLoading;
+  const onlineGeoError = !isOffline && routesState.errors != null;
+  const offlineGeoError = isOffline && offlineLoadError != null;
+  const geoErrorMessage = offlineGeoError
+    ? offlineLoadError?.message
+    : onlineGeoError
+      ? routesState.errors?.message
+      : undefined;
 
-  if (!anchorRect) return null;
+  const hasRouteGeoData =
+    displayGeojson != null && displayGeojson.features.length > 0;
+  const blockingGeoErrorMessage =
+    geoErrorMessage != null && geoErrorMessage !== "" && !hasRouteGeoData
+      ? geoErrorMessage
+      : null;
+
+  const showDataLoadingOverlay =
+    shell.mountNativeMap &&
+    blockingGeoErrorMessage == null &&
+    (onlineInitialLoading || offlineInitialLoading);
+
+  useEffect(() => {
+    shell.setBlockingErrorMessage(blockingGeoErrorMessage);
+  }, [blockingGeoErrorMessage, shell.setBlockingErrorMessage]);
+
+  const reloadMinimap = useCallback(() => {
+    shell.setBlockingErrorMessage(null);
+  }, [shell.setBlockingErrorMessage]);
+
+  useEffect(() => {
+    if (reloadRegisterRef == null) return;
+    reloadRegisterRef.current = reloadMinimap;
+    return () => {
+      reloadRegisterRef.current = null;
+    };
+  }, [reloadRegisterRef, reloadMinimap]);
+
+  useEffect(() => {
+    shell.setLoadingOverlayVisible(showDataLoadingOverlay);
+  }, [showDataLoadingOverlay, shell.setLoadingOverlayVisible]);
+
+  const { insets } = shell;
 
   return (
-    <View style={miniMapHostStyles.root} pointerEvents="box-none">
-      <Animated.View
-        style={[
-          miniMapHostStyles.mapCard,
-          cardStyle,
-          expanded && miniMapHostStyles.expandedCard,
-        ]}
-        pointerEvents={expanded ? "auto" : "box-none"}
-      >
-        {!mountNativeMap ? (
-          <View style={[minimapStyles.map, minimapStyles.mapPlaceholder]} />
-        ) : (
-          <MapView
-            styleURL="mapbox://styles/mapbox/outdoors-v12"
-            style={minimapStyles.map}
-            projection="globe"
-            pointerEvents={expanded ? "auto" : "none"}
-            scrollEnabled={expanded}
-            zoomEnabled={expanded}
-            rotateEnabled={expanded}
-            pitchEnabled={expanded}
-            scaleBarEnabled={false}
-            attributionEnabled={expanded}
-            logoEnabled={expanded}
-            logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
-            attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
-            onPress={() => {
-              if (!expanded) return;
-              setFocusedRouteId(null);
-              setCurrentPreview(null);
+    <>
+      {shell.mapBodyVisible ? (
+        <MapView
+          styleURL="mapbox://styles/mapbox/outdoors-v12"
+          style={minimapStyles.map}
+          projection="globe"
+          pointerEvents={shell.expanded ? "auto" : "none"}
+          scrollEnabled={shell.expanded}
+          zoomEnabled={shell.expanded}
+          rotateEnabled={shell.expanded}
+          pitchEnabled={shell.expanded}
+          scaleBarEnabled={false}
+          attributionEnabled={shell.expanded}
+          logoEnabled={shell.expanded}
+          logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
+          attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
+          onPress={() => {
+            if (!shell.expanded) return;
+            setFocusedRouteId(null);
+            setCurrentPreview(null);
+          }}
+          onCameraChanged={onCameraChanged}
+        >
+          <LocationPuck />
+          <Camera
+            ref={cameraRef}
+            defaultSettings={{
+              centerCoordinate: defaultCenter,
+              zoomLevel: DEFAULT_ZOOM,
             }}
-            onCameraChanged={onCameraChanged}
-          >
-            <LocationPuck />
-            <Camera
-              ref={cameraRef}
-              defaultSettings={{
-                centerCoordinate: defaultCenter,
-                zoomLevel: DEFAULT_ZOOM,
+          />
+          {liveRoutesParams != null ? (
+            <RouteMarkersLayer
+              routesParams={liveRoutesParams}
+              onStateChange={setRoutesState}
+              cameraRef={cameraRef}
+              focusedRouteId={shell.expanded ? focusedRouteId : null}
+              accentRouteId={markerAccentRouteId}
+              onRoutePress={(routeId) => {
+                if (!shell.expanded) return;
+                if (routeId !== centeredRouteId) {
+                  userFocusedNonCenteredRouteRef.current = true;
+                } else {
+                  userFocusedNonCenteredRouteRef.current = false;
+                }
+                setFocusedRouteId(routeId);
+                setCurrentPreview(null);
+              }}
+              onRouteClusterPress={() => {
+                if (!shell.expanded) return;
+                setFocusedRouteId(null);
+                setCurrentPreview(null);
               }}
             />
-            {liveRoutesParams != null ? (
-              <RouteMarkersLayer
-                routesParams={liveRoutesParams}
-                onStateChange={setRoutesState}
-                cameraRef={cameraRef}
-                focusedRouteId={expanded ? focusedRouteId : null}
-                accentRouteId={markerAccentRouteId}
-                onRoutePress={(routeId) => {
-                  if (!expanded) return;
-                  if (routeId !== centeredRouteId) {
-                    userFocusedNonCenteredRouteRef.current = true;
-                  } else {
-                    userFocusedNonCenteredRouteRef.current = false;
-                  }
-                  setFocusedRouteId(routeId);
-                  setCurrentPreview(null);
-                }}
-                onRouteClusterPress={() => {
-                  if (!expanded) return;
-                  setFocusedRouteId(null);
-                  setCurrentPreview(null);
+          ) : offlineShape != null && offlineShape.features.length > 0 ? (
+            <ShapeSource
+              ref={shapeSourceRef}
+              id="centered-offline-routes"
+              shape={offlineShape}
+              cluster
+              clusterRadius={CLUSTER_RADIUS}
+              onPress={handleOfflineMarkerPress}
+            >
+              <SymbolLayer
+                id="centered-offline-unclustered"
+                filter={["!", ["has", "point_count"]]}
+                style={{
+                  iconImage: offlineUnclusteredIconImage,
+                  iconSize: offlineUnclusteredIconSize,
+                  iconAllowOverlap: true,
+                  iconIgnorePlacement: true,
+                  iconAnchor: "bottom",
+                  textField: ["get", "name"],
+                  textSize: 12,
+                  textColor: "#333333",
+                  textHaloColor: "#ffffff",
+                  textHaloWidth: 1.5,
+                  textOffset: [0, 0.2],
+                  textAnchor: "top",
+                  textAllowOverlap: true,
+                  textIgnorePlacement: true,
                 }}
               />
-            ) : offlineShape != null && offlineShape.features.length > 0 ? (
-              <ShapeSource
-                ref={shapeSourceRef}
-                id="centered-offline-routes"
-                shape={offlineShape}
-                cluster
-                clusterRadius={CLUSTER_RADIUS}
-                onPress={handleOfflineMarkerPress}
-              >
-                <SymbolLayer
-                  id="centered-offline-unclustered"
-                  filter={["!", ["has", "point_count"]]}
-                  style={{
-                    iconImage: offlineUnclusteredIconImage,
-                    iconSize: offlineUnclusteredIconSize,
-                    iconAllowOverlap: true,
-                    iconIgnorePlacement: true,
-                    iconAnchor: "bottom",
-                    textField: ["get", "name"],
-                    textSize: 12,
-                    textColor: "#333333",
-                    textHaloColor: "#ffffff",
-                    textHaloWidth: 1.5,
-                    textOffset: [0, 0.2],
-                    textAnchor: "top",
-                    textAllowOverlap: true,
-                    textIgnorePlacement: true,
-                  }}
-                />
-                <SymbolLayer
-                  id="centered-offline-clusters"
-                  filter={["has", "point_count"]}
-                  style={{
-                    iconImage: "route-marker-cluster",
-                    iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
-                    iconAllowOverlap: true,
-                    iconIgnorePlacement: true,
-                    iconAnchor: "bottom",
-                    textField: [
-                      "concat",
-                      "(",
-                      ["to-string", ["get", "point_count"]],
-                      ")",
-                    ],
-                    textSize: 12,
-                    textColor: "#333333",
-                    textHaloColor: "#ffffff",
-                    textHaloWidth: 1.5,
-                    textOffset: [0, 0.2],
-                    textAnchor: "top",
-                    textAllowOverlap: true,
-                    textIgnorePlacement: true,
-                  }}
-                />
-                <Images images={{ ...ROUTE_MARKER_IMAGES }} />
-              </ShapeSource>
-            ) : null}
-            <TrailsLayer
-              focusedRouteId={expanded ? focusedRouteId : null}
-              visibleTrailIds={expanded && currentPreview?.mapData != null ? [currentPreview.mapData] : []}
-            />
-          </MapView>
-        )}
-        {showMapLoading ? (
-          <View style={[StyleSheet.absoluteFill, localStyles.mapLoadingOverlay]} pointerEvents="none">
-            <ActivityIndicator size="large" color="#64748b" />
-          </View>
-        ) : null}
-        {!expanded && mapDirections != null ? (
-          <MiniMapDirectionsButtons lat={mapDirections.lat} lon={mapDirections.lon} />
-        ) : null}
-        {!expanded && <MiniMapExpandButton onPress={onExpand} />}
-      </Animated.View>
-      {expanded && (
-        <>
-          <MiniMapHeader
-            title={miniMap.title}
-            onBack={onCollapse}
-            top={insets.top + 8}
-            rightSlot={
-              liveMiniMap != null ? (
-                <View style={[localStyles.filterButtonWrap, { width: HEADER_SIDE_SLOT_WIDTH }]}>
-                  <FilterButton persisted={false} onPress={() => setRegionFilterOpen(true)} />
-                </View>
-              ) : null
+              <SymbolLayer
+                id="centered-offline-clusters"
+                filter={["has", "point_count"]}
+                style={{
+                  iconImage: "route-marker-cluster",
+                  iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+                  iconAllowOverlap: true,
+                  iconIgnorePlacement: true,
+                  iconAnchor: "bottom",
+                  textField: [
+                    "concat",
+                    "(",
+                    ["to-string", ["get", "point_count"]],
+                    ")",
+                  ],
+                  textSize: 12,
+                  textColor: "#333333",
+                  textHaloColor: "#ffffff",
+                  textHaloWidth: 1.5,
+                  textOffset: [0, 0.2],
+                  textAnchor: "top",
+                  textAllowOverlap: true,
+                  textIgnorePlacement: true,
+                }}
+              />
+              <Images images={{ ...ROUTE_MARKER_IMAGES }} />
+            </ShapeSource>
+          ) : null}
+          <TrailsLayer
+            focusedRouteId={shell.expanded ? focusedRouteId : null}
+            visibleTrailIds={
+              shell.expanded && currentPreview?.mapData != null ? [currentPreview.mapData] : []
             }
           />
+        </MapView>
+      ) : null}
+      {shell.expanded ? (
+        <View style={expandedChromeStyles.layer} pointerEvents="box-none">
+          <MiniMapHeader title={miniMap.title} onBack={onCollapse} top={insets.top + 8} />
           {focusedRouteId != null && (
-            <View style={[miniMapHostStyles.previewContainer, { paddingBottom: insets.bottom + 8 }]}>
+            <View
+              style={[
+                miniMapHostStyles.previewContainer,
+                {
+                  paddingBottom: routePreviewDockedPaddingBottom(
+                    insets.bottom,
+                    tabBarHeight,
+                  ),
+                },
+              ]}
+            >
               <RoutePreview
                 routeId={focusedRouteId}
                 routeType={
@@ -572,38 +579,15 @@ export function CenteredRegionMiniMapView({
             visible={compassVisible}
             top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
           />
-        </>
-      )}
-      {liveMiniMap != null ? (
-        <FilterBottomSheet
-          visible={regionFilterOpen}
-          onClose={() => setRegionFilterOpen(false)}
-          mode={
-            regionFilterOpen
-              ? {
-                  kind: "region-route",
-                  draft: regionRouteFilter,
-                  onDraftChange: setRegionRouteFilter,
-                  onReset: () => setRegionRouteFilter(new RouteFilter([PageDataSource.Ropewiki])),
-                }
-              : null
-          }
-        />
+        </View>
       ) : null}
-    </View>
+    </>
   );
 }
 
-const localStyles = StyleSheet.create({
-  filterButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mapLoadingOverlay: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(229, 231, 235, 0.92)",
-    borderRadius: minimapStyles.map.borderRadius,
+const expandedChromeStyles = StyleSheet.create({
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
   },
 });
