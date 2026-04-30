@@ -45,6 +45,9 @@ export type RoutesState = {
 /** Exported for minimaps that render clustered route markers with the same layout as this layer. */
 export const CLUSTER_RADIUS = 50;
 
+/** Zoom when focusing a route from a marker tap — matches `ExploreScreen` default map zoom (12.1). */
+export const ROUTE_MARKER_CAMERA_ZOOM = 12.1;
+
 type RouteMarkersLayerProps = {
   onStateChange?: (state: RoutesState) => void;
   cameraRef?: React.RefObject<ComponentRef<typeof Camera> | null>;
@@ -161,7 +164,6 @@ function RouteMarkersLayerContent({
     const isCluster = props?.point_count != null;
 
     if (isCluster && shapeSourceRef.current) {
-      onRouteClusterPress?.();
       try {
         const zoom = await shapeSourceRef.current.getClusterExpansionZoom(
           feature as GeoJSON.Feature<GeoJSON.Point>,
@@ -174,6 +176,8 @@ function RouteMarkersLayerContent({
       } catch {
         // getClusterExpansionZoom can fail on some platforms; ignore
       }
+      // After camera moves so parent re-renders (e.g. clearing preview) cannot race the fly-to.
+      onRouteClusterPress?.();
       return;
     }
 
@@ -182,6 +186,7 @@ function RouteMarkersLayerContent({
       onRoutePress?.(routeId, coords);
       cameraRef.current.setCamera({
         centerCoordinate: coords,
+        zoomLevel: ROUTE_MARKER_CAMERA_ZOOM,
         animationDuration: 300,
       });
     }

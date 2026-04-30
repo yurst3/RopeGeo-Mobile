@@ -40,20 +40,6 @@ export class DownloadQueue {
 
   private processing = false;
 
-  private online = true;
-
-  private runAbort: AbortController | null = null;
-
-  /** Called when device reachability changes (e.g. from {@link NetworkStatusProvider}). */
-  setOnline(online: boolean): void {
-    this.online = online;
-    if (!online) {
-      this.runAbort?.abort();
-    } else if (!this.processing && this.queue.length > 0) {
-      void this.process();
-    }
-  }
-
   static getInstance(): DownloadQueue {
     if (DownloadQueue.instance == null) {
       DownloadQueue.instance = new DownloadQueue();
@@ -81,6 +67,27 @@ export class DownloadQueue {
         task.getSnapshot(),
       ]),
     );
+  }
+
+  /** Aborts one download, removes it from the FIFO queue and task maps (must tap download again to retry). */
+  abortTask(pageId: string): void {
+    for (let i = this.queue.length - 1; i >= 0; i--) {
+      if (this.queue[i].pageId === pageId) {
+        this.queue.splice(i, 1);
+      }
+    }
+    const task = this.tasks.get(pageId);
+    task?.abort();
+    this.stripTrackedDownload(pageId);
+    this.emit();
+  }
+
+  /** Aborts every tracked download (e.g. device went offline). */
+  abortAllTasks(): void {
+    const ids = [...this.tasks.keys()];
+    for (const id of ids) {
+      this.abortTask(id);
+    }
   }
 
   enqueue(entry: QueueEntry): void {
@@ -113,39 +120,42 @@ export class DownloadQueue {
     void this.process();
   }
 
+  private stripTrackedDownload(pageId: string): void {
+    this.clearCleanupTimer(pageId);
+    this.tasks.delete(pageId);
+    this.onSuccessByPageId.delete(pageId);
+    this.onlineViewByPageId.delete(pageId);
+    this.displayPlanByPageId.delete(pageId);
+    this.savedAtByPageId.delete(pageId);
+  }
+
   private async process(): Promise<void> {
     if (this.processing) return;
     this.processing = true;
     try {
       while (this.queue.length > 0) {
-        if (!this.online) {
-          break;
-        }
         const task = this.queue.shift();
         if (task == null) break;
         const onSuccess = this.onSuccessByPageId.get(task.pageId);
         const view = this.onlineViewByPageId.get(task.pageId);
         const displayPlan = this.displayPlanByPageId.get(task.pageId);
         const savedAt = this.savedAtByPageId.get(task.pageId);
-        if (onSuccess == null || view == null || displayPlan == null || savedAt == null) continue;
+        if (onSuccess == null || view == null || displayPlan == null || savedAt == null) {
+          continue;
+        }
         const viewSaved = view.toSavedPage();
         const savedPage = new SavedPage(viewSaved.preview, savedAt, viewSaved.downloadedPageViewPath);
 
-        this.runAbort = new AbortController();
         try {
-          const result = await task.run(
-            savedPage,
-            displayPlan,
-            this.runAbort.signal,
-          );
+          const result = await task.run(savedPage, displayPlan);
           await onSuccess(result);
           this.emit();
           this.scheduleCleanup(task.pageId, 2000);
         } catch {
           this.emit();
-          this.scheduleCleanup(task.pageId, 4000);
-        } finally {
-          this.runAbort = null;
+          if (this.tasks.has(task.pageId)) {
+            this.scheduleCleanup(task.pageId, 4000);
+          }
         }
       }
     } finally {

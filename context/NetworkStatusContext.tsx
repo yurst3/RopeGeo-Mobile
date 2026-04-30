@@ -4,9 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { DownloadQueue } from "@/lib/downloadQueue/downloadQueue";
 import type { NetworkState } from "expo-network";
 import { AppState } from "react-native";
 
@@ -82,6 +84,15 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
     }
     return networkState == null ? true : isOnlineFromNetworkState(networkState);
   }, [networkState]);
+
+  const prevOnlineRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    const prev = prevOnlineRef.current;
+    prevOnlineRef.current = isOnline;
+    if (prev === true && !isOnline) {
+      DownloadQueue.getInstance().abortAllTasks();
+    }
+  }, [isOnline]);
 
   const value = useMemo<NetworkStatusContextValue>(
     () => ({ isOnline, networkState }),

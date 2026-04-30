@@ -28,6 +28,7 @@ import {
 } from "@/constants/toast";
 import {
   getToastArchetypeForKey,
+  TOAST_KEY_DOWNLOAD_CANCELLED,
   TOAST_KEY_PAGE_ERROR,
   TOAST_KEY_PAGE_SAVED,
 } from "@/constants/toastArchetypes";
@@ -107,7 +108,7 @@ function PageScreenBody({
   const insets = useSafeAreaInsets();
   const { showPill, dismiss, upsertPill } = useToast();
   const router = useRouter();
-  const { enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
+  const { abortTask, enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
   const { setHighlightSavedTab } = useSavedTabHighlight();
   const {
     isSaved,
@@ -177,6 +178,35 @@ function PageScreenBody({
   const onSavePress = () => {
     if (saved) {
       dismissSavedToastImmediate();
+      if (downloading) {
+        abortTask(pageId);
+        const cancelKey = `${TOAST_KEY_DOWNLOAD_CANCELLED}-${pageId}`;
+        const pageAllowedRoutes = [`/explore/${pageId}/page`, `/saved/${pageId}/page`];
+        const cancelDurationMs =
+          getToastArchetypeForKey(cancelKey)?.durationMs ?? 5000;
+        try {
+          showPill({
+            key: cancelKey,
+            variant: "error",
+            message: "Download cancelled",
+            durationMs: cancelDurationMs,
+            allowedRoutes: pageAllowedRoutes,
+            horizontalInset: TOAST_HORIZONTAL_INSET,
+          });
+        } catch (error) {
+          if (!(error instanceof ToastKeyCollisionError)) {
+            throw error;
+          }
+          upsertPill({
+            key: cancelKey,
+            variant: "error",
+            message: "Download cancelled",
+            durationMs: cancelDurationMs,
+            allowedRoutes: pageAllowedRoutes,
+            horizontalInset: TOAST_HORIZONTAL_INSET,
+          });
+        }
+      }
       removeSaved(pageId);
       return;
     }

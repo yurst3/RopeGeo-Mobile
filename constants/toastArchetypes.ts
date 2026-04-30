@@ -10,6 +10,8 @@ export const TOAST_KEY_SEARCH_REFRESHING = "search-refreshing";
 export const TOAST_KEY_REGION_ERROR = "error-region";
 export const TOAST_KEY_PAGE_ERROR = "error-page";
 export const TOAST_KEY_DOWNLOAD_PROGRESS = "download-progress";
+/** Prefix with `-${pageId}` for per-page dedupe (see `getToastArchetypeForKey`). */
+export const TOAST_KEY_DOWNLOAD_CANCELLED = "download-cancelled";
 export const TOAST_KEY_PAGE_SAVED = "saved-page";
 export const TOAST_KEY_DISTANCE_GPS_TIMEOUT = "error-search-distance-gps-timeout";
 
@@ -126,6 +128,12 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: 3000,
     mode: "progress",
   },
+  [TOAST_KEY_DOWNLOAD_CANCELLED]: {
+    priority: 3,
+    allowedRoutes: ["/explore/[id]/page", "/saved/[id]/page"],
+    durationMs: 5000,
+    mode: "pill",
+  },
   [TOAST_KEY_PAGE_SAVED]: {
     priority: 4,
     // Override to one specific page id on creation; allow explore + saved variants of that page.
@@ -235,6 +243,15 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       allowedRoutes: ["/explore/[id]/page", "/saved/[id]/page"],
       durationMs: 3000,
       mode: "progress",
+    };
+  }
+
+  if (key.startsWith(`${TOAST_KEY_DOWNLOAD_CANCELLED}-`)) {
+    return {
+      priority: 3,
+      allowedRoutes: ["/explore/[id]/page", "/saved/[id]/page"],
+      durationMs: 5000,
+      mode: "pill",
     };
   }
 

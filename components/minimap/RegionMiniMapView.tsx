@@ -78,7 +78,11 @@ export function RegionMiniMapView({
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
-  const regionFitBounds = boundsToFit(regionMiniMap.bounds);
+  const apiBounds = regionMiniMap.bounds;
+  const regionFitBounds = useMemo(
+    () => boundsToFit(apiBounds),
+    [apiBounds?.north, apiBounds?.south, apiBounds?.east, apiBounds?.west],
+  );
 
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,

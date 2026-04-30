@@ -5,6 +5,7 @@ import {
 } from "ropegeo-common/helpers/network";
 import { PaginationResults } from "ropegeo-common/models";
 import { SERVICE_BASE_URL, Service } from "ropegeo-common/components";
+import { DownloadCancelledError } from "@/lib/downloadQueue/downloadCancelled";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 
@@ -42,6 +43,9 @@ export async function fetchMapDataTileKeys<R>(
       throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
     }
     if (isAbortError(e)) {
+      if (outerSignal.aborted) {
+        throw new DownloadCancelledError();
+      }
       throw new Error(NO_NETWORK_MESSAGE);
     }
     throw e;

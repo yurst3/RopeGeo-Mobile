@@ -40,6 +40,9 @@ export function pageDownloadUiFromTaskSnapshot(
   task: DownloadTaskSnapshot | null,
 ): PageDownloadUi {
   if (task == null) return { kind: "idle" };
+  if (task.state === "cancelled") {
+    return { kind: "idle" };
+  }
   if (task.state === "queued" || task.state === "running") {
     return {
       kind: "progress",

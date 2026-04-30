@@ -3,6 +3,7 @@ import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionBut
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   CLUSTER_RADIUS,
+  ROUTE_MARKER_CAMERA_ZOOM,
   RouteMarkersLayer,
   type RoutesState,
 } from "@/components/screens/explore/RouteMarkersLayer";
@@ -356,6 +357,7 @@ export function CenteredRegionMiniMapView({
       setCurrentPreview(null);
       cameraRef.current.setCamera({
         centerCoordinate: coords,
+        zoomLevel: ROUTE_MARKER_CAMERA_ZOOM,
         animationDuration: 300,
       });
     }

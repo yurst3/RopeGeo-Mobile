@@ -45,6 +45,7 @@ type DownloadQueueContextValue = {
   /** Enqueue download using only saved-page metadata (no `RopewikiPageView` required). */
   enqueueSavedPageDownload: (input: EnqueueSavedPageDownloadInput) => void;
   getTaskSnapshot: (pageId: string) => DownloadTaskSnapshot | null;
+  abortTask: (pageId: string) => void;
 };
 
 const DownloadQueueContext = createContext<DownloadQueueContextValue | null>(null);
@@ -65,10 +66,6 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => queue.subscribe(setSnapshots), [queue]);
 
-  useEffect(() => {
-    queue.setOnline(isOnline);
-  }, [isOnline, queue]);
-
   const pageViewTypeFromSavedPage = useCallback((savedPage: SavedPage): PageViewType => {
     switch (savedPage.preview.source) {
       case PageDataSource.Ropewiki:
@@ -80,6 +77,9 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
 
   const enqueuePageDownload = useCallback(
     (input: EnqueuePageDownloadInput) => {
+      if (!isOnline) {
+        return;
+      }
       const existingAtEnqueue = savedEntriesRef.current.find(
         (e) => e.preview.id === input.pageId,
       );
@@ -96,11 +96,14 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
         },
       });
     },
-    [addSaved, queue, replaceSaved],
+    [addSaved, isOnline, queue, replaceSaved],
   );
 
   const enqueueSavedPageDownload = useCallback(
     (input: EnqueueSavedPageDownloadInput) => {
+      if (!isOnline) {
+        return;
+      }
       const saved = savedEntriesRef.current.find(
         (e) => e.preview.id === input.pageId,
       );
@@ -158,7 +161,14 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
         console.warn("[DownloadQueue] failed to enqueue saved-page download", error);
       });
     },
-    [pageViewTypeFromSavedPage, queue, replaceSaved, webBase],
+    [isOnline, pageViewTypeFromSavedPage, queue, replaceSaved, webBase],
+  );
+
+  const abortTask = useCallback(
+    (pageId: string) => {
+      queue.abortTask(pageId);
+    },
+    [queue],
   );
 
   const getTaskSnapshot = useCallback(
@@ -171,8 +181,9 @@ export function DownloadQueueProvider({ children }: { children: ReactNode }) {
       enqueuePageDownload,
       enqueueSavedPageDownload,
       getTaskSnapshot,
+      abortTask,
     }),
-    [enqueuePageDownload, enqueueSavedPageDownload, getTaskSnapshot],
+    [abortTask, enqueuePageDownload, enqueueSavedPageDownload, getTaskSnapshot],
   );
 
   return (

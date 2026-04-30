@@ -26,6 +26,10 @@ import {
   mergeParentSignalWithDeadline,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
 } from "ropegeo-common/helpers/network";
+import {
+  DownloadCancelledError,
+  isDownloadCancelledError,
+} from "@/lib/downloadQueue/downloadCancelled";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { setDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
@@ -54,7 +58,12 @@ export {
   type DownloadProgressPayload,
 } from "@/lib/downloadQueue/downloadPhase";
 
-export type DownloadTaskState = "queued" | "running" | "success" | "error";
+export type DownloadTaskState =
+  | "queued"
+  | "running"
+  | "success"
+  | "error"
+  | "cancelled";
 
 export type DownloadTaskSnapshot = {
   pageId: string;
@@ -109,7 +118,7 @@ export class DownloadTask {
 
   private readonly onProgressCallback: (p: DownloadProgressPayload) => void;
 
-  private runOuter?: AbortSignal;
+  private readonly abortController = new AbortController();
 
   constructor(
     pageId: string,
@@ -128,6 +137,11 @@ export class DownloadTask {
       this.errorMessage = null;
       onProgress(p);
     };
+  }
+
+  /** Aborts in-flight `fetch` work wired to this task’s signal; {@link DownloadQueue} removes the task from its maps. */
+  abort(): void {
+    this.abortController.abort();
   }
 
   getSnapshot(): DownloadTaskSnapshot {
@@ -174,17 +188,17 @@ export class DownloadTask {
     return view as MiniMapCapableOnlinePageView;
   }
 
-  async run(
-    savedPage: SavedPage,
-    displayPlan: DownloadPhase[],
-    outerSignal: AbortSignal,
-  ): Promise<SavedPage> {
-    this.runOuter = outerSignal;
+  async run(savedPage: SavedPage, displayPlan: DownloadPhase[]): Promise<SavedPage> {
     try {
       this.displayPlan = [...displayPlan];
       this.displayStep = 0;
       this.displayTotal = this.displayPlan.length;
       await deleteOfflineBundleFiles(this.pageId);
+      if (this.abortController.signal.aborted) {
+        this.state = "cancelled";
+        this.errorMessage = null;
+        throw new DownloadCancelledError();
+      }
 
       const view = await this.downloadPageJson();
 
@@ -222,19 +236,19 @@ export class DownloadTask {
       return finalSaved;
     } catch (e) {
       await deleteOfflineBundleFiles(this.pageId);
-      this.state = "error";
-      this.errorMessage = e instanceof Error ? e.message : String(e);
+      if (isDownloadCancelledError(e)) {
+        this.state = "cancelled";
+        this.errorMessage = null;
+      } else {
+        this.state = "error";
+        this.errorMessage = e instanceof Error ? e.message : String(e);
+      }
       throw e;
-    } finally {
-      this.runOuter = undefined;
     }
   }
 
   private async fetchWithDeadline(url: string, init: RequestInit): Promise<Response> {
-    const outer = this.runOuter;
-    if (outer == null) {
-      throw new Error("DownloadTask.fetchWithDeadline: missing outer signal");
-    }
+    const outer = this.abortController.signal;
     const merged = mergeParentSignalWithDeadline(
       outer,
       REQUEST_TIMEOUT_SECONDS * 1000,
@@ -246,6 +260,9 @@ export class DownloadTask {
         throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
       }
       if (isAbortError(e)) {
+        if (this.abortController.signal.aborted) {
+          throw new DownloadCancelledError();
+        }
         throw new Error(NO_NETWORK_MESSAGE);
       }
       throw e;
@@ -498,7 +515,7 @@ export class DownloadTask {
         miniMap.layerId,
         page,
         TILE_DOWNLOAD_PAGE_LIMIT,
-        this.runOuter!,
+        this.abortController.signal,
       );
       if (page === 1) {
         totalBytesForTiles = Math.max(parsed.totalBytes, 1);
