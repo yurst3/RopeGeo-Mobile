@@ -1,3 +1,4 @@
+import { TRAIL_VECTOR_LINE_STYLE } from "@/components/minimap/shared/trailVectorLineStyle";
 import { LineLayer, VectorSource } from "@rnmapbox/maps";
 
 /**
@@ -30,10 +31,16 @@ export function TrailsLayer({
 }: TrailsLayerProps) {
   const isFocused = focusedRouteId != null;
   const hasIdsToShow = visibleTrailIds.length > 0;
-  const filter =
+  const lineOnly: ["==", ["geometry-type"], "LineString"] = [
+    "==",
+    ["geometry-type"],
+    "LineString",
+  ];
+  const visibilityFilter =
     !isFocused || !hasIdsToShow
       ? (["==", ["get", "id"], ""] as const) // Match nothing: no feature has id === ""
       : (["in", ["get", "id"], ["literal", visibleTrailIds]] as const);
+  const filter = ["all", lineOnly, visibilityFilter] as const;
 
   return (
     <VectorSource id="trails-source" tileUrlTemplates={TRAILS_TILE_URL_TEMPLATES}>
@@ -41,12 +48,7 @@ export function TrailsLayer({
         id="trails-line-layer"
         sourceLayerID={TRAILS_SOURCE_LAYER_ID}
         filter={filter}
-        style={{
-          lineColor: "#2563eb",
-          lineWidth: 2.5,
-          lineCap: "round",
-          lineJoin: "round",
-        }}
+        style={TRAIL_VECTOR_LINE_STYLE}
       />
     </VectorSource>
   );

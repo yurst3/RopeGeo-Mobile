@@ -1,5 +1,5 @@
 import {
-  RopeGeoCursorPaginationHttpRequest,
+  RopeGeoPagedDataLoader,
   Service,
 } from "ropegeo-common/components";
 import {
@@ -73,10 +73,10 @@ type RegionBannerCarouselProps = {
   /** Reanimated style for the inner image frame (width/height/left) — same as former full-banner parallax. */
   imageFrameStyle: React.ComponentProps<typeof Animated.View>["style"];
   loading: boolean;
-  loadingMore: boolean;
+  loadingNextPage: boolean;
   slides: RegionBannerSlide[];
-  loadMore: () => void;
-  hasMore: boolean;
+  loadNextPage: () => void;
+  morePages: boolean;
   errors: Error | null;
   verticalScrollActive: boolean;
   controlRef: React.RefObject<RegionBannerHandle | null>;
@@ -104,10 +104,10 @@ function RegionBannerCarousel({
   layoutHeight,
   imageFrameStyle,
   loading,
-  loadingMore,
+  loadingNextPage,
   slides,
-  loadMore,
-  hasMore,
+  loadNextPage,
+  morePages,
   errors,
   verticalScrollActive,
   controlRef,
@@ -176,19 +176,19 @@ function RegionBannerCarousel({
 
   const intervalGateRef = useRef({
     slidesLength: 0,
-    hasMore: false,
-    loadingMore: false,
+    morePages: false,
+    loadingNextPage: false,
   });
   useEffect(() => {
     intervalGateRef.current = {
       slidesLength: slides.length,
-      hasMore,
-      loadingMore,
+      morePages,
+      loadingNextPage,
     };
-  }, [slides.length, hasMore, loadingMore]);
+  }, [slides.length, morePages, loadingNextPage]);
 
-  const loadMoreRef = useRef(loadMore);
-  loadMoreRef.current = loadMore;
+  const loadNextPageRef = useRef(loadNextPage);
+  loadNextPageRef.current = loadNextPage;
 
   const verticalScrollActiveRef = useRef(verticalScrollActive);
   useEffect(() => {
@@ -333,7 +333,7 @@ function RegionBannerCarousel({
 
       const prevIndex = carouselIndexRef.current;
       syncIndexFromOffset(e.nativeEvent.contentOffset.x);
-      const { slidesLength, hasMore: hm, loadingMore: lm } =
+      const { slidesLength, morePages: hm, loadingNextPage: lm } =
         intervalGateRef.current;
       if (slidesLength === 0) return;
       const w = pageWidthRef.current;
@@ -344,7 +344,7 @@ function RegionBannerCarousel({
         pauseAutoAdvance();
       }
       if (clamped >= slidesLength - 1 && hm && !lm) {
-        queueMicrotask(() => loadMoreRef.current());
+        queueMicrotask(() => loadNextPageRef.current());
       }
     },
     [pauseAutoAdvance, syncIndexFromOffset]
@@ -352,7 +352,7 @@ function RegionBannerCarousel({
 
   const goToNext = useCallback(() => {
     if (verticalScrollActiveRef.current) return;
-    const { slidesLength, hasMore: hm, loadingMore: lm } =
+    const { slidesLength, morePages: hm, loadingNextPage: lm } =
       intervalGateRef.current;
     if (slidesLength === 0) return;
     if (currentImageLoadingRef.current) return;
@@ -363,7 +363,7 @@ function RegionBannerCarousel({
     programmaticScrollRef.current = true;
     if (i >= slidesLength - 1 && hm && lm) return;
     if (i >= slidesLength - 1 && hm && !lm) {
-      queueMicrotask(() => loadMoreRef.current());
+      queueMicrotask(() => loadNextPageRef.current());
       return;
     }
     if (i >= slidesLength - 1 && !hm) {
@@ -376,7 +376,7 @@ function RegionBannerCarousel({
 
   useEffect(() => {
     if (slides.length === 0) return;
-    if (loadingMore) return;
+    if (loadingNextPage) return;
     if (currentImageLoading) return;
     if (verticalScrollActive) return;
     if (autoAdvancePaused) return;
@@ -388,8 +388,8 @@ function RegionBannerCarousel({
     };
   }, [
     slides.length,
-    hasMore,
-    loadingMore,
+    morePages,
+    loadingNextPage,
     currentImageLoading,
     verticalScrollActive,
     autoAdvancePaused,
@@ -588,32 +588,35 @@ export const RegionBanner = forwardRef<RegionBannerHandle, RegionBannerProps>(fu
   );
 
   return (
-    <RopeGeoCursorPaginationHttpRequest<RopewikiRegionImageView>
+    <RopeGeoPagedDataLoader<RopewikiRegionImageView>
       service={Service.WEBSCRAPER}
-      path="/ropewiki/region/:regionId/images"
-      pathParams={pathParams}
+      onlinePath="/ropewiki/region/:regionId/images"
+      onlinePathParams={pathParams}
       queryParams={queryParams}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
     >
-      {({ loading, loadingMore, data, errors, loadMore, hasMore }) => (
-        <RegionBannerCarousel
-          regionId={regionId}
-          regionName={regionName}
-          layoutWidth={layoutWidth}
-          layoutHeight={layoutHeight}
-          imageFrameStyle={imageFrameStyle}
-          loading={loading}
-          loadingMore={loadingMore}
-          slides={toSlides(data ?? [])}
-          loadMore={loadMore}
-          hasMore={hasMore}
-          errors={errors}
-          verticalScrollActive={verticalScrollActive}
-          controlRef={controlRef}
-        />
-      )}
-    </RopeGeoCursorPaginationHttpRequest>
+      {({ loadingNextPage, data, errors, loadNextPage, morePages }) => {
+        const loading = data === null && errors === null;
+        return (
+          <RegionBannerCarousel
+            regionId={regionId}
+            regionName={regionName}
+            layoutWidth={layoutWidth}
+            layoutHeight={layoutHeight}
+            imageFrameStyle={imageFrameStyle}
+            loading={loading}
+            loadingNextPage={loadingNextPage}
+            slides={toSlides(data ?? [])}
+            loadNextPage={loadNextPage}
+            morePages={morePages}
+            errors={errors}
+            verticalScrollActive={verticalScrollActive}
+            controlRef={controlRef}
+          />
+        );
+      }}
+    </RopeGeoPagedDataLoader>
   );
 });
 

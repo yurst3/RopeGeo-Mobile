@@ -1,0 +1,113 @@
+---
+description: Use ropegeo-common data loaders (RopeGeoDataLoader, RopeGeoProgressDataLoader, RopeGeoPagedDataLoader) — props, loading UX, and toasts
+globs: components/**/*.tsx, app/**/*.tsx
+alwaysApply: false
+---
+
+# RopeGeo data loaders (Mobile)
+
+Import from `ropegeo-common/components`:
+
+- **`RopeGeoDataLoader`** — single JSON `Result` fetch (`onlinePath` + optional `onlinePathParams`, optional `queryParams` / `body`).
+- **`RopeGeoProgressDataLoader`** — page-based GET that merges all pages (e.g. `/routes`); children get `received`, `total`, `data`, `errors`, `timeoutCountdown`, `reload`.
+- **`RopeGeoPagedDataLoader`** — cursor pagination; children get `loadNextPage`, `loadingNextPage`, `morePages`, plus `data`, `errors`, `timeoutCountdown`, `reload`.
+
+Do **not** use removed names: `RopeGeoHttpRequest`, `RopeGeoPaginationHttpRequest`, `RopeGeoCursorPaginationHttpRequest`, or props `path` / `pathParams` / `refreshOnReconnect`.
+
+## API reminders
+
+- Use **`onlinePath`** and **`onlinePathParams`** (not `path` / `pathParams`).
+- Loaders do **not** pass `loading` or `refreshing` to children. Derive initial/spinner state where needed: e.g. **`const loading = data === null && errors === null`** (and keep using loader-specific flags like `loadingNextPage` for paged lists).
+- **`timeoutCountdown`** is only non-`null` during an **online** in-flight fetch when `timeoutAfterSeconds` is set; use it for slow-network UI via `useNetworkRequestToasts` (no `loading` argument on that hook).
+- Reconnect refetch when params change while offline is handled inside Common (`dirtyWhileOffline` + semantic keys); do **not** thread a `refreshOnReconnect` prop into loaders.
+
+## Good / bad (examples)
+
+Use **`RopeGeoDataLoader`** (same ideas apply to other loaders). Keep the **loader mounted**; vary **`isOnline`**, **`offlineData`**, and **children UI** instead of swapping the loader for a different subtree.
+
+### 1. Online / offline placeholder
+
+**Good** — pass **`isOnline`** into the loader; show a **placeholder inside** the render prop when there is nothing to render yet (`data === null`), including while offline (the loader surfaces **`NO_NETWORK_MESSAGE`** as `errors` when appropriate—handle that in children too).
+
+```tsx
+<RopeGeoDataLoader<MyModel>
+  service={Service.WEBSCRAPER}
+  method={Method.GET}
+  onlinePath="/ropewiki/page/:id"
+  onlinePathParams={{ id: pageId }}
+  timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+  isOnline={isOnline}
+>
+  {({ data, errors, timeoutCountdown, reload }) => {
+    if (errors != null) {
+      return (
+        <PagePlaceholder errorMessage={errors.message} onRetry={reload} />
+      );
+    }
+    if (data == null) {
+      return <PagePlaceholder />;
+    }
+    return <PageBody data={data} timeoutCountdown={timeoutCountdown} />;
+  }}
+</RopeGeoDataLoader>
+```
+
+**Bad** — **unmount** the loader when offline and show a separate placeholder (resets loader state, drops in-flight / dirty / reconnect behavior).
+
+```tsx
+{isOnline ? (
+  <RopeGeoDataLoader<MyModel> /* … */>{/* … */}</RopeGeoDataLoader>
+) : (
+  <PagePlaceholder />
+)}
+```
+
+### 2. Loading offline data from the file system
+
+**Good** — while reading a local bundle, pass **`offlineData={null}`** so the loader keeps **`data` / `errors` null** (loading-style) and does **not** start an online fetch. When the file is ready, pass the parsed **`offlineData` object**. If reading fails (non-stale error), show an **error toast**, set **`offlineData` to `undefined`**, and let the loader **fall back to the network**.
+
+```tsx
+const offlineData =
+  !shouldUseOffline || offlineReadFailedTryOnline
+    ? undefined
+    : offlineBundle != null
+      ? offlineBundle
+      : null;
+
+<RopeGeoDataLoader<MyModel>
+  /* … */
+  isOnline={isOnline}
+  offlineData={offlineData}
+>
+  {({ data, errors, timeoutCountdown, reload }) => {
+    if (errors != null) {
+      return (
+        <PagePlaceholder errorMessage={errors.message} onRetry={reload} />
+      );
+    }
+    if (data == null) {
+      return <PagePlaceholder />;
+    }
+    return <PageBody data={data} timeoutCountdown={timeoutCountdown} />;
+  }}
+</RopeGeoDataLoader>
+
+// on non-stale read error: upsertPill(/* … */); setOfflineReadFailedTryOnline(true);
+// → offlineData becomes undefined → online fetch runs when isOnline
+```
+
+**Bad** — **unmount** the loader (or swap it for another instance) **while** reading from disk, or **after** a read error, instead of using **`null` / `undefined`** on **`offlineData`**.
+
+```tsx
+{readingFromDisk || fileReadError ? (
+  <FullScreenSpinner />
+) : (
+  <RopeGeoDataLoader<MyModel> offlineData={parsed} /* … */>
+    {/* … */}
+  </RopeGeoDataLoader>
+)}
+```
+
+## Toasts
+
+Use **`useNetworkRequestToasts({ errors, timeoutCountdown, … })`** — not `{ loading, … }`. Offline error suppression and slow-network pills are driven by `errors` / `isOnline` and `timeoutCountdown` as implemented in the hook.

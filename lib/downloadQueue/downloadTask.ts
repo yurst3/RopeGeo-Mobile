@@ -15,6 +15,7 @@ import {
   type OfflinePageMiniMap,
   type OnlineCenteredRegionMiniMap,
   type OnlinePageMiniMap,
+  type OnlineRopewikiPageView,
   type OfflinePageView,
   type OfflinePagePreview,
   type OnlinePagePreview,
@@ -503,6 +504,14 @@ export class DownloadTask {
       return null;
     }
 
+    const mapDataId =
+      this.pageViewType === PageViewType.Ropewiki
+        ? (view as OnlineRopewikiPageView).mapDataId
+        : null;
+    if (mapDataId == null || mapDataId === "") {
+      throw new Error("Page minimap tile download requires mapDataId on the page view");
+    }
+
     const mapRoot = getOfflineMapDataRootUri(this.pageId);
     await FileSystem.makeDirectoryAsync(mapRoot, { intermediates: true });
     this.reportDisplayed(DownloadPhase.DownloadTiles, 0);
@@ -512,7 +521,7 @@ export class DownloadTask {
     let bytesDone = 0;
     for (;;) {
       const parsed = await fetchMapDataTileKeys<MapDataTileKeysResults>(
-        miniMap.layerId,
+        mapDataId,
         page,
         TILE_DOWNLOAD_PAGE_LIMIT,
         this.abortController.signal,
@@ -553,7 +562,7 @@ export class DownloadTask {
 
     this.reportDisplayed(DownloadPhase.DownloadTiles, 1);
     const base = mapRoot.endsWith("/") ? mapRoot : `${mapRoot}/`;
-    const offlineMiniMap = miniMap.toOffline(`${base}tiles/${miniMap.layerId}/{z}/{x}/{y}.pbf`);
+    const offlineMiniMap = miniMap.toOffline(`${base}tiles/${mapDataId}/{z}/{x}/{y}.pbf`);
     return offlineMiniMap;
   }
 

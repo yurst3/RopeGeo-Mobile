@@ -1,6 +1,7 @@
 import { Camera } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useCallback, useRef, useState } from "react";
+import { MINIMAP_FIT_BOUNDS_ANIMATION_MS } from "./minimapShared";
 
 type Bounds = { north: number; south: number; east: number; west: number };
 type Padding = { paddingTop: number; paddingBottom: number; paddingLeft: number; paddingRight: number };
@@ -27,7 +28,7 @@ export function useMiniMapCamera({
   expandedRef.current = expanded;
 
   const fitToBounds = useCallback(
-    (bounds: Bounds, padding: Padding, duration = 300) => {
+    (bounds: Bounds, padding: Padding, duration = MINIMAP_FIT_BOUNDS_ANIMATION_MS) => {
       cameraRef.current?.setCamera({
         type: "CameraStop",
         bounds: {
@@ -42,7 +43,11 @@ export function useMiniMapCamera({
   );
 
   const resetPitchAndHeading = useCallback(() => {
-    cameraRef.current?.setCamera({ pitch: 0, heading: 0, animationDuration: 300 });
+    cameraRef.current?.setCamera({
+      pitch: 0,
+      heading: 0,
+      animationDuration: MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+    });
   }, []);
 
   const captureHome = useCallback(() => {

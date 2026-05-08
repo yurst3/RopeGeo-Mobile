@@ -86,7 +86,6 @@ export function RegionMiniMapView({
 
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,
-    refreshing: false,
     data: null,
     errors: null,
     received: 0,

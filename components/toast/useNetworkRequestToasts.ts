@@ -20,7 +20,6 @@ const RETRY_ICON = require("@/assets/images/icons/buttons/retry.png");
 const SLOW_THRESHOLD_SEC = Math.ceil(NETWORK_REQUEST_SLOW_THRESHOLD_MS / 1000);
 
 export type UseNetworkRequestToastsArgs = {
-  loading: boolean;
   errors: Error | null;
   timeoutCountdown: number | null;
   resetKey?: string | number;
@@ -55,15 +54,17 @@ export type UseNetworkRequestToastsArgs = {
 };
 
 /**
- * Slow-network and timeout pill toasts for screens using ropegeo-common HTTP wrappers (`timeoutCountdown`).
+ * Slow-network and timeout pill toasts for screens using ropegeo-common data loaders (`timeoutCountdown`
+ * is numeric only while an online fetch is in flight when `timeoutAfterSeconds` is set).
  * Pills and the shared slow-warning path only upsert while the host screen is focused (`useIsFocused`);
  * when blurred, this hook dismisses its `errorToastKey` and `slowToastKey` so stacked routes do not
  * inherit another screen’s request UI. The global `TOAST_KEY_NETWORK_RETRY` action toast is not
  * dismissed on blur here (multiple hook instances share it; the focused surface may upsert it).
+ * Error pills are suppressed while offline; {@link NO_NETWORK_MESSAGE} uses the same path.
  */
 export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void {
   const { isOnline } = useNetworkStatus();
-  const { upsertPill, upsertActionToast, dismiss } = useToast();
+  const { upsertPill, upsertActionToast, dismiss, incrementMultiple } = useToast();
   const isFocused = useIsFocused();
   const pathname = usePathname();
   const prevOnlineRef = useRef<boolean | null>(null);
@@ -78,6 +79,7 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
   const offlineToastKey = args.offlineToastKey ?? TOAST_KEY_NETWORK_OFFLINE;
   /** Avoid effect churn when HTTP wrappers pass a new `Error` instance each render with the same message. */
   const errorMessageKey = args.errors?.message ?? null;
+  const prevResetKeyForErrorBumpRef = useRef<string | number | undefined>(undefined);
 
   useEffect(() => {
     dismiss(slowToastKey);
@@ -100,57 +102,12 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
       return;
     }
 
-    if (!args.loading) {
-      dismiss(slowToastKey);
-      if (args.errors != null) {
-        if (!isOnline) {
-          dismiss(TOAST_KEY_NETWORK_RETRY);
-          return;
-        }
-        const message = args.errorToastTitle ?? "Error";
-        const trimmed = args.errors.message?.trim() ?? "";
-        const subtitle = trimmed === "" ? undefined : trimmed;
-        /** `upsertPill` updates the error pill in place when the key already exists. */
-        upsertPill({
-          key: errorToastKey,
-          variant: "error",
-          message,
-          subtitle,
-          durationMs: null,
-          allowedRoutes: [pathname],
-        });
-        if (args.onRetryRequest != null) {
-          upsertActionToast({
-            key: TOAST_KEY_NETWORK_RETRY,
-            message: "Retry",
-            icon: RETRY_ICON,
-            color: DOWNLOAD_TOAST_TEXT,
-            backgroundColor: DOWNLOAD_TOAST_BG,
-            durationMs: null,
-            allowedRoutes: [pathname],
-            onPress: () => {
-              dismiss(TOAST_KEY_NETWORK_RETRY);
-              onRetryRequestRef.current?.();
-            },
-          });
-        } else {
-          dismiss(TOAST_KEY_NETWORK_RETRY);
-        }
-      } else {
-        dismiss(errorToastKey);
-        dismiss(TOAST_KEY_NETWORK_RETRY);
-      }
-      return;
-    }
-
-    dismiss(errorToastKey);
-    // Do not dismiss `TOAST_KEY_NETWORK_RETRY` here: other mounted hooks also run while `loading`
-    // and share that global key; dismissing from every instance causes retry to flicker / exit-loop.
-    if (
+    const slowInRange =
       args.timeoutCountdown != null &&
       args.timeoutCountdown <= SLOW_THRESHOLD_SEC &&
-      args.timeoutCountdown >= 1
-    ) {
+      args.timeoutCountdown >= 1;
+
+    if (isOnline && slowInRange) {
       const message = `Waiting for network response ${args.timeoutCountdown}s`;
       upsertPill({
         key: slowToastKey,
@@ -162,11 +119,65 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
     } else {
       dismiss(slowToastKey);
     }
+
+    if (args.errors != null) {
+      if (!isOnline) {
+        dismiss(TOAST_KEY_NETWORK_RETRY);
+        return;
+      }
+      const message = args.errorToastTitle ?? "Error";
+      const trimmed = args.errors.message?.trim() ?? "";
+      const subtitle = trimmed === "" ? undefined : trimmed;
+      const resetNow = args.resetKey ?? "default";
+      const priorReset = prevResetKeyForErrorBumpRef.current;
+      prevResetKeyForErrorBumpRef.current = resetNow;
+      upsertPill({
+        key: errorToastKey,
+        variant: "error",
+        message,
+        subtitle,
+        durationMs: null,
+        allowedRoutes: [pathname],
+      });
+      if (
+        args.incrementErrorMultipleOnCollision === true &&
+        priorReset !== undefined &&
+        priorReset !== resetNow
+      ) {
+        queueMicrotask(() => {
+          try {
+            incrementMultiple(errorToastKey);
+          } catch {
+            // No existing pill for this key (e.g. first paint).
+          }
+        });
+      }
+      if (args.onRetryRequest != null) {
+        upsertActionToast({
+          key: TOAST_KEY_NETWORK_RETRY,
+          message: "Retry",
+          icon: RETRY_ICON,
+          color: DOWNLOAD_TOAST_TEXT,
+          backgroundColor: DOWNLOAD_TOAST_BG,
+          durationMs: null,
+          allowedRoutes: [pathname],
+          onPress: () => {
+            dismiss(TOAST_KEY_NETWORK_RETRY);
+            onRetryRequestRef.current?.();
+          },
+        });
+      } else {
+        dismiss(TOAST_KEY_NETWORK_RETRY);
+      }
+    } else {
+      prevResetKeyForErrorBumpRef.current = undefined;
+      dismiss(errorToastKey);
+      dismiss(TOAST_KEY_NETWORK_RETRY);
+    }
   }, [
     isFocused,
     isOnline,
     pathname,
-    args.loading,
     errorMessageKey,
     args.timeoutCountdown,
     dismiss,
@@ -175,6 +186,9 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
     upsertPill,
     upsertActionToast,
     slowToastKey,
+    incrementMultiple,
+    args.resetKey,
+    args.incrementErrorMultipleOnCollision,
   ]);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
   Method,
-  RopeGeoHttpRequest,
+  RopeGeoDataLoader,
   Service,
 } from "ropegeo-common/components";
 
@@ -33,7 +33,6 @@ import {
   TOAST_KEY_ROUTES_ERROR,
 } from "@/constants/toastArchetypes";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import { isPageIdKeyInSavedPagesStorage } from "@/lib/savedPages/isPageIdKeyInSavedPagesStorage";
 import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
@@ -90,7 +89,6 @@ function RegionScreenBody({
   const [expandedInitialIndex, setExpandedInitialIndex] = useState(0);
   const [regionRoutesState, setRegionRoutesState] = useState<RoutesState>({
     loading: false,
-    refreshing: false,
     data: null,
     errors: null,
     received: 0,
@@ -106,7 +104,6 @@ function RegionScreenBody({
   });
 
   useNetworkRequestToasts({
-    loading: regionRoutesState.loading,
     errors: regionRoutesState.errors,
     timeoutCountdown: regionRoutesState.timeoutCountdown,
     resetKey: regionId,
@@ -360,12 +357,10 @@ export type RopewikiRegionScreenProps = {
   savedPageId?: string | null;
 };
 
-function RopewikiRegionOnlineInner({
+function RopewikiRegionScreenInner({
   regionId,
   source,
   backTop,
-  isOnline,
-  loading,
   data,
   errors,
   timeoutCountdown,
@@ -375,8 +370,6 @@ function RopewikiRegionOnlineInner({
   regionId: string;
   source: PageDataSource;
   backTop: number;
-  isOnline: boolean;
-  loading: boolean;
   data: RopewikiRegionView | null;
   errors: Error | null;
   timeoutCountdown: number | null;
@@ -384,7 +377,6 @@ function RopewikiRegionOnlineInner({
   onRetryRequest: () => void;
 }) {
   useNetworkRequestToasts({
-    loading,
     errors,
     timeoutCountdown,
     resetKey: regionId,
@@ -395,51 +387,24 @@ function RopewikiRegionOnlineInner({
     onRetryRequest,
   });
 
-  const offlineSoftError =
-    !isOnline && errors?.message === NO_NETWORK_MESSAGE;
-  const hasRegionData =
-    data != null && (errors == null || offlineSoftError);
-
-  if (hasRegionData) {
-    return (
-      <RegionScreenBody
-        data={data}
-        regionId={regionId}
-        onBackPress={onBackPress}
-        onRetryRequest={onRetryRequest}
-      />
-    );
-  }
-  if (errors != null && !offlineSoftError) {
+  if (data == null) {
     return (
       <RopewikiRegionPlaceholder
         backTop={backTop}
         source={source}
-        errorMessage={errors.message}
+        errorMessage={errors?.message}
         onBackPress={onBackPress}
       />
     );
   }
-  if (loading) {
-    return (
-      <RopewikiRegionPlaceholder
-        backTop={backTop}
-        source={source}
-        onBackPress={onBackPress}
-      />
-    );
-  }
-  if (data == null && offlineSoftError) {
-    return (
-      <RopewikiRegionPlaceholder
-        backTop={backTop}
-        source={source}
-        errorMessage="No network connection"
-        onBackPress={onBackPress}
-      />
-    );
-  }
-  return null;
+  return (
+    <RegionScreenBody
+      data={data}
+      regionId={regionId}
+      onBackPress={onBackPress}
+      onRetryRequest={onRetryRequest}
+    />
+  );
 }
 
 export function RopewikiRegionScreen({
@@ -450,28 +415,6 @@ export function RopewikiRegionScreen({
   const insets = useSafeAreaInsets();
   const { isOnline } = useNetworkStatus();
   const backTop = insets.top + HEADER_ROW_TOP;
-
-  return (
-    <RopewikiRegionScreenWithBack
-      regionId={regionId}
-      source={source}
-      savedPageId={savedPageId ?? null}
-      backTop={backTop}
-      isOnline={isOnline}
-    />
-  );
-}
-
-function RopewikiRegionScreenWithBack({
-  regionId,
-  source,
-  savedPageId,
-  backTop,
-  isOnline,
-}: RopewikiRegionScreenProps & {
-  backTop: number;
-  isOnline: boolean;
-}) {
   const router = useRouter();
   const handleBack = useCallback(() => {
     void (async () => {
@@ -493,22 +436,20 @@ function RopewikiRegionScreenWithBack({
   }, [router, savedPageId]);
 
   return (
-    <RopeGeoHttpRequest<RopewikiRegionView>
+    <RopeGeoDataLoader<RopewikiRegionView>
       key={regionId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
-      path="/ropewiki/region/:id"
-      pathParams={{ id: regionId }}
+      onlinePath="/ropewiki/region/:id"
+      onlinePathParams={{ id: regionId }}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
     >
-      {({ loading, data, errors, timeoutCountdown, reload }) => (
-        <RopewikiRegionOnlineInner
+      {({ data, errors, timeoutCountdown, reload }) => (
+        <RopewikiRegionScreenInner
           regionId={regionId}
           source={source}
           backTop={backTop}
-          isOnline={isOnline}
-          loading={loading}
           data={data}
           errors={errors}
           timeoutCountdown={timeoutCountdown}
@@ -516,7 +457,7 @@ function RopewikiRegionScreenWithBack({
           onRetryRequest={reload}
         />
       )}
-    </RopeGeoHttpRequest>
+    </RopeGeoDataLoader>
   );
 }
 

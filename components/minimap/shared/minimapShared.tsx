@@ -28,6 +28,9 @@ export const CAMERA_PADDING = {
   paddingRight: 12,
 } as const;
 
+/** Default `animationDuration` for `Camera#setCamera` bounds fits; line-highlight wait uses the same value. */
+export const MINIMAP_FIT_BOUNDS_ANIMATION_MS = 300;
+
 export const minimapStyles = StyleSheet.create({
   wrapper: {
     width: "100%",

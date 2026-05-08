@@ -46,7 +46,6 @@ function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
   // `reload` is intentionally ignored — stable ref from ropegeo-common; explore retry uses a ref.
   if (
     prev.loading !== next.loading ||
-    prev.refreshing !== next.refreshing ||
     prev.received !== next.received ||
     prev.total !== next.total ||
     prev.timeoutCountdown !== next.timeoutCountdown ||
@@ -96,10 +95,8 @@ export function ExploreScreen() {
   >(undefined);
   const [cameraZoom, setCameraZoom] = useState<number | undefined>(undefined);
   const [followCurrentPosition, setFollowCurrentPosition] = useState(true);
-  const exploreOfflineBaselineKeyRef = useRef<string | null>(null);
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: true,
-    refreshing: false,
     data: null,
     errors: null,
     received: 0,
@@ -130,21 +127,6 @@ export function ExploreScreen() {
     [routesParamsForExploreMap],
   );
 
-  useEffect(() => {
-    if (isOnline) {
-      exploreOfflineBaselineKeyRef.current = null;
-      return;
-    }
-    if (exploreOfflineBaselineKeyRef.current === null) {
-      exploreOfflineBaselineKeyRef.current = exploreRoutesKey;
-    }
-  }, [isOnline, exploreRoutesKey]);
-
-  const refreshExploreRoutesOnReconnect =
-    isOnline &&
-    exploreOfflineBaselineKeyRef.current != null &&
-    exploreOfflineBaselineKeyRef.current !== exploreRoutesKey;
-
   useRoutesProgressToast(routesState, {
     resetKey: exploreRoutesKey,
     horizontalInset: TOAST_HORIZONTAL_INSET,
@@ -152,7 +134,6 @@ export function ExploreScreen() {
   });
 
   useNetworkRequestToasts({
-    loading: routesState.loading,
     errors: routesState.errors,
     timeoutCountdown: routesState.timeoutCountdown,
     resetKey: exploreRoutesKey,
@@ -347,7 +328,6 @@ export function ExploreScreen() {
               />
               <RouteMarkersLayer
                 routesParams={routesParamsForExploreMap}
-                refreshOnReconnect={refreshExploreRoutesOnReconnect}
                 onStateChange={onRoutesStateChange}
                 cameraRef={cameraRef}
                 focusedRouteId={focusedRouteId}

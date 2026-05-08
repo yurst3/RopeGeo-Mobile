@@ -74,7 +74,6 @@ export function SearchScreen() {
   } = useSavedFilters();
   const { showPill: showToast, updateToast } = useToast();
   const { isOnline } = useNetworkStatus();
-  const offlineBaselineKeyRef = useRef<string | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef<TextInput>(null);
@@ -345,28 +344,11 @@ export function SearchScreen() {
   const searchBarHeight = 48;
 
   useNetworkRequestToasts({
-    loading: false,
     errors: null,
     timeoutCountdown: null,
     resetKey: "search-connectivity",
     offlineSurfaceActive: isFocused,
   });
-
-  useEffect(() => {
-    if (isOnline) {
-      offlineBaselineKeyRef.current = null;
-      return;
-    }
-    if (offlineBaselineKeyRef.current === null) {
-      offlineBaselineKeyRef.current = searchParamsForRequest.toQueryString();
-    }
-  }, [isOnline, searchParamsForRequest]);
-
-  const refreshSearchOnReconnect =
-    isOnline &&
-    offlineBaselineKeyRef.current != null &&
-    offlineBaselineKeyRef.current !==
-      searchParamsForRequest.toQueryString();
 
   const openFilterSheet = useCallback(() => {
     searchOpeningSnapRef.current = {
@@ -443,7 +425,6 @@ export function SearchScreen() {
             loadMoreRef={loadMoreRef}
             onScroll={handleScroll}
             isOnline={isOnline}
-            refreshOnReconnect={refreshSearchOnReconnect}
           />
         )}
       </Pressable>

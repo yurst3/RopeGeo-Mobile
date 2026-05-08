@@ -1,6 +1,6 @@
 import {
   Method,
-  RopeGeoCursorPaginationHttpRequest,
+  RopeGeoPagedDataLoader,
   Service,
 } from "ropegeo-common/components";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
@@ -8,7 +8,6 @@ import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
 import {
   TOAST_KEY_SEARCH_ERROR,
   TOAST_KEY_SEARCH_NO_RESULTS,
-  TOAST_KEY_SEARCH_REFRESHING,
 } from "@/constants/toastArchetypes";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -51,11 +50,6 @@ type SearchHttpSectionProps = {
     };
   }) => void;
   isOnline: boolean;
-  /**
-   * Refetch after reconnect when search params changed while offline (ropegeo-common
-   * `refreshOnReconnect`).
-   */
-  refreshOnReconnect?: boolean;
 };
 
 /**
@@ -68,63 +62,60 @@ export function SearchHttpSection({
   loadMoreRef,
   onScroll,
   isOnline,
-  refreshOnReconnect = false,
 }: SearchHttpSectionProps) {
   const queryKey = useMemo(() => queryParams.toQueryString(), [queryParams]);
 
   return (
-    <RopeGeoCursorPaginationHttpRequest<Preview>
+    <RopeGeoPagedDataLoader<Preview>
       key={queryKey}
       service={Service.WEBSCRAPER}
       method={Method.GET}
-      path="/search"
+      onlinePath="/search"
       queryParams={queryParams}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
-      refreshOnReconnect={refreshOnReconnect}
     >
       {({
-        loading,
-        loadingMore,
-        refreshing,
+        loadingNextPage,
         data,
         errors,
-        loadMore,
-        hasMore,
+        loadNextPage,
+        morePages,
         timeoutCountdown,
         reload,
-      }) => (
-        <SearchHttpSectionInner
-          isOnline={isOnline}
-          loading={loading}
-          loadingMore={loadingMore}
-          refreshing={refreshing}
-          data={data}
-          errors={errors}
-          loadMore={loadMore}
-          hasMore={hasMore}
-          timeoutCountdown={timeoutCountdown}
-          queryParams={queryParams}
-          loadMoreRef={loadMoreRef}
-          searchBarTop={searchBarTop}
-          searchBarHeight={searchBarHeight}
-          onScroll={onScroll}
-          onRetryRequest={reload}
-        />
-      )}
-    </RopeGeoCursorPaginationHttpRequest>
+      }) => {
+        const loading = data === null && errors === null;
+        return (
+          <SearchHttpSectionInner
+            isOnline={isOnline}
+            loading={loading}
+            loadingNextPage={loadingNextPage}
+            data={data}
+            errors={errors}
+            loadNextPage={loadNextPage}
+            morePages={morePages}
+            timeoutCountdown={timeoutCountdown}
+            queryParams={queryParams}
+            loadMoreRef={loadMoreRef}
+            searchBarTop={searchBarTop}
+            searchBarHeight={searchBarHeight}
+            onScroll={onScroll}
+            onRetryRequest={reload}
+          />
+        );
+      }}
+    </RopeGeoPagedDataLoader>
   );
 }
 
 function SearchHttpSectionInner({
   isOnline,
   loading,
-  loadingMore,
-  refreshing,
+  loadingNextPage,
   data,
   errors,
-  loadMore,
-  hasMore,
+  loadNextPage,
+  morePages,
   timeoutCountdown,
   queryParams,
   loadMoreRef,
@@ -135,12 +126,11 @@ function SearchHttpSectionInner({
 }: {
   isOnline: boolean;
   loading: boolean;
-  loadingMore: boolean;
-  refreshing: boolean;
+  loadingNextPage: boolean;
   data: Preview[] | null;
   errors: Error | null;
-  loadMore: () => void;
-  hasMore: boolean;
+  loadNextPage: () => void;
+  morePages: boolean;
   timeoutCountdown: number | null;
   queryParams: SearchParams;
   loadMoreRef: MutableRefObject<() => void>;
@@ -202,7 +192,6 @@ function SearchHttpSectionInner({
   }, [isOnline, onScroll, updateNearBottomFromMetrics]);
 
   useNetworkRequestToasts({
-    loading,
     errors,
     timeoutCountdown,
     resetKey: queryParams.toQueryString(),
@@ -214,22 +203,8 @@ function SearchHttpSectionInner({
   });
 
   useEffect(() => {
-    if (!refreshing) {
-      dismiss(TOAST_KEY_SEARCH_REFRESHING);
-      return;
-    }
-    upsertPill({
-      key: TOAST_KEY_SEARCH_REFRESHING,
-      variant: "warning",
-      message: "Refreshing",
-      durationMs: null,
-      horizontalInset: TOAST_HORIZONTAL_INSET,
-    });
-  }, [refreshing, upsertPill, dismiss]);
-
-  useEffect(() => {
-    loadMoreRef.current = loadMore;
-  }, [loadMore, loadMoreRef]);
+    loadMoreRef.current = loadNextPage;
+  }, [loadNextPage, loadMoreRef]);
 
   useEffect(() => {
     if (isOnline) {
@@ -251,7 +226,7 @@ function SearchHttpSectionInner({
     showLoadingSkeletons || showErrorSkeletons || showResultsList;
 
   const showOfflineLoadMoreBlocked =
-    !isOnline && hasMore && items.length > 0 && listNearBottom;
+    !isOnline && morePages && items.length > 0 && listNearBottom;
   const showErroredLoadMoreBlocked =
     errors != null && items.length > 0 && listNearBottom;
 
@@ -343,7 +318,7 @@ function SearchHttpSectionInner({
                 ) : null,
               )
             : null}
-          {loadingMore ? (
+          {loadingNextPage ? (
             <PlaceholderPreview key="load-more-footer" />
           ) : null}
           {showOfflineLoadMoreBlocked || showErroredLoadMoreBlocked ? (

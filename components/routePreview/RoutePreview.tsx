@@ -3,11 +3,10 @@ import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToa
 import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toastArchetypes";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { loadDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
-import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
   Method,
-  RopeGeoHttpRequest,
+  RopeGeoDataLoader,
   Service,
 } from "ropegeo-common/components";
 import { useSavedPages } from "@/context/SavedPagesContext";
@@ -314,16 +313,12 @@ function RoutePreviewDataView({
   );
 }
 
-function RoutePreviewOnlineInner({
+function RoutePreviewInner({
   routeId,
   routeType,
   badgeScale,
   onPreviewPress,
   onCurrentPreviewChange,
-  isOnline,
-  diskPreviews,
-  diskLoading,
-  loading,
   data,
   errors,
   timeoutCountdown,
@@ -334,17 +329,12 @@ function RoutePreviewOnlineInner({
   badgeScale: number;
   onPreviewPress?: (preview: PreviewCardData) => void;
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
-  isOnline: boolean;
-  diskPreviews: OfflinePagePreview[] | null;
-  diskLoading: boolean;
-  loading: boolean;
   data: OnlinePagePreview[] | null;
   errors: Error | null;
   timeoutCountdown: number | null;
   onRetryRequest: () => void;
 }) {
   useNetworkRequestToasts({
-    loading,
     errors,
     timeoutCountdown,
     resetKey: routeId,
@@ -355,67 +345,13 @@ function RoutePreviewOnlineInner({
     onRetryRequest,
   });
 
-  const isNoNetworkSoft = errors?.message === NO_NETWORK_MESSAGE;
-  const rows = data ?? [];
-
-  if (!isOnline) {
-    if (rows.length > 0 && (errors == null || isNoNetworkSoft)) {
-      return (
-        <RoutePreviewDataView
-          data={rows}
-          loading={false}
-          routeType={routeType}
-          badgeScale={badgeScale}
-          onPreviewPress={onPreviewPress}
-          onCurrentPreviewChange={onCurrentPreviewChange}
-        />
-      );
-    }
-    if (diskLoading) {
-      return <RoutePreviewPlaceholder />;
-    }
-    const fromDisk = diskPreviews ?? [];
-    if (fromDisk.length > 0) {
-      return (
-        <RoutePreviewDataView
-          data={fromDisk}
-          loading={false}
-          routeType={routeType}
-          badgeScale={badgeScale}
-          onPreviewPress={onPreviewPress}
-          onCurrentPreviewChange={onCurrentPreviewChange}
-        />
-      );
-    }
-    return (
-      <RoutePreviewPlaceholder errorMessage="No network connection" />
-    );
+  if (data == null) {
+    return <RoutePreviewPlaceholder errorMessage={errors?.message} />;
   }
 
-  // Show placeholder for the whole in-flight fetch, including route switches: RopeGeoHttpRequest
-  // keeps previous `data` until the new response arrives, so we must not gate on empty data.
-  if (loading) {
-    return <RoutePreviewPlaceholder />;
-  }
-  if (errors != null && (data == null || data.length === 0)) {
-    const detail = errors.message.trim();
+  if (data.length === 0) {
     return (
-      <RoutePreviewPlaceholder
-        errorMessage={
-          detail !== ""
-            ? `Error loading preview\n${detail}`
-            : "Error loading preview"
-        }
-      />
-    );
-  }
-  if (data == null || data.length === 0) {
-    return (
-      <View style={styles.outer}>
-        <View style={[styles.card, styles.placeholderCard]}>
-          <Text style={styles.placeholderText}>No preview available</Text>
-        </View>
-      </View>
+      <RoutePreviewPlaceholder errorMessage="No page previews for this route" />
     );
   }
 
@@ -443,13 +379,10 @@ export function RoutePreview({
     null,
   );
   const [diskLoading, setDiskLoading] = useState(false);
+
   useEffect(() => {
-    if (isOnline) {
-      setDiskPreviews(null);
-      setDiskLoading(false);
-      return;
-    }
     let cancelled = false;
+    setDiskPreviews(null);
     setDiskLoading(true);
     void loadDownloadedRoutePreviewsForPage(routeId).then((rows) => {
       if (!cancelled) {
@@ -460,36 +393,46 @@ export function RoutePreview({
     return () => {
       cancelled = true;
     };
-  }, [isOnline, routeId]);
+  }, [routeId]);
+
+  const loaderOfflineData: OnlinePagePreview[] | null | undefined = (() => {
+    if (isOnline) {
+      return undefined;
+    }
+    if (diskLoading) {
+      return null;
+    }
+    if (diskPreviews != null && diskPreviews.length > 0) {
+      return diskPreviews as unknown as OnlinePagePreview[];
+    }
+    return undefined;
+  })();
 
   return (
-    <RopeGeoHttpRequest<OnlinePagePreview[]>
+    <RopeGeoDataLoader<OnlinePagePreview[]>
       key={routeId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
-      path="/route/:routeId/preview"
-      pathParams={{ routeId }}
+      onlinePath="/route/:routeId/preview"
+      onlinePathParams={{ routeId }}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
+      offlineData={loaderOfflineData}
     >
-      {({ loading, data, errors, timeoutCountdown, reload }) => (
-        <RoutePreviewOnlineInner
+      {({ data, errors, timeoutCountdown, reload }) => (
+        <RoutePreviewInner
           routeId={routeId}
           routeType={routeType}
           badgeScale={badgeScale}
           onPreviewPress={onPreviewPress}
           onCurrentPreviewChange={onCurrentPreviewChange}
-          isOnline={isOnline}
-          diskPreviews={diskPreviews}
-          diskLoading={diskLoading}
-          loading={loading}
           data={data}
           errors={errors}
           timeoutCountdown={timeoutCountdown}
           onRetryRequest={reload}
         />
       )}
-    </RopeGeoHttpRequest>
+    </RopeGeoDataLoader>
   );
 }
 
@@ -542,15 +485,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
-  },
-  placeholderCard: {
-    justifyContent: "center",
-    alignItems: "center",
-    padding: CARD_PADDING,
-  },
-  placeholderText: {
-    color: "#666",
-    fontSize: 14,
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,

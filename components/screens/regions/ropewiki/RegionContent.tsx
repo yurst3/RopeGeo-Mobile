@@ -3,7 +3,7 @@ import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { minimapStyles } from "@/components/minimap/shared/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
 import {
-  RopeGeoCursorPaginationHttpRequest,
+  RopeGeoPagedDataLoader,
   Service,
 } from "ropegeo-common/components";
 import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMoreBlockedFooter";
@@ -74,20 +74,17 @@ const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 function RegionPreviewsToasts({
   regionId,
   regionName,
-  loading,
   errors,
   timeoutCountdown,
   onRetryRequest,
 }: {
   regionId: string;
   regionName: string;
-  loading: boolean;
   errors: Error | null;
   timeoutCountdown: number | null;
   onRetryRequest: () => void;
 }) {
   useNetworkRequestToasts({
-    loading,
     errors,
     timeoutCountdown,
     resetKey: `${regionId}-previews`,
@@ -263,18 +260,27 @@ export function RegionContent({
   }, [checkMiniMapInView, clearScrollIdleTimeout, onVerticalScrollActiveChange]);
 
   return (
-    <RopeGeoCursorPaginationHttpRequest<Preview>
+    <RopeGeoPagedDataLoader<Preview>
       service={Service.WEBSCRAPER}
-      path="/ropewiki/region/:regionId/previews"
-      pathParams={pathParams}
+      onlinePath="/ropewiki/region/:regionId/previews"
+      onlinePathParams={pathParams}
       queryParams={queryParams}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
     >
-      {({ loading, loadingMore, data, errors, loadMore, hasMore, timeoutCountdown, reload }) => {
-        loadMoreRef.current = loadMore;
+      {({
+        loadingNextPage,
+        data,
+        errors,
+        loadNextPage,
+        morePages,
+        timeoutCountdown,
+        reload,
+      }) => {
+        loadMoreRef.current = loadNextPage;
         previewErrorsRef.current = errors;
         const items = data ?? [];
+        const loading = data === null && errors === null;
         return (
           <AnimatedScrollView
             style={styles.scrollView}
@@ -318,7 +324,6 @@ export function RegionContent({
                 <RegionPreviewsToasts
                   regionId={regionId}
                   regionName={region.name}
-                  loading={loading}
                   errors={errors}
                   timeoutCountdown={timeoutCountdown}
                   onRetryRequest={reload}
@@ -388,11 +393,11 @@ export function RegionContent({
                           />
                         ) : null
                       )}
-                      {loadingMore ? (
+                      {loadingNextPage ? (
                         <View style={styles.loadMoreIndicator}>
                           <PlaceholderPreview />
                         </View>
-                      ) : ((!isOnline && hasMore) || errors != null) &&
+                      ) : ((!isOnline && morePages) || errors != null) &&
                         items.length > 0 &&
                         previewsListNearBottom ? (
                         <OfflineLoadMoreBlockedFooter />
@@ -405,7 +410,7 @@ export function RegionContent({
           </AnimatedScrollView>
         );
       }}
-    </RopeGeoCursorPaginationHttpRequest>
+    </RopeGeoPagedDataLoader>
   );
 }
 

@@ -1,7 +1,6 @@
 import {
   formatRoutesLoadedSuccessTitle,
   formatRoutesLoadingTitle,
-  formatRoutesRefreshingTitle,
   ROUTES_LOAD_SUCCESS_LINGER_MS,
   routesLoadingProgress01,
   type RoutesLoadToastSource,
@@ -79,10 +78,7 @@ export function useRoutesProgressToast(
 
     if (loading) {
       dismiss(TOAST_KEY_ROUTES_ERROR);
-      const title =
-        state.refreshing === true
-          ? formatRoutesRefreshingTitle(received, state.total)
-          : formatRoutesLoadingTitle(received, state.total);
+      const title = formatRoutesLoadingTitle(received, state.total);
       const progress = routesLoadingProgress01(received, state.total);
       upsertProgress({
         key: TOAST_KEY_ROUTES_PROGRESS,
@@ -139,7 +135,6 @@ export function useRoutesProgressToast(
     pathname,
     surfaceActive,
     state.loading,
-    state.refreshing,
     state.errors,
     state.received,
     state.total,

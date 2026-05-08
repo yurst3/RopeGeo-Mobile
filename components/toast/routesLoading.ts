@@ -1,8 +1,7 @@
 /** Shape used by the routes progress toast helper (e.g. explore / region routes state). */
 export type RoutesLoadToastSource = {
+  /** True while GET /routes pages are still merging (`data` is still null). */
   loading: boolean;
-  /** Stale-while-revalidate: refetch in flight while prior route data is still shown. */
-  refreshing?: boolean;
   errors: Error | null;
   received: number;
   total: number | null;
@@ -24,18 +23,6 @@ export function formatRoutesLoadingTitle(
       ? Math.round((received / total) * 100)
       : 0;
   return `Loading routes ${received} (${pct}%)`;
-}
-
-/** Progress title while re-fetching routes after reconnect (filters changed while offline). */
-export function formatRoutesRefreshingTitle(
-  received: number,
-  total: number | null,
-): string {
-  const pct =
-    total != null && total > 0
-      ? Math.round((received / total) * 100)
-      : 0;
-  return `Refreshing routes ... ${received} (${pct}%)`;
 }
 
 /** Bar fill 0–1; 0 when total is unknown or non-positive. */

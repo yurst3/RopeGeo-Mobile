@@ -5,7 +5,7 @@ import {
 } from "ropegeo-common/models";
 import {
   Method,
-  RopeGeoPaginationHttpRequest,
+  RopeGeoProgressDataLoader,
   Service,
 } from "ropegeo-common/components";
 import {
@@ -27,18 +27,17 @@ import {
 } from "./routeMarkerIcons";
 
 export type RoutesState = {
+  /** True while all `/routes` pages are still merging (`data` is still null). */
   loading: boolean;
-  /** Background refetch while showing last successful markers (ropegeo-common `refreshing`). */
-  refreshing: boolean;
   data: RoutesGeojson | null;
   errors: Error | null;
   /** Items merged from completed pages so far. */
   received: number;
   /** Total from API when known; `null` until the first page returns. */
   total: number | null;
-  /** Seconds until request timeout from {@link RopeGeoPaginationHttpRequest}; `null` when idle. */
+  /** Seconds until request timeout from {@link RopeGeoProgressDataLoader}; `null` when idle. */
   timeoutCountdown: number | null;
-  /** Re-fetch all route pages (ropegeo-common pagination `reload`). */
+  /** Re-fetch all route pages ({@link RopeGeoProgressDataLoader} `reload`). */
   reload?: () => void;
 };
 
@@ -61,16 +60,10 @@ type RouteMarkersLayerProps = {
   focusedRouteId?: string | null;
   /** Marker uses selected icon for this id even without tap focus (e.g. page centered route). */
   accentRouteId?: string | null;
-  /**
-   * When `true`, refetch after reconnect even if cached markers exist (e.g. filters changed while offline).
-   * @default false
-   */
-  refreshOnReconnect?: boolean;
 };
 
 type RouteMarkersLayerContentProps = {
   loading: boolean;
-  refreshing: boolean;
   /** Raw features from pagination; wrapped in {@link RoutesGeojson} with a stable memo. */
   rawRouteFeatures: RouteGeoJsonFeature[] | null;
   errors: Error | null;
@@ -88,7 +81,6 @@ type RouteMarkersLayerContentProps = {
 
 function RouteMarkersLayerContent({
   loading,
-  refreshing,
   rawRouteFeatures,
   errors,
   received,
@@ -125,7 +117,6 @@ function RouteMarkersLayerContent({
   useEffect(() => {
     onStateChange?.({
       loading,
-      refreshing,
       data,
       errors,
       received,
@@ -135,7 +126,6 @@ function RouteMarkersLayerContent({
     });
   }, [
     loading,
-    refreshing,
     data,
     errors,
     received,
@@ -271,7 +261,7 @@ function queryRecordToRoutesParams(
 
 /**
  * Route markers with client-side clustering. Fetches all pages of GET /routes via
- * {@link RopeGeoPaginationHttpRequest} and builds a single GeoJSON collection.
+ * {@link RopeGeoProgressDataLoader} and builds a single GeoJSON collection.
  */
 export function RouteMarkersLayer({
   onStateChange,
@@ -282,7 +272,6 @@ export function RouteMarkersLayer({
   routesParams,
   focusedRouteId = null,
   accentRouteId = null,
-  refreshOnReconnect = false,
 }: RouteMarkersLayerProps) {
   const { isOnline } = useNetworkStatus();
   const paginationParams = useMemo((): RoutesParams => {
@@ -291,42 +280,34 @@ export function RouteMarkersLayer({
   }, [routesParams, routesQueryParams]);
 
   return (
-    <RopeGeoPaginationHttpRequest<RouteGeoJsonFeature>
+    <RopeGeoProgressDataLoader<RouteGeoJsonFeature>
       service={Service.WEBSCRAPER}
       method={Method.GET}
-      path="/routes"
+      onlinePath="/routes"
       queryParams={paginationParams}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
-      refreshOnReconnect={refreshOnReconnect}
     >
-      {({
-        loading,
-        refreshing,
-        data,
-        errors,
-        received,
-        total,
-        timeoutCountdown,
-        reload,
-      }) => (
-        <RouteMarkersLayerContent
-          loading={loading}
-          refreshing={refreshing}
-          rawRouteFeatures={data}
-          errors={errors}
-          received={received}
-          total={total}
-          timeoutCountdown={timeoutCountdown}
-          reload={reload}
-          onStateChange={onStateChange}
-          cameraRef={cameraRef}
-          onRoutePress={onRoutePress}
-          onRouteClusterPress={onRouteClusterPress}
-          focusedRouteId={focusedRouteId}
-          accentRouteId={accentRouteId}
-        />
-      )}
-    </RopeGeoPaginationHttpRequest>
+      {({ data, errors, received, total, timeoutCountdown, reload }) => {
+        const loading = data === null && errors === null;
+        return (
+          <RouteMarkersLayerContent
+            loading={loading}
+            rawRouteFeatures={data}
+            errors={errors}
+            received={received}
+            total={total}
+            timeoutCountdown={timeoutCountdown}
+            reload={reload}
+            onStateChange={onStateChange}
+            cameraRef={cameraRef}
+            onRoutePress={onRoutePress}
+            onRouteClusterPress={onRouteClusterPress}
+            focusedRouteId={focusedRouteId}
+            accentRouteId={accentRouteId}
+          />
+        );
+      }}
+    </RopeGeoProgressDataLoader>
   );
 }

@@ -31,9 +31,9 @@ export function boundsPaddingForFullScreenMap(insets: {
 }
 
 /**
- * Bottom padding for a docked RoutePreview on an expanded minimap (full window). Matches Explore
- * visually: tab screens lay out above the tab bar, so they use `insets.bottom + gap` only; overlays
- * that cover the whole window must add the tab bar height.
+ * Bottom padding for overlays that cover the full window on tab screens (e.g. docked RoutePreview,
+ * floating map legend). Tab screens lay out above the tab bar with `insets.bottom` only; overlays
+ * must add the tab bar height.
  */
 export function routePreviewDockedPaddingBottom(
   safeBottomInset: number,
