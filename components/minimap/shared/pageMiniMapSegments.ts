@@ -154,6 +154,34 @@ export function lineFeatureSelectionKey(f: GeoJSON.Feature<GeoJSON.LineString>):
   return segmentKeyFromLineFeature(f);
 }
 
+/**
+ * Legend list rows use {@link LegendItem.id}. Map features may use `legendId`, a synthetic geometry
+ * key, or only `name`. Returns the line legend row id when we can resolve it; otherwise the raw
+ * selection key from {@link lineFeatureSelectionKey}.
+ */
+export function resolveLineLegendSelectionId(
+  legend: Record<string, LegendItem> | undefined,
+  feature: GeoJSON.Feature<GeoJSON.LineString>,
+): string {
+  const rawKey = lineFeatureSelectionKey(feature);
+  if (legend == null) return rawKey;
+  const byKey = legendItemForKey(legend, rawKey);
+  if (byKey?.featureType === LegendFeatureType.Line) {
+    return byKey.id;
+  }
+  const name = String((feature.properties as Record<string, unknown> | null)?.name ?? "").trim();
+  if (name.length > 0) {
+    const byName = Object.values(legend).find(
+      (x) =>
+        x.featureType === LegendFeatureType.Line && x.name.trim() === name,
+    );
+    if (byName != null) {
+      return byName.id;
+    }
+  }
+  return rawKey;
+}
+
 function expandHex3(s: string): string {
   if (s.length === 4 && s[0] === "#") {
     return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`.toLowerCase();

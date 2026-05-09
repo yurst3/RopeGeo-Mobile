@@ -2,7 +2,8 @@ import { parseStrokeColor, parseStrokeWidth } from "@/components/minimap/shared/
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
 import { LegendFeatureType, LineLegendItem, PolygonLegendItem } from "ropegeo-common/models";
-import { useEffect, useMemo } from "react";
+import type { ComponentRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -13,6 +14,8 @@ import Animated, {
 
 const EXPAND_MS = 280;
 const COLLAPSE_MS = 260;
+/** After expand animation, row layouts inside the ScrollView are reliable. */
+const SCROLL_AFTER_EXPAND_MS = EXPAND_MS + 48;
 const EASE = Easing.out(Easing.cubic);
 
 const POINT_MARKER_IMAGE = require("@/assets/images/icons/markers/marker.png");
@@ -22,6 +25,11 @@ export type PageMiniMapLegendProps = {
   legend: Record<string, LegendItem>;
   expanded: boolean;
   selectedKey: string | null;
+  /**
+   * Parent increments this only when the user selects a line on the map (not when tapping the legend).
+   * Used to trigger a one-time scroll so the selected row is visible.
+   */
+  scrollIntoViewEpoch?: number;
   maxHeight: number;
   maxWidth: number;
   /** Distance from the physical bottom of the overlay to the legend (tab bar + safe area + gap). */
@@ -82,6 +90,7 @@ export function PageMiniMapLegend({
   legend,
   expanded,
   selectedKey,
+  scrollIntoViewEpoch = 0,
   maxHeight,
   maxWidth,
   bottomOffset,
@@ -91,6 +100,11 @@ export function PageMiniMapLegend({
 }: PageMiniMapLegendProps) {
   const bodyHeight = useSharedValue(0);
   const bodyOpacity = useSharedValue(0);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const rowYRef = useRef<Record<string, number>>({});
+  const prevExpandedRef = useRef(false);
+  const selectedKeyRef = useRef<string | null>(null);
+  selectedKeyRef.current = selectedKey;
 
   const sortedLegendItems = useMemo(
     () => Object.values(legend).sort((a, b) => a.name.localeCompare(b.name)),
@@ -120,6 +134,30 @@ export function PageMiniMapLegend({
     overflow: "hidden",
   }));
 
+  useEffect(() => {
+    if (scrollIntoViewEpoch === 0 || !expanded) {
+      prevExpandedRef.current = expanded;
+      return;
+    }
+    const id = selectedKeyRef.current;
+    if (id == null || id === "") {
+      prevExpandedRef.current = expanded;
+      return;
+    }
+    const legendJustOpened = expanded && !prevExpandedRef.current;
+    prevExpandedRef.current = expanded;
+    const delay = legendJustOpened ? SCROLL_AFTER_EXPAND_MS : 80;
+    const t = setTimeout(() => {
+      const y = rowYRef.current[id];
+      if (y == null || scrollRef.current == null) return;
+      scrollRef.current.scrollTo({
+        y: Math.max(0, y - 10),
+        animated: true,
+      });
+    }, delay);
+    return () => clearTimeout(t);
+  }, [scrollIntoViewEpoch, expanded, rowCount]);
+
   if (rowCount === 0) return null;
 
   return (
@@ -139,6 +177,7 @@ export function PageMiniMapLegend({
         </Pressable>
         <Animated.View style={animatedBodyStyle} pointerEvents={expanded ? "auto" : "none"}>
           <ScrollView
+            ref={scrollRef}
             style={{ maxHeight }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator
@@ -148,6 +187,9 @@ export function PageMiniMapLegend({
               return (
                 <Pressable
                   key={item.id}
+                  onLayout={(e) => {
+                    rowYRef.current[item.id] = e.nativeEvent.layout.y;
+                  }}
                   onPress={() => onSelectLegendId(item.id)}
                   style={({ pressed }) => [
                     styles.row,

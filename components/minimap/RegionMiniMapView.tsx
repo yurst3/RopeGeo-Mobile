@@ -1,5 +1,8 @@
-import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
-import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
+import { ButtonStack } from "@/components/buttons/ButtonStack";
+import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
@@ -11,8 +14,6 @@ import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
   HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
-  MAP_BUTTON_GAP,
-  MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
@@ -35,6 +36,8 @@ import {
   RoutesParams,
   type OnlineRegionMiniMap,
 } from "ropegeo-common/models";
+
+const USER_LOCATION_ZOOM = 14;
 
 type RegionFitBounds = {
   north: number;
@@ -108,6 +111,8 @@ export function RegionMiniMapView({
     () => new RouteFilter([source]),
   );
   const [regionFilterOpen, setRegionFilterOpen] = useState(false);
+  const [mapLiveCenter, setMapLiveCenter] = useState<[number, number] | undefined>(undefined);
+  const [mapLiveZoom, setMapLiveZoom] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     setRegionRouteFilter(new RouteFilter([source]));
@@ -142,6 +147,7 @@ export function RegionMiniMapView({
     onCameraChanged,
     compassVisible,
     positionButtonVisible,
+    cameraHeadingDeg,
   } = useMiniMapCamera({ expanded: shell.expanded });
 
   const collapseCleanup = useCallback(() => {
@@ -180,7 +186,7 @@ export function RegionMiniMapView({
     regionFitBounds,
   ]);
 
-  const resetPosition = () => {
+  const resetPosition = useCallback(() => {
     setFocusedRouteId(null);
     setCurrentPreview(null);
     if (regionFitBounds) {
@@ -188,7 +194,44 @@ export function RegionMiniMapView({
       fitToBounds(regionFitBounds, shell.expandedPadding);
       requestAnimationFrame(() => fitToBounds(regionFitBounds, shell.expandedPadding));
     }
-  };
+  }, [
+    captureHome,
+    fitToBounds,
+    regionFitBounds,
+    shell.expandedPadding,
+  ]);
+
+  const userLocationCoord = useForegroundUserLocation(
+    shell.expanded && shell.mapBodyVisible,
+  );
+
+  const resetCameraToUserPosition = useCallback(() => {
+    if (userLocationCoord == null) return;
+    cameraRef.current?.setCamera({
+      centerCoordinate: userLocationCoord,
+      zoomLevel: USER_LOCATION_ZOOM,
+      animationDuration: 300,
+    });
+  }, [userLocationCoord]);
+
+  const userPositionButtonVisible =
+    userLocationCoord != null &&
+    mapLiveCenter != null &&
+    mapLiveZoom != null &&
+    (Math.abs(mapLiveCenter[0] - userLocationCoord[0]) > 1e-4 ||
+      Math.abs(mapLiveCenter[1] - userLocationCoord[1]) > 1e-4 ||
+      Math.abs(mapLiveZoom - USER_LOCATION_ZOOM) > 0.05);
+
+  const onCameraChangedWrapped = useCallback(
+    (state: { properties: { pitch: number; heading: number; center: unknown; zoom: number } }) => {
+      onCameraChanged(state);
+      if (shell.expanded) {
+        setMapLiveCenter(state.properties.center as [number, number]);
+        setMapLiveZoom(state.properties.zoom);
+      }
+    },
+    [onCameraChanged, shell.expanded],
+  );
 
   const routesRequestError = routesState.errors;
   const hasRoutesData =
@@ -255,7 +298,7 @@ export function RegionMiniMapView({
             setFocusedRouteId(null);
             setCurrentPreview(null);
           }}
-          onCameraChanged={onCameraChanged}
+          onCameraChanged={onCameraChangedWrapped}
         >
           <LocationPuck />
           <Camera ref={cameraRef} />
@@ -295,51 +338,60 @@ export function RegionMiniMapView({
               </View>
             }
           />
-          {focusedRouteId != null && (
-            <View
-              style={[
-                miniMapHostStyles.previewContainer,
-                {
-                  paddingBottom: routePreviewDockedPaddingBottom(
-                    insets.bottom,
-                    tabBarHeight,
-                  ),
-                },
-              ]}
-            >
-              <RoutePreview
-                routeId={focusedRouteId}
-                routeType={
-                  routesState.data?.features?.find((f) => f.properties?.id === focusedRouteId)
-                    ?.properties?.type ?? null
-                }
-                onCurrentPreviewChange={setCurrentPreview}
-                onPreviewPress={(preview) => {
-                  if (preview.source === "ropewiki") {
-                    router.push({
-                      pathname: "/(tabs)/explore/[id]/page",
-                      params: {
-                        id: preview.id,
-                        source: PageDataSource.Ropewiki,
-                      },
-                    } as unknown as Parameters<typeof router.push>[0]);
-                  } else {
-                    router.push("/explore/technical-info");
-                  }
-                }}
+          <RoutePreview
+            routeId={focusedRouteId}
+            containerStyle={[
+              miniMapHostStyles.previewContainer,
+              {
+                paddingBottom: routePreviewDockedPaddingBottom(
+                  insets.bottom,
+                  tabBarHeight,
+                ),
+              },
+            ]}
+            routeType={
+              routesState.data?.features?.find((f) => f.properties?.id === focusedRouteId)
+                ?.properties?.type ?? null
+            }
+            onCurrentPreviewChange={setCurrentPreview}
+            onPreviewPress={(preview) => {
+              if (preview.source === "ropewiki") {
+                router.push({
+                  pathname: "/(tabs)/explore/[id]/page",
+                  params: {
+                    id: preview.id,
+                    source: PageDataSource.Ropewiki,
+                  },
+                } as unknown as Parameters<typeof router.push>[0]);
+              } else {
+                router.push("/explore/technical-info");
+              }
+            }}
+          />
+          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
+            <ButtonStack.Slot id="bounds" visible={positionButtonVisible}>
+              <ResetCameraToBoundsButton
+                stacked
+                onPress={resetPosition}
+                visible={positionButtonVisible}
               />
-            </View>
-          )}
-          <ResetMapPositionButton
-            onPress={resetPosition}
-            visible={positionButtonVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET}
-          />
-          <ResetMapOrientationButton
-            onPress={resetPitchAndHeading}
-            visible={compassVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
-          />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="orientation" visible={compassVisible}>
+              <ResetCameraOrientationButton
+                stacked
+                iconRotation={-cameraHeadingDeg}
+                onPress={resetPitchAndHeading}
+                visible={compassVisible}
+              />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="user-position" visible={userPositionButtonVisible}>
+              <ResetCameraToPositionButton
+                stacked
+                onPress={resetCameraToUserPosition}
+                visible={userPositionButtonVisible}
+              />
+            </ButtonStack.Slot>
+          </ButtonStack>
         </View>
       ) : null}
       <FilterBottomSheet

@@ -1,12 +1,10 @@
-import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
-import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
+import { ButtonStack } from "@/components/buttons/ButtonStack";
+import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
 import {
   HEADER_BUTTON_GAP,
-  HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
-  MAP_BUTTON_GAP,
   MAP_BUTTON_SIZE,
-  MAP_BUTTON_TOP_OFFSET,
 } from "@/components/minimap/shared/fullScreenMapLayout";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/FilterButton";
@@ -41,6 +39,8 @@ const DEFAULT_CURRENT_POSITION: [number, number] = [-109.5508, 38.5733];
 const DEFAULT_ZOOM = 12.1;
 
 const SEARCH_BAR_SIDE_WIDTH = HEADER_SIDE_SLOT_WIDTH;
+/** Keeps the search field clear of the top-right `ButtonStack` (widest stacked control + gap). */
+const SEARCH_BAR_RIGHT_CLEARANCE = MAP_BUTTON_SIZE + HEADER_BUTTON_GAP;
 
 function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
   // `reload` is intentionally ignored — stable ref from ropegeo-common; explore retry uses a ref.
@@ -233,15 +233,15 @@ export function ExploreScreen() {
     });
   }, [followCurrentPosition, currentPosition]);
 
-  const resetPitchAndHeading = () => {
+  const resetPitchAndHeading = useCallback(() => {
     cameraRef.current?.setCamera({
       pitch: 0,
       heading: 0,
       animationDuration: 300,
     });
-  };
+  }, []);
 
-  const resetPosition = () => {
+  const resetPosition = useCallback(() => {
     setFocusedRouteId(null);
     setFollowCurrentPosition(true);
     cameraRef.current?.setCamera({
@@ -249,7 +249,7 @@ export function ExploreScreen() {
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: 300,
     });
-  };
+  }, [currentPosition]);
 
   return (
     <>
@@ -268,25 +268,6 @@ export function ExploreScreen() {
             <FontAwesome5 name="search" size={16} color="#6b7280" />
             <Text style={styles.searchBarPlaceholder}>Search</Text>
           </Pressable>
-          <View
-            style={[
-              styles.headerButtonWrap,
-              { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
-            ]}
-          >
-            <FilterButton
-              persisted={explorePersisted}
-              onPress={() => {
-                setFrozenExploreRoutesParams(exploreRoutesParams);
-                setExploreRouteDraft(
-                  RouteFilter.fromJsonString(
-                    getEffectiveRouteFilterForExplore().toString(),
-                  ),
-                );
-                setRouteFilterSheetOpen(true);
-              }}
-            />
-          </View>
         </View>
         <MapView
               styleURL="mapbox://styles/mapbox/outdoors-v12"
@@ -347,42 +328,59 @@ export function ExploreScreen() {
                 visibleTrailIds={currentPreview?.mapData != null ? [currentPreview.mapData] : []}
               />
         </MapView>
-        {focusedRouteId != null && (
-          <View style={[styles.previewContainer, { paddingBottom: insets.bottom + 8 }]}>
-            <RoutePreview
-              routeId={focusedRouteId}
-              routeType={
-                routesState.data?.features?.find(
-                  (f) => f.properties?.id === focusedRouteId
-                )?.properties?.type ?? null
-              }
-              onCurrentPreviewChange={setCurrentPreview}
-              onPreviewPress={(preview) => {
-                if (preview.source === "ropewiki") {
-                  router.push({
-                    pathname: "/(tabs)/explore/[id]/page",
-                    params: {
-                      id: preview.id,
-                      source: PageDataSource.Ropewiki,
-                    },
-                  } as unknown as Parameters<typeof router.push>[0]);
-                } else {
-                  router.push("/explore/technical-info");
-                }
+        <RoutePreview
+          routeId={focusedRouteId}
+          containerStyle={[styles.previewContainer, { paddingBottom: insets.bottom + 8 }]}
+          routeType={
+            routesState.data?.features?.find((f) => f.properties?.id === focusedRouteId)
+              ?.properties?.type ?? null
+          }
+          onCurrentPreviewChange={setCurrentPreview}
+          onPreviewPress={(preview) => {
+            if (preview.source === "ropewiki") {
+              router.push({
+                pathname: "/(tabs)/explore/[id]/page",
+                params: {
+                  id: preview.id,
+                  source: PageDataSource.Ropewiki,
+                },
+              } as unknown as Parameters<typeof router.push>[0]);
+            } else {
+              router.push("/explore/technical-info");
+            }
+          }}
+        />
+        <ButtonStack top={insets.top + 8}>
+          <ButtonStack.Slot id="filter" visible animateLayout={false}>
+            <FilterButton
+              persisted={explorePersisted}
+              onPress={() => {
+                setFrozenExploreRoutesParams(exploreRoutesParams);
+                setExploreRouteDraft(
+                  RouteFilter.fromJsonString(
+                    getEffectiveRouteFilterForExplore().toString(),
+                  ),
+                );
+                setRouteFilterSheetOpen(true);
               }}
             />
-          </View>
-        )}
-        <ResetMapPositionButton
-          onPress={resetPosition}
-          visible={isPositionButtonVisible}
-          top={insets.top + MAP_BUTTON_TOP_OFFSET}
-        />
-        <ResetMapOrientationButton
-          onPress={resetPitchAndHeading}
-          visible={isCompassVisible}
-          top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
-        />
+          </ButtonStack.Slot>
+          <ButtonStack.Slot id="position" visible={isPositionButtonVisible}>
+            <ResetCameraToPositionButton
+              stacked
+              onPress={resetPosition}
+              visible={isPositionButtonVisible}
+            />
+          </ButtonStack.Slot>
+          <ButtonStack.Slot id="orientation" visible={isCompassVisible}>
+            <ResetCameraOrientationButton
+              stacked
+              iconRotation={-heading}
+              onPress={resetPitchAndHeading}
+              visible={isCompassVisible}
+            />
+          </ButtonStack.Slot>
+        </ButtonStack>
         <FilterBottomSheet
           visible={routeFilterSheetOpen}
           onClose={() => {
@@ -426,14 +424,10 @@ const styles = StyleSheet.create({
     zIndex: 3,
     flexDirection: "row",
     alignItems: "center",
+    paddingRight: SEARCH_BAR_RIGHT_CLEARANCE,
   },
   searchBarSpacer: {
     width: SEARCH_BAR_SIDE_WIDTH,
-  },
-  headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
-    justifyContent: "center",
-    alignItems: "center",
   },
   searchBar: {
     flex: 1,

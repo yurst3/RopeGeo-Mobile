@@ -1,7 +1,7 @@
 import { miniMapHostStyles } from "@/components/minimap/shared/miniMapHostStyles";
+import { ExpandMiniMapButton } from "@/components/buttons/ExpandMiniMapButton";
 import {
   MiniMapDirectionsButtons,
-  MiniMapExpandButton,
   minimapStyles,
 } from "@/components/minimap/shared/minimapShared";
 import { type Rect, useMiniMapAnimation } from "@/components/minimap/shared/useMiniMapAnimation";
@@ -185,7 +185,7 @@ export function MiniMapAnimatedCard({
           {!expanded && mapDirections != null ? (
             <MiniMapDirectionsButtons lat={mapDirections.lat} lon={mapDirections.lon} />
           ) : null}
-          {!expanded && <MiniMapExpandButton onPress={onExpand} />}
+          {!expanded && <ExpandMiniMapButton onPress={onExpand} />}
         </Animated.View>
       </View>
     </MiniMapShellContext.Provider>

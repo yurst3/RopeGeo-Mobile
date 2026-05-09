@@ -1,5 +1,5 @@
 import { TRAIL_VECTOR_LINE_STYLE } from "@/components/minimap/shared/trailVectorLineStyle";
-import { LineLayer, VectorSource } from "@rnmapbox/maps";
+import { LineLayer, VectorSource, type LineLayerStyle } from "@rnmapbox/maps";
 
 /**
  * Vector tile source for trails. Tiles at /trails/{z}/{x}/{y}.pbf.
@@ -13,6 +13,22 @@ const TRAILS_TILE_URL_TEMPLATES = [
  * Name of the vector tile layer in the trails tiles (e.g. tippecanoe -l trails).
  */
 const TRAILS_SOURCE_LAYER_ID = "trails";
+const MATCH_NOTHING_FILTER = ["==", ["get", "id"], ""] as const;
+
+// Unfocused route appearance (non-selected trails).
+export const UNFOCUSED_ROUTE_LINE_COLOR = "#6b7280";
+export const UNFOCUSED_ROUTE_LINE_WIDTH = 2;
+export const UNFOCUSED_ROUTE_LINE_OPACITY = 0.65;
+const UNFOCUSED_ROUTE_LINE_DASHARRAY: number[] = [2, 2];
+
+const UNFOCUSED_TRAIL_LINE_STYLE: LineLayerStyle = {
+  lineColor: UNFOCUSED_ROUTE_LINE_COLOR,
+  lineWidth: UNFOCUSED_ROUTE_LINE_WIDTH,
+  lineOpacity: UNFOCUSED_ROUTE_LINE_OPACITY,
+  lineDasharray: UNFOCUSED_ROUTE_LINE_DASHARRAY,
+  lineCap: "round",
+  lineJoin: "round",
+};
 
 export type TrailsLayerProps = {
   /** When null, no trails are shown. When set, only trails whose id is in visibleTrailIds are shown. */
@@ -36,18 +52,30 @@ export function TrailsLayer({
     ["geometry-type"],
     "LineString",
   ];
-  const visibilityFilter =
-    !isFocused || !hasIdsToShow
-      ? (["==", ["get", "id"], ""] as const) // Match nothing: no feature has id === ""
-      : (["in", ["get", "id"], ["literal", visibleTrailIds]] as const);
-  const filter = ["all", lineOnly, visibilityFilter] as const;
+  const focusedTrailFilter =
+    isFocused && hasIdsToShow
+      ? (["in", ["get", "id"], ["literal", visibleTrailIds]] as const)
+      : MATCH_NOTHING_FILTER;
+  const focusedFilter = ["all", lineOnly, focusedTrailFilter] as const;
+
+  const unfocusedTrailFilter =
+    isFocused && hasIdsToShow
+      ? (["!", ["in", ["get", "id"], ["literal", visibleTrailIds]]] as const)
+      : (["!=", ["get", "id"], ""] as const);
+  const unfocusedFilter = ["all", lineOnly, unfocusedTrailFilter] as const;
 
   return (
     <VectorSource id="trails-source" tileUrlTemplates={TRAILS_TILE_URL_TEMPLATES}>
       <LineLayer
-        id="trails-line-layer"
+        id="trails-line-layer-unfocused"
         sourceLayerID={TRAILS_SOURCE_LAYER_ID}
-        filter={filter}
+        filter={unfocusedFilter}
+        style={UNFOCUSED_TRAIL_LINE_STYLE}
+      />
+      <LineLayer
+        id="trails-line-layer-focused"
+        sourceLayerID={TRAILS_SOURCE_LAYER_ID}
+        filter={focusedFilter}
         style={TRAIL_VECTOR_LINE_STYLE}
       />
     </VectorSource>

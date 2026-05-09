@@ -176,7 +176,6 @@ function RouteMarkersLayerContent({
       onRoutePress?.(routeId, coords);
       cameraRef.current.setCamera({
         centerCoordinate: coords,
-        zoomLevel: ROUTE_MARKER_CAMERA_ZOOM,
         animationDuration: 300,
       });
     }

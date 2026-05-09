@@ -23,6 +23,7 @@ export function useMiniMapCamera({
   const cameraZoomRef = useRef<number | undefined>(undefined);
   const [compassVisible, setCompassVisible] = useState(false);
   const [positionButtonVisible, setPositionButtonVisible] = useState(false);
+  const [cameraHeadingDeg, setCameraHeadingDeg] = useState(0);
 
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
@@ -56,10 +57,12 @@ export function useMiniMapCamera({
 
   const onCameraChanged = useCallback(
     (state: { properties: { pitch: number; heading: number; center: unknown; zoom: number } }) => {
-      if (!expandedRef.current) return;
       const { pitch: p, heading: h, center, zoom } = state.properties;
       pitchRef.current = p;
       headingRef.current = h;
+      setCameraHeadingDeg(h);
+
+      if (!expandedRef.current) return;
       const c = center as [number, number];
       cameraCenterRef.current = c;
       cameraZoomRef.current = zoom;
@@ -92,5 +95,6 @@ export function useMiniMapCamera({
     onCameraChanged,
     compassVisible,
     positionButtonVisible,
+    cameraHeadingDeg,
   };
 }

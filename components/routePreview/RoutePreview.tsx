@@ -10,17 +10,30 @@ import {
   Service,
 } from "ropegeo-common/components";
 import { useSavedPages } from "@/context/SavedPagesContext";
-import { useRef, useState, useEffect } from "react";
+import type { ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
+  type StyleProp,
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
+  useWindowDimensions,
 } from "react-native";
+import Animated, {
+  type AnimatedStyle,
+  cancelAnimation,
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -44,6 +57,17 @@ const PREVIEW_CARD_MIN_HEIGHT = 140;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_MARGIN_H = 16;
 const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
+
+const SLIDE_ENTER_MS = 320;
+const SLIDE_EXIT_MS = 260;
+const slideEnterEasing = Easing.out(Easing.cubic);
+const slideExitEasing = Easing.in(Easing.cubic);
+
+/**
+ * Placeholder path param while no route is focused. {@link RopeGeoDataLoader} stays mounted with
+ * `offlineData={null}` so the network effect never runs; this value is never requested.
+ */
+const ROUTE_PREVIEW_LOADER_IDLE_ROUTE_ID = "__ropegeo_route_preview_inactive__";
 
 type PreviewCardData = OnlinePagePreview | OfflinePagePreview;
 
@@ -192,10 +216,15 @@ function CurrentPreviewNotifier({
   return null;
 }
 
-type RoutePreviewProps = {
-  routeId: string;
+type VisibleRouteSnapshot = { id: string; routeType: RouteType | null };
+
+export type RoutePreviewProps = {
+  /** When null, the preview slides out and unmounts after the exit animation. */
+  routeId: string | null;
   /** Route type from map/list (e.g. Cave, POI) so the preview can show the correct badge. */
   routeType?: RouteType | null;
+  /** Layout for bottom-docked previews (e.g. absolute + safe-area padding). */
+  containerStyle?: StyleProp<ViewStyle>;
   /** Called when the currently viewed preview page changes (initial load or swipe). Use to sync mapData for TrailsLayer. */
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
   /** Called when the user presses the preview card. Receives the tapped preview. */
@@ -314,6 +343,7 @@ function RoutePreviewDataView({
 }
 
 function RoutePreviewInner({
+  pipelineActive,
   routeId,
   routeType,
   badgeScale,
@@ -323,7 +353,11 @@ function RoutePreviewInner({
   errors,
   timeoutCountdown,
   onRetryRequest,
+  slideWrapperStyle,
+  slideMotionStyle,
 }: {
+  /** When false, the loader is idle; render no preview UI (collapsed shell). */
+  pipelineActive: boolean;
   routeId: string;
   routeType?: RouteType | null;
   badgeScale: number;
@@ -333,6 +367,8 @@ function RoutePreviewInner({
   errors: Error | null;
   timeoutCountdown: number | null;
   onRetryRequest: () => void;
+  slideWrapperStyle?: StyleProp<ViewStyle>;
+  slideMotionStyle: AnimatedStyle<ViewStyle>;
 }) {
   useNetworkRequestToasts({
     errors,
@@ -345,46 +381,138 @@ function RoutePreviewInner({
     onRetryRequest,
   });
 
-  if (data == null) {
-    return <RoutePreviewPlaceholder errorMessage={errors?.message} />;
+  if (!pipelineActive) {
+    return (
+      <Animated.View
+        style={[
+          slideWrapperStyle,
+          slideMotionStyle,
+          routePreviewShellStyles.idleShell,
+        ]}
+        pointerEvents="none"
+        collapsable
+      />
+    );
   }
 
-  if (data.length === 0) {
-    return (
+  let body: ReactElement;
+  if (data == null) {
+    body = <RoutePreviewPlaceholder errorMessage={errors?.message} />;
+  } else if (data.length === 0) {
+    body = (
       <RoutePreviewPlaceholder errorMessage="No page previews for this route" />
+    );
+  } else {
+    body = (
+      <RoutePreviewDataView
+        data={data}
+        loading={false}
+        routeType={routeType}
+        badgeScale={badgeScale}
+        onPreviewPress={onPreviewPress}
+        onCurrentPreviewChange={onCurrentPreviewChange}
+      />
     );
   }
 
   return (
-    <RoutePreviewDataView
-      data={data}
-      loading={false}
-      routeType={routeType}
-      badgeScale={badgeScale}
-      onPreviewPress={onPreviewPress}
-      onCurrentPreviewChange={onCurrentPreviewChange}
-    />
+    <Animated.View
+      style={[slideWrapperStyle, slideMotionStyle]}
+      pointerEvents="box-none"
+    >
+      {body}
+    </Animated.View>
   );
 }
 
 export function RoutePreview({
   routeId,
   routeType = null,
+  containerStyle,
   onCurrentPreviewChange,
   onPreviewPress,
   badgeScale = 0.65,
 }: RoutePreviewProps) {
   const { isOnline } = useNetworkStatus();
+  const { height: windowHeight } = useWindowDimensions();
+  const slideDistance = useMemo(
+    () => Math.min(Math.round(windowHeight * 0.42), 420),
+    [windowHeight],
+  );
+
+  const [visible, setVisible] = useState<VisibleRouteSnapshot | null>(null);
+  const translateY = useSharedValue(slideDistance);
+  const prevFocusedRef = useRef<string | null>(null);
+  const exitStartedRef = useRef(false);
+  const visibleRef = useRef<VisibleRouteSnapshot | null>(null);
+  visibleRef.current = visible;
+  const routeIdRef = useRef(routeId);
+  routeIdRef.current = routeId;
+
+  /** Runs on JS after slide-out timing; only hides if still unfocused (avoids racing a new focus). */
+  const onSlideOutComplete = useCallback(() => {
+    exitStartedRef.current = false;
+    if (routeIdRef.current != null) {
+      return;
+    }
+    setVisible(null);
+  }, []);
+
+  useEffect(() => {
+    if (routeId != null) {
+      cancelAnimation(translateY);
+      exitStartedRef.current = false;
+      const previous = prevFocusedRef.current;
+      prevFocusedRef.current = routeId;
+      setVisible({ id: routeId, routeType });
+
+      if (previous === null) {
+        translateY.value = slideDistance;
+        translateY.value = withTiming(0, {
+          duration: SLIDE_ENTER_MS,
+          easing: slideEnterEasing,
+        });
+      } else {
+        translateY.value = 0;
+      }
+      return;
+    }
+
+    prevFocusedRef.current = null;
+    if (visibleRef.current == null) {
+      exitStartedRef.current = false;
+      return;
+    }
+    if (exitStartedRef.current) return;
+    exitStartedRef.current = true;
+    translateY.value = withTiming(
+      slideDistance,
+      { duration: SLIDE_EXIT_MS, easing: slideExitEasing },
+      () => {
+        runOnJS(onSlideOutComplete)();
+      },
+    );
+  }, [routeId, routeType, slideDistance, onSlideOutComplete]);
+
+  const slideMotionStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const previewId = visible?.id ?? null;
+
   const [diskPreviews, setDiskPreviews] = useState<OfflinePagePreview[] | null>(
     null,
   );
   const [diskLoading, setDiskLoading] = useState(false);
 
   useEffect(() => {
+    if (previewId == null) {
+      return;
+    }
     let cancelled = false;
     setDiskPreviews(null);
     setDiskLoading(true);
-    void loadDownloadedRoutePreviewsForPage(routeId).then((rows) => {
+    void loadDownloadedRoutePreviewsForPage(previewId).then((rows) => {
       if (!cancelled) {
         setDiskPreviews(rows);
         setDiskLoading(false);
@@ -393,9 +521,12 @@ export function RoutePreview({
     return () => {
       cancelled = true;
     };
-  }, [routeId]);
+  }, [previewId]);
 
   const loaderOfflineData: OnlinePagePreview[] | null | undefined = (() => {
+    if (previewId == null) {
+      return undefined;
+    }
     if (isOnline) {
       return undefined;
     }
@@ -408,21 +539,26 @@ export function RoutePreview({
     return undefined;
   })();
 
+  const pipelineActive = visible != null;
+  const loaderRouteId = visible?.id ?? ROUTE_PREVIEW_LOADER_IDLE_ROUTE_ID;
+  const loaderOfflinePayload: OnlinePagePreview[] | null | undefined =
+    visible == null ? null : loaderOfflineData;
+
   return (
     <RopeGeoDataLoader<OnlinePagePreview[]>
-      key={routeId}
       service={Service.WEBSCRAPER}
       method={Method.GET}
       onlinePath="/route/:routeId/preview"
-      onlinePathParams={{ routeId }}
+      onlinePathParams={{ routeId: loaderRouteId }}
       timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
       isOnline={isOnline}
-      offlineData={loaderOfflineData}
+      offlineData={loaderOfflinePayload}
     >
       {({ data, errors, timeoutCountdown, reload }) => (
         <RoutePreviewInner
-          routeId={routeId}
-          routeType={routeType}
+          pipelineActive={pipelineActive}
+          routeId={loaderRouteId}
+          routeType={visible?.routeType ?? null}
           badgeScale={badgeScale}
           onPreviewPress={onPreviewPress}
           onCurrentPreviewChange={onCurrentPreviewChange}
@@ -430,11 +566,21 @@ export function RoutePreview({
           errors={errors}
           timeoutCountdown={timeoutCountdown}
           onRetryRequest={reload}
+          slideWrapperStyle={containerStyle}
+          slideMotionStyle={slideMotionStyle}
         />
       )}
     </RopeGeoDataLoader>
   );
 }
+
+const routePreviewShellStyles = StyleSheet.create({
+  idleShell: {
+    height: 0,
+    opacity: 0,
+    overflow: "hidden",
+  },
+});
 
 const styles = StyleSheet.create({
   previewWrapper: {

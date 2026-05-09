@@ -1,5 +1,4 @@
 import { openAppleMaps, openGoogleMaps } from "@/lib/openExternalMaps";
-import { FontAwesome5 } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -78,23 +77,6 @@ export const minimapStyles = StyleSheet.create({
     gap: MAP_OVERLAY_BUTTON_GAP,
   },
 });
-
-export function MiniMapExpandButton({
-  onPress,
-}: {
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      style={[minimapStyles.circleMapButton, minimapStyles.expandButton]}
-      onPress={onPress ?? (() => {})}
-      accessibilityLabel="Expand map"
-      accessibilityRole="button"
-    >
-      <FontAwesome5 name="expand" size={18} color="#000" />
-    </Pressable>
-  );
-}
 
 /** 22 × 1.2 — directions icons inside the 40pt overlay circles. */
 const DIRECTIONS_ICON_SIZE = 30;

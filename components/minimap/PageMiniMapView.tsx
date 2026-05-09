@@ -1,10 +1,9 @@
-import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
-import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
-import {
-  MAP_BUTTON_GAP,
-  MAP_BUTTON_SIZE,
-  MAP_BUTTON_TOP_OFFSET,
-} from "./shared/fullScreenMapLayout";
+import { ButtonStack } from "@/components/buttons/ButtonStack";
+import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { MAP_BUTTON_TOP_OFFSET } from "./shared/fullScreenMapLayout";
+import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { PageMiniMapLegend } from "./shared/PageMiniMapLegend";
 import {
@@ -14,7 +13,7 @@ import {
   filterRenderedLinesForSelectionKey,
   isLineRowSelectionKey,
   legendItemForKey,
-  lineFeatureSelectionKey,
+  resolveLineLegendSelectionId,
   lineSelectionBounds,
   lineSelectionStyle,
 } from "./shared/pageMiniMapSegments";
@@ -62,6 +61,8 @@ const PAGE_POINT_MARKER_IMAGES = {
   "page-map-marker": require("@/assets/images/icons/markers/marker.png"),
   "page-map-marker-selected": require("@/assets/images/icons/markers/markerSelected.png"),
 } as const;
+
+const USER_LOCATION_ZOOM = 14;
 
 const LINE_ONLY_FILTER: ["==", ["geometry-type"], "LineString"] = [
   "==",
@@ -160,6 +161,7 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
     onCameraChanged,
     compassVisible,
     positionButtonVisible,
+    cameraHeadingDeg,
   } = useMiniMapCamera({
     expanded: shell.expanded,
     initialHomeCenter: [b.west, b.south],
@@ -175,6 +177,10 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
     null,
   );
   const [legendExpanded, setLegendExpanded] = useState(false);
+  /** Incremented only on map line press so the legend auto-scrolls for map-driven selection, not legend taps. */
+  const [legendScrollIntoViewEpoch, setLegendScrollIntoViewEpoch] = useState(0);
+  const [mapLiveCenter, setMapLiveCenter] = useState<[number, number] | undefined>(undefined);
+  const [mapLiveZoom, setMapLiveZoom] = useState<number | undefined>(undefined);
   const [selectedLineHighlight, setSelectedLineHighlight] = useState<GeoJSON.FeatureCollection | null>(
     null,
   );
@@ -223,11 +229,32 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
     shell.mountNativeMap,
   ]);
 
-  const resetPosition = () => {
+  const resetPosition = useCallback(() => {
     captureHome();
     fitToBounds(b, shell.expandedPadding);
     requestAnimationFrame(() => fitToBounds(b, shell.expandedPadding));
-  };
+  }, [captureHome, fitToBounds, b, shell.expandedPadding]);
+
+  const userLocationCoord = useForegroundUserLocation(
+    shell.expanded && shell.mapBodyVisible,
+  );
+
+  const resetCameraToUserPosition = useCallback(() => {
+    if (userLocationCoord == null) return;
+    cameraRef.current?.setCamera({
+      centerCoordinate: userLocationCoord,
+      zoomLevel: USER_LOCATION_ZOOM,
+      animationDuration: 300,
+    });
+  }, [userLocationCoord]);
+
+  const userPositionButtonVisible =
+    userLocationCoord != null &&
+    mapLiveCenter != null &&
+    mapLiveZoom != null &&
+    (Math.abs(mapLiveCenter[0] - userLocationCoord[0]) > 1e-4 ||
+      Math.abs(mapLiveCenter[1] - userLocationCoord[1]) > 1e-4 ||
+      Math.abs(mapLiveZoom - USER_LOCATION_ZOOM) > 0.05);
 
   const [mapFinishedLoading, setMapFinishedLoading] = useState(false);
   const [mapLoadError, setMapLoadError] = useState<Error | null>(null);
@@ -245,6 +272,7 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
     setSelectedLineStyle(null);
     clearMapSelections();
     setLegendExpanded(false);
+    setLegendScrollIntoViewEpoch(0);
   }, [miniMapReloadKey, clearMapSelections]);
 
   const mapBlockingErrorMessage =
@@ -433,7 +461,7 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
             clearMapSelections();
             return;
           }
-          const key = lineFeatureSelectionKey(lineHit);
+          const key = resolveLineLegendSelectionId(miniMap.legend, lineHit);
           const legendItem = legendItemForKey(miniMap.legend, key);
           let fitBounds: Bounds | null =
             legendItem != null ? boundsFromLegendItem(legendItem) : null;
@@ -447,7 +475,10 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
           setSelectedSegmentKey(key);
           setPointTooltip(null);
           selectedPointLngLatRef.current = null;
-          if (hasPageLegend) setLegendExpanded(true);
+          if (hasPageLegend) {
+            setLegendExpanded(true);
+            setLegendScrollIntoViewEpoch((n) => n + 1);
+          }
           return;
         }
       } catch {
@@ -469,9 +500,14 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
   const onCameraChangedWrapped = useCallback(
     (state: { properties: { pitch: number; heading: number; center: unknown; zoom: number } }) => {
       onCameraChanged(state);
+      if (shell.expanded) {
+        const c = state.properties.center as [number, number];
+        setMapLiveCenter(c);
+        setMapLiveZoom(state.properties.zoom);
+      }
       if (selectedPointLngLatRef.current != null) void refreshTooltipScreenPosition();
     },
-    [onCameraChanged, refreshTooltipScreenPosition],
+    [onCameraChanged, refreshTooltipScreenPosition, shell.expanded],
   );
 
   const handleLegendSelectSegment = useCallback(
@@ -632,6 +668,7 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
               legend={miniMap.legend}
               expanded={legendExpanded}
               selectedKey={selectedSegmentKey}
+              scrollIntoViewEpoch={legendScrollIntoViewEpoch}
               maxHeight={legendMaxH}
               maxWidth={legendMaxW}
               bottomOffset={legendBottomOffset}
@@ -640,16 +677,30 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
               onSelectLegendId={handleLegendSelectSegment}
             />
           ) : null}
-          <ResetMapPositionButton
-            onPress={resetPosition}
-            visible={positionButtonVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET}
-          />
-          <ResetMapOrientationButton
-            onPress={resetPitchAndHeading}
-            visible={compassVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
-          />
+          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
+            <ButtonStack.Slot id="bounds" visible={positionButtonVisible}>
+              <ResetCameraToBoundsButton
+                stacked
+                onPress={resetPosition}
+                visible={positionButtonVisible}
+              />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="orientation" visible={compassVisible}>
+              <ResetCameraOrientationButton
+                stacked
+                iconRotation={-cameraHeadingDeg}
+                onPress={resetPitchAndHeading}
+                visible={compassVisible}
+              />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="user-position" visible={userPositionButtonVisible}>
+              <ResetCameraToPositionButton
+                stacked
+                onPress={resetCameraToUserPosition}
+                visible={userPositionButtonVisible}
+              />
+            </ButtonStack.Slot>
+          </ButtonStack>
         </View>
       ) : null}
     </>

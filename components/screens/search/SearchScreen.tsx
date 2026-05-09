@@ -1,7 +1,4 @@
-import { BackButton } from "@/components/buttons/BackButton";
-import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
-import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
+import { type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
 import { TOAST_KEY_DISTANCE_GPS_TIMEOUT } from "@/constants/toastArchetypes";
 import {
   ToastKeyCollisionError,
@@ -9,33 +6,21 @@ import {
   useToast,
 } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { SearchHttpSection } from "@/components/screens/search/SearchHttpSection";
+import { SearchScreenInner } from "@/components/screens/search/SearchScreenInner";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
-import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RopeGeoPagedDataLoader, Method, Service } from "ropegeo-common/components";
+import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
+  Preview,
   SearchFilter,
   SearchParams,
   type SearchParamsPosition,
 } from "ropegeo-common/models";
 
-const HEADER_BUTTON_SIZE = 44;
-const HEADER_BUTTON_GAP = 8;
 const SEARCH_LIMIT = 10;
 const SEARCH_DEBOUNCE_MS = 300;
-const LOAD_MORE_THRESHOLD = 100;
 /** Persisted distance order without a GPS fix: wait this long, then clear saved search + toast. */
 const DISTANCE_GPS_WAIT_MS = 10_000;
 const DISTANCE_GPS_TIMEOUT_TOAST =
@@ -63,9 +48,6 @@ function buildSearchParamsWhenValid(
 }
 
 export function SearchScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const isFocused = useIsFocused();
   const {
     getEffectiveSearchFilter,
     searchPersisted,
@@ -76,7 +58,6 @@ export function SearchScreen() {
   const { isOnline } = useNetworkStatus();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const searchInputRef = useRef<TextInput>(null);
   const [searchPos, setSearchPos] = useState<SearchParamsPosition | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState<SearchFilter | null>(null);
@@ -308,49 +289,8 @@ export function SearchScreen() {
     setFrozenSearchParams(null);
   }, [frozenSearchParams, persistSearchFilter]);
 
-  const handleScroll = useCallback(
-    (e: {
-      nativeEvent: {
-        contentOffset: { y: number };
-        contentSize: { height: number };
-        layoutMeasurement: { height: number };
-      };
-    }) => {
-      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-      const canScroll = contentSize.height > layoutMeasurement.height;
-      const isNearBottom =
-        contentOffset.y + layoutMeasurement.height >=
-        contentSize.height - LOAD_MORE_THRESHOLD;
-      if (!isOnline) {
-        return;
-      }
-      if (canScroll && isNearBottom) {
-        loadMoreRef.current();
-      }
-    },
-    [isOnline],
-  );
-
-  const loadMoreRef = useRef<() => void>(() => {});
-
-  useFocusEffect(
-    useCallback(() => {
-      const timer = setTimeout(() => searchInputRef.current?.focus(), 0);
-      return () => clearTimeout(timer);
-    }, []),
-  );
-
-  const searchBarTop = insets.top + 8;
-  const searchBarHeight = 48;
-
-  useNetworkRequestToasts({
-    errors: null,
-    timeoutCountdown: null,
-    resetKey: "search-connectivity",
-    offlineSurfaceActive: isFocused,
-  });
-
-  const openFilterSheet = useCallback(() => {
+  useEffect(() => {
+    if (!filterSheetOpen || searchDraft != null) return;
     searchOpeningSnapRef.current = {
       persisted: searchPersistedRef.current,
       filterJson: effectiveSearchFilterRef.current.toString(),
@@ -359,177 +299,66 @@ export function SearchScreen() {
     setSearchDraft(
       SearchFilter.fromJsonString(effectiveSearchFilterRef.current.toString()),
     );
-    setFilterSheetOpen(true);
-  }, []);
+  }, [filterSheetOpen, searchDraft]);
+
+  const queryKey = searchParamsForRequest.toQueryString();
+  const filterSheetMode: FilterSheetMode | null =
+    filterSheetOpen && searchDraft != null
+      ? {
+          kind: "search",
+          draft: searchDraft,
+          onDraftChange: handleSearchDraftChange,
+          persisted: searchPersisted,
+          livePosition: searchPos,
+          onRevert: () => {
+            persistSearchFilter(null);
+            setSearchDraft(
+              new SearchFilter(searchPos, debouncedQuery),
+            );
+          },
+        }
+      : null;
 
   return (
-    <View style={styles.container}>
-      <View
-        style={[
-          styles.headerRow,
-          {
-            top: searchBarTop,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
-          ]}
-        >
-          <BackButton onPress={() => router.back()} />
-        </View>
-        <View style={styles.searchBar}>
-          <FontAwesome5 name="search" size={16} color="#6b7280" />
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchBarInput}
-            placeholder="Search"
-            placeholderTextColor="#9ca3af"
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-        </View>
-        <View
-          style={[
-            styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
-          ]}
-        >
-          <FilterButton persisted={searchPersisted} onPress={openFilterSheet} />
-        </View>
-      </View>
-      <Pressable
-        style={styles.content}
-        onPress={() => searchInputRef.current?.blur()}
-      >
-        {awaitingDistanceGps ? (
-          <View
-            style={[
-              styles.centered,
-              { paddingTop: searchBarTop + searchBarHeight + 12 },
-            ]}
-          >
-            <ActivityIndicator size="large" />
-            <Text style={styles.locationWaitText}>Getting your location…</Text>
-          </View>
-        ) : (
-          <SearchHttpSection
-            queryParams={searchParamsForRequest}
-            searchBarTop={searchBarTop}
-            searchBarHeight={searchBarHeight}
-            loadMoreRef={loadMoreRef}
-            onScroll={handleScroll}
-            isOnline={isOnline}
-          />
-        )}
-      </Pressable>
-      <FilterBottomSheet
-        visible={filterSheetOpen}
-        onClose={closeFilterSheet}
-        mode={
-          filterSheetOpen && searchDraft != null
-            ? {
-                kind: "search",
-                draft: searchDraft,
-                onDraftChange: handleSearchDraftChange,
-                persisted: searchPersisted,
-                livePosition: searchPos,
-                onRevert: () => {
-                  persistSearchFilter(null);
-                  setSearchDraft(
-                    new SearchFilter(searchPos, debouncedQuery),
-                  );
-                },
-              }
-            : null
-        }
-      />
-    </View>
+    <RopeGeoPagedDataLoader<Preview>
+      key={queryKey}
+      service={Service.WEBSCRAPER}
+      method={Method.GET}
+      onlinePath="/search"
+      queryParams={searchParamsForRequest}
+      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+      isOnline={isOnline}
+    >
+      {({
+        loadingNextPage,
+        data,
+        errors,
+        loadNextPage,
+        morePages,
+        timeoutCountdown,
+        reload,
+      }) => (
+        <SearchScreenInner
+          query={query}
+          onChangeQuery={setQuery}
+          searchPersisted={searchPersisted}
+          setFilterSheetOpen={setFilterSheetOpen}
+          filterSheetOpen={filterSheetOpen}
+          onCloseFilterSheet={closeFilterSheet}
+          filterSheetMode={filterSheetMode}
+          awaitingDistanceGps={awaitingDistanceGps}
+          isOnline={isOnline}
+          queryKey={queryKey}
+          loadingNextPage={loadingNextPage}
+          data={data}
+          errors={errors}
+          loadNextPage={loadNextPage}
+          morePages={morePages}
+          timeoutCountdown={timeoutCountdown}
+          onRetryRequest={reload}
+        />
+      )}
+    </RopeGeoPagedDataLoader>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  headerRow: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    zIndex: 3,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
-    minWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  searchBarInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 0,
-    minWidth: 0,
-  },
-  content: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  loadMoreIndicator: {
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#dc2626",
-    textAlign: "center",
-  },
-  hint: {
-    fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  locationWaitText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-});

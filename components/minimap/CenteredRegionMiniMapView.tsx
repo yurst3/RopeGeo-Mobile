@@ -1,5 +1,7 @@
-import { ResetMapOrientationButton } from "@/components/buttons/ResetMapOrientationButton";
-import { ResetMapPositionButton } from "@/components/buttons/ResetMapPositionButton";
+import { ButtonStack } from "@/components/buttons/ButtonStack";
+import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   CLUSTER_RADIUS,
@@ -15,15 +17,17 @@ import {
 } from "@/components/screens/explore/routeMarkerIcons";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
-  MAP_BUTTON_GAP,
-  MAP_BUTTON_SIZE,
   MAP_BUTTON_TOP_OFFSET,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
-import { minimapStyles } from "./shared/minimapShared";
+import {
+  MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+  minimapStyles,
+} from "./shared/minimapShared";
+import { boundsFromFeatureCollection } from "./shared/geoJsonBounds";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
@@ -208,6 +212,7 @@ export function CenteredRegionMiniMapView({
     onCameraChanged,
     compassVisible,
     positionButtonVisible,
+    cameraHeadingDeg,
   } = useMiniMapCamera({ expanded: shell.expanded, initialHomeCenter: defaultCenter });
 
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
@@ -237,6 +242,11 @@ export function CenteredRegionMiniMapView({
     if (g?.type !== "Point" || !Array.isArray(g.coordinates)) return null;
     return g.coordinates as [number, number];
   }, [displayGeojson, centeredRouteId]);
+
+  const routesFitBounds = useMemo(
+    () => boundsFromFeatureCollection(displayGeojson ?? null),
+    [displayGeojson],
+  );
 
   useEffect(() => {
     if (centeredRouteCoordinate == null) return;
@@ -298,7 +308,7 @@ export function CenteredRegionMiniMapView({
     return () => clearTimeout(timer);
   }, [shell.anchorRect, captureHome, shell.expanded, shell.mountNativeMap, defaultCenter, centeredRouteCoordinate]);
 
-  const resetPosition = () => {
+  const resetPosition = useCallback(() => {
     userFocusedNonCenteredRouteRef.current = false;
     setFocusedRouteId(null);
     setCurrentPreview(null);
@@ -309,7 +319,27 @@ export function CenteredRegionMiniMapView({
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: 300,
     });
-  };
+  }, [captureHome, centeredRouteCoordinate, defaultCenter]);
+
+  const resetToRoutesBounds = useCallback(() => {
+    if (routesFitBounds == null) return;
+    userFocusedNonCenteredRouteRef.current = false;
+    setFocusedRouteId(null);
+    setCurrentPreview(null);
+    captureHome();
+    cameraRef.current?.setCamera({
+      type: "CameraStop",
+      bounds: {
+        ne: [routesFitBounds.east, routesFitBounds.north],
+        sw: [routesFitBounds.west, routesFitBounds.south],
+        ...shell.expandedPadding,
+      },
+      animationDuration: MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+    });
+  }, [routesFitBounds, captureHome, shell.expandedPadding]);
+
+  const boundsSlotVisible =
+    routesFitBounds != null && positionButtonVisible;
 
   const handleOfflineMarkerPress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
@@ -535,51 +565,60 @@ export function CenteredRegionMiniMapView({
       {shell.expanded ? (
         <View style={expandedChromeStyles.layer} pointerEvents="box-none">
           <MiniMapHeader title={miniMap.title} onBack={onCollapse} top={insets.top + 8} />
-          {focusedRouteId != null && (
-            <View
-              style={[
-                miniMapHostStyles.previewContainer,
-                {
-                  paddingBottom: routePreviewDockedPaddingBottom(
-                    insets.bottom,
-                    tabBarHeight,
-                  ),
-                },
-              ]}
-            >
-              <RoutePreview
-                routeId={focusedRouteId}
-                routeType={
-                  displayGeojson?.features?.find((f) => f.properties?.id === focusedRouteId)
-                    ?.properties?.type ?? null
-                }
-                onCurrentPreviewChange={setCurrentPreview}
-                onPreviewPress={(preview) => {
-                  if (preview.source === "ropewiki") {
-                    router.push({
-                      pathname: "/(tabs)/explore/[id]/page",
-                      params: {
-                        id: preview.id,
-                        source: PageDataSource.Ropewiki,
-                      },
-                    } as unknown as Parameters<typeof router.push>[0]);
-                  } else {
-                    router.push("/explore/technical-info");
-                  }
-                }}
+          <RoutePreview
+            routeId={focusedRouteId}
+            containerStyle={[
+              miniMapHostStyles.previewContainer,
+              {
+                paddingBottom: routePreviewDockedPaddingBottom(
+                  insets.bottom,
+                  tabBarHeight,
+                ),
+              },
+            ]}
+            routeType={
+              displayGeojson?.features?.find((f) => f.properties?.id === focusedRouteId)
+                ?.properties?.type ?? null
+            }
+            onCurrentPreviewChange={setCurrentPreview}
+            onPreviewPress={(preview) => {
+              if (preview.source === "ropewiki") {
+                router.push({
+                  pathname: "/(tabs)/explore/[id]/page",
+                  params: {
+                    id: preview.id,
+                    source: PageDataSource.Ropewiki,
+                  },
+                } as unknown as Parameters<typeof router.push>[0]);
+              } else {
+                router.push("/explore/technical-info");
+              }
+            }}
+          />
+          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
+            <ButtonStack.Slot id="bounds" visible={boundsSlotVisible}>
+              <ResetCameraToBoundsButton
+                stacked
+                onPress={resetToRoutesBounds}
+                visible={boundsSlotVisible}
               />
-            </View>
-          )}
-          <ResetMapPositionButton
-            onPress={resetPosition}
-            visible={positionButtonVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET}
-          />
-          <ResetMapOrientationButton
-            onPress={resetPitchAndHeading}
-            visible={compassVisible}
-            top={insets.top + MAP_BUTTON_TOP_OFFSET + MAP_BUTTON_SIZE + MAP_BUTTON_GAP}
-          />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="orientation" visible={compassVisible}>
+              <ResetCameraOrientationButton
+                stacked
+                iconRotation={-cameraHeadingDeg}
+                onPress={resetPitchAndHeading}
+                visible={compassVisible}
+              />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="position" visible={positionButtonVisible}>
+              <ResetCameraToPositionButton
+                stacked
+                onPress={resetPosition}
+                visible={positionButtonVisible}
+              />
+            </ButtonStack.Slot>
+          </ButtonStack>
         </View>
       ) : null}
     </>
