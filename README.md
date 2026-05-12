@@ -38,3 +38,22 @@ This app uses [@rnmapbox/maps](https://rnmapbox.github.io/docs/install) with Exp
    ```
 
 After prebuild (and `pod install` if needed), run **iOS** with `npx expo run:ios` and **Android** with `npx expo run:android` (development builds).
+
+## Troubleshooting
+
+### Android: "Unable to locate a Java Runtime" when running `npm run android`
+
+Gradle needs a **JDK** on the machine that runs `expo run:android`. If macOS cannot find one, the build fails with a message like *The operation couldn't be completed. Unable to locate a Java Runtime* (and `gradlew ... exited with non-zero code: 1`).
+
+**macOS (Homebrew):** Install OpenJDK and point your shell at it (adjust the version if you installed a different one):
+
+```bash
+brew install openjdk@17
+export JAVA_HOME="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+java -version
+```
+
+Add the `export` lines to `~/.zshrc` (or your shell profile) if you want this to persist. Then run `npm run android` again from this directory.
+
+**Windows and Linux:** The Homebrew steps above are **macOS-specific**; they will not apply on Windows. Install a supported JDK (for example [Eclipse Temurin](https://adoptium.net/) 17 or 21), set the `JAVA_HOME` environment variable to the JDK installation root (the folder that contains `bin/java`), ensure `%JAVA_HOME%\bin` is on `PATH`, open a new terminal, and retry the Android build. Exact steps depend on your JDK installer and shell.

@@ -13,6 +13,7 @@ import { type Rect } from "@/components/minimap/shared/useMiniMapAnimation";
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import type { SharedValue } from "react-native-reanimated";
+import type { RefObject } from "react";
 import { View } from "react-native";
 import {
   MiniMapType,
@@ -37,6 +38,7 @@ export type MiniMapProps = MiniMapShellProps &
     | {
         miniMap: PageMiniMapTileProps;
         mapDirections?: { lat: number; lon: number } | null;
+        mapHostMeasureRef?: RefObject<View | null>;
       }
     | {
         miniMap: OnlineRegionMiniMap;
@@ -128,6 +130,7 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
             miniMap={p.miniMap}
             onCollapse={onCollapse}
             reloadRegisterRef={reloadRegisterRef}
+            mapHostMeasureRef={p.mapHostMeasureRef}
           />
         </MiniMapAnimatedCard>
       );

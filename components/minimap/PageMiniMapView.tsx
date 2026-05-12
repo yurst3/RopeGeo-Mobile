@@ -40,7 +40,7 @@ import {
   VectorSource,
 } from "@rnmapbox/maps";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import type { ComponentRef } from "react";
+import type { ComponentRef, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import {
@@ -133,9 +133,16 @@ export type PageMiniMapViewProps = {
   miniMap: PageMiniMapTileProps;
   onCollapse: () => void;
   reloadRegisterRef?: MiniMapReloadRegisterRef;
+  /** RN host around `MapView`; parent can `measureInWindow` for debug vs scroll placeholder. */
+  mapHostMeasureRef?: RefObject<View | null> | null;
 };
 
-export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: PageMiniMapViewProps) {
+export function PageMiniMapView({
+  miniMap,
+  onCollapse,
+  reloadRegisterRef,
+  mapHostMeasureRef,
+}: PageMiniMapViewProps) {
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const b = miniMap.bounds;
@@ -544,7 +551,11 @@ export function PageMiniMapView({ miniMap, onCollapse, reloadRegisterRef }: Page
   return (
     <>
       {shell.mapBodyVisible ? (
-        <View style={minimapStyles.map} pointerEvents={shell.expanded ? "auto" : "none"}>
+        <View
+          ref={mapHostMeasureRef ?? undefined}
+          style={minimapStyles.map}
+          pointerEvents={shell.expanded ? "auto" : "none"}
+        >
           <MapView
             ref={mapRef}
             styleURL="mapbox://styles/mapbox/outdoors-v12"

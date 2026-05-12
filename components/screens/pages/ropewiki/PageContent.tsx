@@ -70,6 +70,8 @@ export type PageContentProps = {
   onMomentumScrollEnd: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onCardHeightLayout: (height: number) => void;
   miniMapGateRef: React.RefObject<View | null>;
+  /** Inner grey square (`minimapStyles.wrapper`); window frame for debug vs overlay anchor. */
+  miniMapPlaceholderRef: React.RefObject<View | null>;
   /** Gate placeholder in the scroll card; parent decides from API + offline minimap. */
   showMiniMapPlaceholder: boolean;
   onMiniMapLayout: (width: number, height: number) => void;
@@ -91,6 +93,7 @@ export function PageContent({
   onMomentumScrollEnd,
   onCardHeightLayout,
   miniMapGateRef,
+  miniMapPlaceholderRef,
   showMiniMapPlaceholder,
   onMiniMapLayout,
   checkMiniMapInView,
@@ -192,7 +195,7 @@ export function PageContent({
                   requestAnimationFrame(() => checkMiniMapInView());
                 }}
               >
-                <View style={minimapStyles.wrapper} />
+                <View ref={miniMapPlaceholderRef} style={minimapStyles.wrapper} />
               </View>
             ) : null}
             {(data.betaSections ?? [])

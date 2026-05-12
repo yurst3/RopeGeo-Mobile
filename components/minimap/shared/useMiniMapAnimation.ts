@@ -70,15 +70,15 @@ export function useMiniMapAnimation({
 
   const cardStyle = useAnimatedStyle(() => {
     const scrollDelta = scrollY.value - baseScrollYSv.value;
+    /** Scroll sync was `top` + `translateY(-scrollDelta)`; merged into `top` so Android matches `measureInWindow` / placeholder alignment (transform on Reanimated card skews window metrics). */
+    const topBase = interpolate(progressSv.value, [0, 1], [topSv.value, 0]);
+    const topScrollSync = interpolate(progressSv.value, [0, 1], [-scrollDelta, 0]);
     return {
       left: interpolate(progressSv.value, [0, 1], [leftSv.value, 0]),
-      top: interpolate(progressSv.value, [0, 1], [topSv.value, 0]),
+      top: topBase + topScrollSync,
       width: Math.max(1, Math.round(interpolate(progressSv.value, [0, 1], [widthSv.value, windowWidth]))),
       height: Math.max(1, Math.round(interpolate(progressSv.value, [0, 1], [heightSv.value, windowHeight]))),
       borderRadius: interpolate(progressSv.value, [0, 1], [12, 0]),
-      transform: [
-        { translateY: interpolate(progressSv.value, [0, 1], [-scrollDelta, 0]) },
-      ],
     };
   });
 

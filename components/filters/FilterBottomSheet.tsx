@@ -117,21 +117,25 @@ export function FilterBottomSheet({
     onClose();
   }, [onClose]);
 
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      if (e.translationY > 0) {
-        translateY.value = e.translationY;
-      }
-    })
-    .onEnd((e) => {
-      if (e.translationY > 80 || e.velocityY > 800) {
-        translateY.value = withSpring(400, SHEET_SPRING, () =>
-          runOnJS(closeSheet)(),
-        );
-      } else {
-        translateY.value = withSpring(0, SHEET_SPRING);
-      }
-    });
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .onUpdate((e) => {
+          if (e.translationY > 0) {
+            translateY.value = e.translationY;
+          }
+        })
+        .onEnd((e) => {
+          if (e.translationY > 80 || e.velocityY > 800) {
+            translateY.value = withSpring(400, SHEET_SPRING, () =>
+              runOnJS(closeSheet)(),
+            );
+          } else {
+            translateY.value = withSpring(0, SHEET_SPRING);
+          }
+        }),
+    [closeSheet, translateY],
+  );
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

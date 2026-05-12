@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.yurst3.RopeGeo",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "LSApplicationQueriesSchemes": ["comgooglemaps", "maps"]
+        "LSApplicationQueriesSchemes": ["comgooglemaps", "maps"],
+        "CADisableMinimumFrameDurationOnPhone": true
       }
     },
     "android": {
