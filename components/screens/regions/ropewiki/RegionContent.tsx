@@ -1,6 +1,7 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { MiniMap } from "@/components/minimap/MiniMap";
+import type { RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { minimapStyles } from "@/components/minimap/shared/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
 import {
   RopeGeoPagedDataLoader,
@@ -15,7 +16,12 @@ import { RegionPreview } from "@/components/previews/RegionPreview";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  MINI_MAP_BORDER_RADIUS,
+  MINI_MAP_EXPANDED_Z_INDEX,
+} from "@/components/minimap/shared/minimapShared";
+import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -33,6 +39,7 @@ import Animated, {
 import {
   type OnlinePagePreview,
   type RopewikiRegionView,
+  MiniMapType,
   PageDataSource,
   Preview,
   RopewikiRegionPreviewsParams,
@@ -41,6 +48,8 @@ import {
 const PREVIEWS_PAGE_LIMIT = 10;
 const LOAD_MORE_THRESHOLD = 100;
 const CARD_BORDER_RADIUS = 24;
+/** Matches header row top inset on {@link RopewikiRegionScreen}. */
+const MINI_MAP_VIEWPORT_HEADER_TOP = 8;
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const INITIAL_LOADING_MIN_HEIGHT = SCREEN_HEIGHT * 0.5;
@@ -59,12 +68,11 @@ export type RegionContentProps = {
   region: RopewikiRegionView;
   insets: { top: number; bottom: number };
   scrollY: SharedValue<number>;
+  expandAnchorRef: React.RefObject<View | null>;
   paddingTop: number;
   onCardHeightLayout: (height: number) => void;
-  onOpenFullMap: () => void;
-  mapExpanded: boolean;
-  onMiniMapAnchorRect: (rect: { x: number; y: number; width: number; height: number }) => void;
-  onMountMiniMapNative: () => void;
+  onMapExpandedChange?: (expanded: boolean) => void;
+  onRoutesStateChange?: (state: RoutesState) => void;
   /** True while the user is dragging or flinging the page vertically (parallax scroll). */
   onVerticalScrollActiveChange?: (active: boolean) => void;
 };
@@ -103,12 +111,11 @@ export function RegionContent({
   region,
   insets,
   scrollY,
+  expandAnchorRef,
   paddingTop,
   onCardHeightLayout,
-  onOpenFullMap,
-  mapExpanded,
-  onMiniMapAnchorRect,
-  onMountMiniMapNative,
+  onMapExpandedChange,
+  onRoutesStateChange,
   onVerticalScrollActiveChange,
 }: RegionContentProps) {
   const { isOnline } = useNetworkStatus();
@@ -121,32 +128,59 @@ export function RegionContent({
   const [previewsListNearBottom, setPreviewsListNearBottom] = useState(false);
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
+  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
+  const mapExpanded = mapMode === "expanded";
   const scrollIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const countsText = formatCounts(region.pageCount, region.regionCount);
   const regions = region.regions ?? [];
-  const hasMiniMap = region.miniMap != null;
+  const regionMiniMap =
+    region.miniMap?.miniMapType === MiniMapType.Region ? region.miniMap : null;
+  const hasMiniMap = regionMiniMap != null;
+
+  const onMapExpandedChangeRef = useRef(onMapExpandedChange);
+  onMapExpandedChangeRef.current = onMapExpandedChange;
+
+  const setMapModeAndNotify = useCallback(
+    (mode: "collapsed" | "expanded") => {
+      setMapMode(mode);
+      onMapExpandedChangeRef.current?.(mode === "expanded");
+    },
+    [],
+  );
 
   useEffect(() => {
     miniMapUnlockedRef.current = false;
+    setMountMiniMapNative(false);
+    setMapMode("collapsed");
+    onMapExpandedChangeRef.current?.(false);
   }, [regionId]);
 
   const checkMiniMapInView = useCallback(() => {
     if (!hasMiniMap) return;
     const node = miniMapGateRef.current;
     if (node == null) return;
-    node.measureInWindow((x, y, width, h) => {
-      onMiniMapAnchorRect({ x, y, width, height: h });
+    node.measureInWindow((_x, y, _width, h) => {
       const winH = Dimensions.get("window").height;
-      const visTop = insets.top + 8;
+      const visTop = insets.top + MINI_MAP_VIEWPORT_HEADER_TOP;
       const visBottom = winH - insets.bottom - 72;
       const intersects = y + h > visTop && y < visBottom;
       if (intersects && !miniMapUnlockedRef.current) {
         miniMapUnlockedRef.current = true;
-        onMountMiniMapNative();
+        setMountMiniMapNative(true);
       }
     });
-  }, [hasMiniMap, insets.bottom, insets.top, onMiniMapAnchorRect, onMountMiniMapNative]);
+  }, [hasMiniMap, insets.bottom, insets.top]);
+
+  useEffect(() => {
+    if (!mapExpanded) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMapModeAndNotify("collapsed");
+      return true;
+    });
+    return () => sub.remove();
+  }, [mapExpanded, setMapModeAndNotify]);
 
   const queryParams = useMemo(
     () => new RopewikiRegionPreviewsParams(PREVIEWS_PAGE_LIMIT),
@@ -257,7 +291,11 @@ export function RegionContent({
     clearScrollIdleTimeout();
     onVerticalScrollActiveChange?.(false);
     checkMiniMapInView();
-  }, [checkMiniMapInView, clearScrollIdleTimeout, onVerticalScrollActiveChange]);
+  }, [
+    checkMiniMapInView,
+    clearScrollIdleTimeout,
+    onVerticalScrollActiveChange,
+  ]);
 
   return (
     <RopeGeoPagedDataLoader<Preview>
@@ -282,14 +320,15 @@ export function RegionContent({
         const items = data ?? [];
         const loading = data === null && errors === null;
         return (
+          <>
           <AnimatedScrollView
-            style={styles.scrollView}
+            style={[styles.scrollView, mapExpanded && styles.scrollViewMapExpanded]}
             contentContainerStyle={{
               paddingTop,
               paddingBottom: 0,
               flexGrow: 1,
             }}
-            pointerEvents={mapExpanded ? "none" : "auto"}
+            pointerEvents="auto"
             nestedScrollEnabled
             onScroll={scrollHandler}
             scrollEventThrottle={16}
@@ -320,7 +359,10 @@ export function RegionContent({
               ]}
               onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
             >
-              <View style={styles.cardWrap}>
+              <View
+                style={[styles.cardWrap, mapExpanded && styles.cardWrapMapExpanded]}
+                collapsable={false}
+              >
                 <RegionPreviewsToasts
                   regionId={regionId}
                   regionName={region.name}
@@ -346,18 +388,33 @@ export function RegionContent({
                   {region.overview != null ? (
                     <BetaSection section={region.overview} pageTitle={region.name} />
                   ) : null}
-                  {hasMiniMap ? (
+                  {hasMiniMap && regionMiniMap != null ? (
                     <View
                       ref={miniMapGateRef}
                       collapsable={false}
-                      style={styles.miniMapWrap}
-                      onLayout={(e) => {
-                        const { width, height } = e.nativeEvent.layout;
-                        onMiniMapAnchorRect({ x: 0, y: 0, width, height });
-                        requestAnimationFrame(() => checkMiniMapInView());
+                      style={[
+                        styles.miniMapWrap,
+                        !mapExpanded && styles.miniMapWrapClip,
+                        mapExpanded && styles.miniMapWrapExpanded,
+                      ]}
+                      onLayout={() => {
+                        requestAnimationFrame(() => {
+                          checkMiniMapInView();
+                        });
                       }}
                     >
-                      <View style={minimapStyles.wrapper} />
+                      <MiniMap
+                        miniMap={regionMiniMap}
+                        regionId={regionId}
+                        source={PageDataSource.Ropewiki}
+                        mountNativeMap={mountMiniMapNative}
+                        expanded={mapExpanded}
+                        expandAnchorRef={expandAnchorRef}
+                        collapsedMeasureRef={miniMapGateRef}
+                        onExpand={() => setMapModeAndNotify("expanded")}
+                        onCollapse={() => setMapModeAndNotify("collapsed")}
+                        onRoutesStateChange={onRoutesStateChange}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -408,6 +465,7 @@ export function RegionContent({
               </View>
             </View>
           </AnimatedScrollView>
+          </>
         );
       }}
     </RopeGeoPagedDataLoader>
@@ -425,14 +483,21 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  scrollViewMapExpanded: {
+    overflow: "visible",
+  },
   cardWrapper: {
     position: "relative",
   },
   cardWrap: {
+    position: "relative",
     backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
+  },
+  cardWrapMapExpanded: {
+    overflow: "visible",
   },
   cardInner: {
     paddingHorizontal: 20,
@@ -450,6 +515,16 @@ const styles = StyleSheet.create({
   },
   miniMapWrap: {
     marginTop: 16,
+    width: "100%",
+    aspectRatio: 1,
+  },
+  miniMapWrapClip: {
+    overflow: "hidden",
+    borderRadius: MINI_MAP_BORDER_RADIUS,
+  },
+  miniMapWrapExpanded: {
+    zIndex: MINI_MAP_EXPANDED_Z_INDEX,
+    elevation: 1000,
   },
   previewsSection: {
     paddingHorizontal: 20,

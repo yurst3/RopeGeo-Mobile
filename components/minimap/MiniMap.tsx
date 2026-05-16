@@ -4,16 +4,14 @@ import {
   PageMiniMapView,
   type PageMiniMapTileProps,
 } from "@/components/minimap/PageMiniMapView";
-import { MiniMapAnimatedCard } from "@/components/minimap/miniMapAnimatedCard";
+import {
+  MiniMapAnimatedCard,
+} from "@/components/minimap/miniMapAnimatedCard";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { RegionMiniMapView } from "@/components/minimap/RegionMiniMapView";
 import { minimapStyles } from "@/components/minimap/shared/minimapShared";
-import { miniMapHostStyles } from "@/components/minimap/shared/miniMapHostStyles";
-import { type Rect } from "@/components/minimap/shared/useMiniMapAnimation";
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef, type RefObject } from "react";
 import type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
-import type { SharedValue } from "react-native-reanimated";
-import type { RefObject } from "react";
 import { View } from "react-native";
 import {
   MiniMapType,
@@ -26,9 +24,8 @@ import {
 type MiniMapShellProps = {
   mountNativeMap: boolean;
   expanded: boolean;
-  anchorRect: Rect | null;
-  baseScrollY: number;
-  scrollY: SharedValue<number>;
+  expandAnchorRef: RefObject<View | null>;
+  collapsedMeasureRef: RefObject<View | null>;
   onExpand: () => void;
   onCollapse: () => void;
 };
@@ -38,7 +35,6 @@ export type MiniMapProps = MiniMapShellProps &
     | {
         miniMap: PageMiniMapTileProps;
         mapDirections?: { lat: number; lon: number } | null;
-        mapHostMeasureRef?: RefObject<View | null>;
       }
     | {
         miniMap: OnlineRegionMiniMap;
@@ -62,9 +58,8 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
     miniMap,
     mountNativeMap,
     expanded,
-    anchorRect,
-    baseScrollY,
-    scrollY,
+    expandAnchorRef,
+    collapsedMeasureRef,
     onExpand,
     onCollapse,
   } = props;
@@ -84,9 +79,8 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
   const cardProps = {
     mountNativeMap,
     expanded,
-    anchorRect,
-    baseScrollY,
-    scrollY,
+    expandAnchorRef,
+    collapsedMeasureRef,
     onExpand,
     onCollapse,
   };
@@ -130,18 +124,14 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
             miniMap={p.miniMap}
             onCollapse={onCollapse}
             reloadRegisterRef={reloadRegisterRef}
-            mapHostMeasureRef={p.mapHostMeasureRef}
           />
         </MiniMapAnimatedCard>
       );
     }
     default: {
-      if (!anchorRect) return null;
       return (
-        <View style={miniMapHostStyles.root} pointerEvents="box-none">
-          <View style={minimapStyles.wrapper}>
-            <PlaceholderMiniMap errorMessage="Unsupported miniMapType value" />
-          </View>
+        <View style={minimapStyles.wrapper}>
+          <PlaceholderMiniMap errorMessage="Unsupported miniMapType value" />
         </View>
       );
     }

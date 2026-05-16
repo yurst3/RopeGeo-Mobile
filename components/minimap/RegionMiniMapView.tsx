@@ -168,7 +168,7 @@ export function RegionMiniMapView({
   }, [regionFitBounds, fitToBounds]);
 
   useEffect(() => {
-    if (!shell.mountNativeMap || !shell.anchorRect) return;
+    if (!shell.mountNativeMap || !shell.layoutReady) return;
     if (shell.expanded) {
       captureHome();
       return;
@@ -178,7 +178,7 @@ export function RegionMiniMapView({
       return () => clearTimeout(timer);
     }
   }, [
-    shell.anchorRect,
+    shell.layoutReady,
     shell.mountNativeMap,
     shell.expanded,
     captureHome,

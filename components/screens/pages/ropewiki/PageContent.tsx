@@ -1,5 +1,11 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
-import { minimapStyles } from "@/components/minimap/shared/minimapShared";
+import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
+import {
+  isCenteredRegionMiniMapType,
+  isPageMiniMapType,
+  MINI_MAP_BORDER_RADIUS,
+  MINI_MAP_EXPANDED_Z_INDEX,
+} from "@/components/minimap/shared/minimapShared";
 import { RegionLinks } from "@/components/RegionLinks";
 import { RappelInfoRow } from "@/components/RappelInfoRow";
 import { StarRating } from "@/components/StarRating";
@@ -7,8 +13,10 @@ import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
 import { PageBadges } from "./PageBadges";
 import { TimeEstimates } from "./TimeEstimates";
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
+  Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -29,6 +37,8 @@ import {
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 const CARD_BORDER_RADIUS = 24;
+/** Matches header row top inset on {@link RopewikiPageScreenBody}. */
+const MINI_MAP_VIEWPORT_HEADER_TOP = 8;
 
 function formatLastUpdated(revisionDate: Date | string): string {
   const date =
@@ -64,18 +74,12 @@ export type PageContentProps = {
   routeTypeResolved: RouteType;
   insets: { top: number; bottom: number };
   paddingTop: number;
-  mapExpanded: boolean;
   onScroll: NonNullable<React.ComponentProps<typeof AnimatedScrollView>["onScroll"]>;
-  onScrollEndDrag: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  onMomentumScrollEnd: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollEndDrag?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onMomentumScrollEnd?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onCardHeightLayout: (height: number) => void;
-  miniMapGateRef: React.RefObject<View | null>;
-  /** Inner grey square (`minimapStyles.wrapper`); window frame for debug vs overlay anchor. */
-  miniMapPlaceholderRef: React.RefObject<View | null>;
-  /** Gate placeholder in the scroll card; parent decides from API + offline minimap. */
-  showMiniMapPlaceholder: boolean;
-  onMiniMapLayout: (width: number, height: number) => void;
-  checkMiniMapInView: () => void;
+  onMapExpandedChange?: (expanded: boolean) => void;
+  expandAnchorRef: React.RefObject<View | null>;
 };
 
 /**
@@ -87,17 +91,103 @@ export function PageContent({
   routeTypeResolved,
   insets,
   paddingTop,
-  mapExpanded,
   onScroll,
   onScrollEndDrag,
   onMomentumScrollEnd,
   onCardHeightLayout,
-  miniMapGateRef,
-  miniMapPlaceholderRef,
-  showMiniMapPlaceholder,
-  onMiniMapLayout,
-  checkMiniMapInView,
+  onMapExpandedChange,
+  expandAnchorRef,
 }: PageContentProps) {
+  const miniMapGateRef = useRef<View>(null);
+  const miniMapUnlockedRef = useRef(false);
+  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
+  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
+  const mapExpanded = mapMode === "expanded";
+
+  const minimapForUi = data.miniMap;
+  const hasMiniMap = minimapForUi != null;
+  const directionsFromPageCoords =
+    data.coordinates != null
+      ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
+      : null;
+  const mapDirections =
+    directionsFromPageCoords != null &&
+    minimapForUi != null &&
+    isPageMiniMapType(minimapForUi.miniMapType)
+      ? directionsFromPageCoords
+      : null;
+  const centeredMiniMapDirections =
+    directionsFromPageCoords != null &&
+    minimapForUi != null &&
+    isCenteredRegionMiniMapType(minimapForUi.miniMapType)
+      ? directionsFromPageCoords
+      : null;
+
+  const setMapModeAndNotify = useCallback(
+    (mode: "collapsed" | "expanded") => {
+      setMapMode(mode);
+      onMapExpandedChange?.(mode === "expanded");
+    },
+    [onMapExpandedChange],
+  );
+
+  const onMapExpandedChangeRef = useRef(onMapExpandedChange);
+  onMapExpandedChangeRef.current = onMapExpandedChange;
+
+  useEffect(() => {
+    miniMapUnlockedRef.current = false;
+    setMountMiniMapNative(false);
+    setMapMode("collapsed");
+    onMapExpandedChangeRef.current?.(false);
+  }, [pageId]);
+
+  const checkMiniMapInView = useCallback(() => {
+    if (!hasMiniMap) return;
+    const node = miniMapGateRef.current;
+    if (node == null) return;
+    node.measureInWindow((_x, y, _width, h) => {
+      const winH = Dimensions.get("window").height;
+      const visTop = insets.top + MINI_MAP_VIEWPORT_HEADER_TOP;
+      const visBottom = winH - insets.bottom - 72;
+      const intersects = y + h > visTop && y < visBottom;
+      if (intersects && !miniMapUnlockedRef.current) {
+        miniMapUnlockedRef.current = true;
+        setMountMiniMapNative(true);
+      }
+    });
+  }, [hasMiniMap, insets.bottom, insets.top]);
+
+  useEffect(() => {
+    if (!hasMiniMap) return;
+    const t = setTimeout(() => checkMiniMapInView(), 0);
+    return () => clearTimeout(t);
+  }, [hasMiniMap, checkMiniMapInView]);
+
+  useEffect(() => {
+    if (!mapExpanded) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMapModeAndNotify("collapsed");
+      return true;
+    });
+    return () => sub.remove();
+  }, [mapExpanded, setMapModeAndNotify]);
+
+  const handleScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      checkMiniMapInView();
+      onScrollEndDrag?.(e);
+    },
+    [checkMiniMapInView, onScrollEndDrag],
+  );
+
+  const handleMomentumScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      checkMiniMapInView();
+      onMomentumScrollEnd?.(e);
+    },
+    [checkMiniMapInView, onMomentumScrollEnd],
+  );
+
   const displayRegions =
     (data.regions?.length ?? 0) > 0 ? (data.regions ?? []).slice(0, -1) : [];
   const rating = data.quality ?? 0;
@@ -107,28 +197,33 @@ export function PageContent({
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
+
   return (
+    <>
     <AnimatedScrollView
-      style={styles.scrollView}
+      style={[styles.scrollView, mapExpanded && styles.scrollViewMapExpanded]}
       contentContainerStyle={{
         paddingTop,
         paddingBottom: 0,
         flexGrow: 1,
       }}
-      pointerEvents={mapExpanded ? "none" : "auto"}
+      pointerEvents="auto"
       onScroll={onScroll}
       scrollEventThrottle={16}
       scrollEnabled={!mapExpanded}
       showsVerticalScrollIndicator={false}
       overScrollMode="never"
-      onScrollEndDrag={onScrollEndDrag}
-      onMomentumScrollEnd={onMomentumScrollEnd}
+      onScrollEndDrag={handleScrollEndDrag}
+      onMomentumScrollEnd={handleMomentumScrollEnd}
     >
       <View
         style={[styles.cardWrapper, { marginTop: -CARD_BORDER_RADIUS }]}
         onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
       >
-        <View style={styles.cardWrap}>
+        <View
+          style={[styles.cardWrap, mapExpanded && styles.cardWrapMapExpanded]}
+          collapsable={false}
+        >
           <View
             style={[
               styles.cardInner,
@@ -184,18 +279,35 @@ export function PageContent({
               descentElevGain={data.descentElevGain}
               exitElevGain={data.exitElevGain}
             />
-            {showMiniMapPlaceholder ? (
+            {hasMiniMap ? (
               <View
                 ref={miniMapGateRef}
                 collapsable={false}
-                style={styles.miniMapWrap}
-                onLayout={(e) => {
-                  const { width, height } = e.nativeEvent.layout;
-                  onMiniMapLayout(width, height);
-                  requestAnimationFrame(() => checkMiniMapInView());
+                style={[
+                  styles.miniMapWrap,
+                  !mapExpanded && styles.miniMapWrapClip,
+                  mapExpanded && styles.miniMapWrapExpanded,
+                ]}
+                onLayout={() => {
+                  requestAnimationFrame(() => {
+                    checkMiniMapInView();
+                  });
                 }}
               >
-                <View ref={miniMapPlaceholderRef} style={minimapStyles.wrapper} />
+                <MiniMap
+                  {...({
+                    miniMap: minimapForUi,
+                    mountNativeMap: mountMiniMapNative,
+                    expanded: mapExpanded,
+                    expandAnchorRef,
+                    collapsedMeasureRef: miniMapGateRef,
+                    onExpand: () => setMapModeAndNotify("expanded"),
+                    onCollapse: () => setMapModeAndNotify("collapsed"),
+                    mapDirections: isPageMiniMapType(minimapForUi.miniMapType)
+                      ? mapDirections
+                      : centeredMiniMapDirections,
+                  } as MiniMapProps)}
+                />
               </View>
             ) : null}
             {(data.betaSections ?? [])
@@ -217,6 +329,7 @@ export function PageContent({
         </View>
       </View>
     </AnimatedScrollView>
+    </>
   );
 }
 
@@ -230,14 +343,21 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  scrollViewMapExpanded: {
+    overflow: "visible",
+  },
   cardWrapper: {
     position: "relative",
   },
   cardWrap: {
+    position: "relative",
     backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
+  },
+  cardWrapMapExpanded: {
+    overflow: "visible",
   },
   cardInner: {
     paddingHorizontal: 20,
@@ -266,7 +386,16 @@ const styles = StyleSheet.create({
   },
   miniMapWrap: {
     marginTop: 16,
-    marginBottom: 0,
+    width: "100%",
+    aspectRatio: 1,
+  },
+  miniMapWrapClip: {
+    overflow: "hidden",
+    borderRadius: MINI_MAP_BORDER_RADIUS,
+  },
+  miniMapWrapExpanded: {
+    zIndex: MINI_MAP_EXPANDED_Z_INDEX,
+    elevation: 1000,
   },
   lastUpdated: {
     marginTop: 24,

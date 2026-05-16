@@ -15,6 +15,10 @@ export function isCenteredRegionMiniMapType(t: MiniMapType): boolean {
 }
 
 export const MINI_MAP_BORDER_RADIUS = 12;
+/** Above scroll content (1000), below seam/header chrome (2001+ / 3600). */
+export const MINI_MAP_COLLAPSED_Z_INDEX = 1100;
+/** Fullscreen expand: above page chrome while expanded. */
+export const MINI_MAP_EXPANDED_Z_INDEX = 5000;
 export const EXPAND_BUTTON_SIZE = 40;
 export const EXPAND_BUTTON_INSET = 8;
 /** Horizontal gap between grouped map overlay circle buttons (e.g. directions). */

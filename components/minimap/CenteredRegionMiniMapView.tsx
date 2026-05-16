@@ -279,7 +279,7 @@ export function CenteredRegionMiniMapView({
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: "" };
       return;
     }
-    if (!shell.anchorRect) return;
+    if (!shell.layoutReady) return;
 
     const collapseCenter = centeredRouteCoordinate ?? defaultCenter;
     const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
@@ -306,7 +306,7 @@ export function CenteredRegionMiniMapView({
       };
     }, 260);
     return () => clearTimeout(timer);
-  }, [shell.anchorRect, captureHome, shell.expanded, shell.mountNativeMap, defaultCenter, centeredRouteCoordinate]);
+  }, [shell.layoutReady, captureHome, shell.expanded, shell.mountNativeMap, defaultCenter, centeredRouteCoordinate]);
 
   const resetPosition = useCallback(() => {
     userFocusedNonCenteredRouteRef.current = false;

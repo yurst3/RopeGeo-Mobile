@@ -2,8 +2,6 @@ import { BackButton } from "@/components/buttons/BackButton";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/components/expandedImage/types";
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
-import { MiniMap } from "@/components/minimap/MiniMap";
-import type { MiniMapHandle } from "@/components/minimap/miniMapHandle";
 import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
 import {
@@ -36,7 +34,7 @@ import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import { isPageIdKeyInSavedPagesStorage } from "@/lib/savedPages/isPageIdKeyInSavedPagesStorage";
 import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
-import { MiniMapType, PageDataSource, RopewikiRegionView } from "ropegeo-common/models";
+import { PageDataSource, RopewikiRegionView } from "ropegeo-common/models";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const STARTING_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
@@ -69,17 +67,10 @@ function RegionScreenBody({
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
-  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
+  const [mapExpanded, setMapExpanded] = useState(false);
   const [regionPageVerticalScrollActive, setRegionPageVerticalScrollActive] =
     useState(false);
-  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
-  const [miniMapAnchorRect, setMiniMapAnchorRect] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const baseScrollYRef = useRef(0);
+  const expandAnchorRef = useRef<View>(null);
   const bannerRef = useRef<RegionBannerHandle | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
@@ -95,8 +86,6 @@ function RegionScreenBody({
     total: null,
     timeoutCountdown: null,
   });
-  const miniMapRef = useRef<MiniMapHandle>(null);
-
   useRoutesProgressToast(regionRoutesState, {
     resetKey: regionId,
     horizontalInset: TOAST_HORIZONTAL_INSET,
@@ -112,33 +101,6 @@ function RegionScreenBody({
     incrementErrorMultipleOnCollision: true,
     onRetryRequest,
   });
-
-  const hasMiniMap = data.miniMap != null;
-
-  useEffect(() => {
-    setMountMiniMapNative(false);
-    setMiniMapAnchorRect(null);
-  }, [regionId]);
-
-  const handleMiniMapAnchorRect = useCallback(
-    (rect: { x: number; y: number; width: number; height: number }) => {
-      setMiniMapAnchorRect(rect);
-      baseScrollYRef.current = scrollY.value;
-    },
-    [scrollY]
-  );
-
-  const handleMountMiniMapNative = useCallback(() => {
-    setMountMiniMapNative(true);
-  }, []);
-
-  const openRegionFullMap = useCallback(() => {
-    setMapMode("expanded");
-  }, []);
-
-  const closeRegionFullMap = useCallback(() => {
-    setMapMode("collapsed");
-  }, []);
 
   const bottomPadding = insets.bottom + 16;
   const paddingTop =
@@ -211,28 +173,13 @@ function RegionScreenBody({
   });
 
   useEffect(() => {
-    if (mapMode !== "expanded") return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      setMapMode("collapsed");
-      return true;
-    });
-    return () => sub.remove();
-  }, [mapMode]);
-
-  useEffect(() => {
-    if (mapMode === "expanded") return;
+    if (mapExpanded) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       onBackPress();
       return true;
     });
     return () => sub.remove();
-  }, [mapMode, onBackPress]);
-
-  useEffect(() => {
-    if (mapMode === "expanded") {
-      setRegionPageVerticalScrollActive(false);
-    }
-  }, [mapMode]);
+  }, [mapExpanded, onBackPress]);
 
   const heroSwipeResponder = useRef(
     PanResponder.create({
@@ -249,7 +196,7 @@ function RegionScreenBody({
   ).current;
 
   return (
-    <View style={styles.container}>
+    <View ref={expandAnchorRef} style={styles.container} collapsable={false}>
       <RegionBanner
         ref={bannerRef}
         regionId={regionId}
@@ -260,7 +207,7 @@ function RegionScreenBody({
         verticalScrollActive={regionPageVerticalScrollActive}
       />
 
-      {mapMode !== "expanded" ? (
+      {!mapExpanded ? (
         <Animated.View
           {...heroSwipeResponder.panHandlers}
           pointerEvents="box-only"
@@ -294,12 +241,16 @@ function RegionScreenBody({
         region={data}
         insets={insets}
         scrollY={scrollY}
+        expandAnchorRef={expandAnchorRef}
         paddingTop={paddingTop}
         onCardHeightLayout={setCardHeight}
-        onOpenFullMap={openRegionFullMap}
-        mapExpanded={mapMode === "expanded"}
-        onMiniMapAnchorRect={handleMiniMapAnchorRect}
-        onMountMiniMapNative={handleMountMiniMapNative}
+        onMapExpandedChange={(expanded) => {
+          setMapExpanded(expanded);
+          if (expanded) {
+            setRegionPageVerticalScrollActive(false);
+          }
+        }}
+        onRoutesStateChange={setRegionRoutesState}
         onVerticalScrollActiveChange={setRegionPageVerticalScrollActive}
       />
 
@@ -307,32 +258,15 @@ function RegionScreenBody({
         url={data.externalLink ?? null}
         scrollY={scrollY}
         paddingTop={paddingTop}
-        mapExpanded={mapMode === "expanded"}
+        mapExpanded={mapExpanded}
       />
 
-      {mapMode !== "expanded" && (
+      {!mapExpanded && (
         <BackButton
           onPress={onBackPress}
           top={insets.top + HEADER_ROW_TOP}
         />
       )}
-      {hasMiniMap && data.miniMap?.miniMapType === MiniMapType.Region ? (
-        <MiniMap
-          ref={miniMapRef}
-          miniMap={data.miniMap}
-          regionId={regionId}
-          source={PageDataSource.Ropewiki}
-          mountNativeMap={mountMiniMapNative}
-          expanded={mapMode === "expanded"}
-          anchorRect={miniMapAnchorRect}
-          baseScrollY={baseScrollYRef.current}
-          scrollY={scrollY}
-          onExpand={openRegionFullMap}
-          onCollapse={closeRegionFullMap}
-          onRoutesStateChange={setRegionRoutesState}
-        />
-      ) : null}
-
       {expandedModalVisible && expandedAnchorRect != null && expandedPages.length > 0 ? (
         <ExpandedImageModal
           anchorRect={expandedAnchorRect}

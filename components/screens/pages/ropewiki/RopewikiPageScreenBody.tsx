@@ -5,12 +5,6 @@ import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useShareSheetDimmer } from "@/context/ShareSheetDimmerContext";
-import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
-import type { MiniMapHandle } from "@/components/minimap/miniMapHandle";
-import {
-  isCenteredRegionMiniMapType,
-  isPageMiniMapType,
-} from "@/components/minimap/shared/minimapShared";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
@@ -33,7 +27,6 @@ import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BackHandler,
   Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -91,9 +84,6 @@ export function RopewikiPageScreenBody({
 }: RopewikiPageScreenBodyProps) {
   const insets = useSafeAreaInsets();
   const { showPill, dismiss, upsertPill } = useToast();
-  const debugScrollToastKey = `dev-ropewiki-page-scrollY-${pageId}`;
-  const debugMiniMapAnchorToastKey = `dev-ropewiki-page-minimap-anchor-${pageId}`;
-  const debugAnchorRectToastKey = `dev-ropewiki-page-anchorRect-${pageId}`;
   const router = useRouter();
   const { abortTask, enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
   const { setHighlightSavedTab } = useSavedTabHighlight();
@@ -251,7 +241,7 @@ export function RopewikiPageScreenBody({
   /** JS copy of scroll offset (throttled) so we can clip the banner hit rect above the overlapping card. */
   const [contentScrollY, setContentScrollY] = useState(0);
   const lastBannerHitScrollRef = useRef(0);
-  const baseScrollYRef = useRef(0);
+  const [mapExpanded, setMapExpanded] = useState(false);
   const aspectRatioSv = useSharedValue(FALLBACK_BANNER_ASPECT_RATIO);
   const startHeightSv = useSharedValue(STARTING_HEIGHT);
   const onBannerImageLoad = useCallback((width: number, height: number) => {
@@ -261,42 +251,16 @@ export function RopewikiPageScreenBody({
     aspectRatioSv.value = ratio;
   }, [aspectRatioSv, pageId]);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
-  const miniMapGateRef = useRef<View>(null);
-  const miniMapPlaceholderRef = useRef<View>(null);
-  /** Window coordinates of the grey `minimapStyles.wrapper` in `PageContent` (from `measureInWindow`). */
-  const [miniMapPlaceholderInWindow, setMiniMapPlaceholderInWindow] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const miniMapMapHostRef = useRef<View>(null);
-  /** `PageMiniMapView` RN host around `MapView` (`measureInWindow`). */
-  const [miniMapHostInWindow, setMiniMapHostInWindow] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const miniMapRef = useRef<MiniMapHandle>(null);
-  const miniMapUnlockedRef = useRef(false);
-  const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
-  const [mapMode, setMapMode] = useState<"collapsed" | "expanded">("collapsed");
-  const [miniMapAnchorRect, setMiniMapAnchorRect] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
 
   useDownloadProgressToasts({
     downloadUi,
     resetKey: pageId,
-    toastVisible: mapMode !== "expanded",
+    toastVisible: !mapExpanded,
     horizontalInset: TOAST_HORIZONTAL_INSET,
   });
 
   /** Full banner bounds for expand animation (`measureInWindow`). Hit testing uses a clipped overlay. */
+  const expandAnchorRef = useRef<View>(null);
   const bannerFullRectRef = useRef<View>(null);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
     null,
@@ -322,31 +286,8 @@ export function RopewikiPageScreenBody({
   /** Prefer full-res URL; fall back to banner so expand works when API omits `fullUrl`. */
   const bannerExpandSourceUrl = bannerFullUrl ?? bannerUrl;
 
-  const minimapForUi = data.miniMap;
-  const hasMiniMap = minimapForUi != null;
-  const directionsFromPageCoords =
-    data.coordinates != null
-      ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
-      : null;
-  const mapDirections =
-    directionsFromPageCoords != null &&
-    minimapForUi != null &&
-    isPageMiniMapType(minimapForUi.miniMapType)
-      ? directionsFromPageCoords
-      : null;
-  const centeredMiniMapDirections =
-    directionsFromPageCoords != null &&
-    minimapForUi != null &&
-    isCenteredRegionMiniMapType(minimapForUi.miniMapType)
-      ? directionsFromPageCoords
-      : null;
-
   useEffect(() => {
-    miniMapUnlockedRef.current = false;
-    setMountMiniMapNative(false);
-    setMiniMapAnchorRect(null);
-    setMiniMapPlaceholderInWindow(null);
-    setMiniMapHostInWindow(null);
+    setMapExpanded(false);
     setBannerExpanded(false);
     setBannerExpandAnchor(null);
     setContentScrollY(0);
@@ -355,52 +296,10 @@ export function RopewikiPageScreenBody({
   }, [pageId, dismissSavedToastImmediate]);
 
   useEffect(() => {
-    if (mapMode === "expanded") {
+    if (mapExpanded) {
       dismiss(TOAST_KEY_PAGE_SAVED);
     }
-  }, [mapMode, dismiss]);
-
-  const checkMiniMapInView = useCallback(() => {
-    if (!hasMiniMap) return;
-    const node = miniMapGateRef.current;
-    if (node == null) return;
-    node.measureInWindow((x, y, width, h) => {
-      setMiniMapAnchorRect({ x, y, width, height: h });
-      baseScrollYRef.current = scrollY.value;
-      const winH = Dimensions.get("window").height;
-      const visTop = insets.top + HEADER_ROW_TOP;
-      const visBottom = winH - insets.bottom - 72;
-      const intersects = y + h > visTop && y < visBottom;
-      if (intersects && !miniMapUnlockedRef.current) {
-        miniMapUnlockedRef.current = true;
-        setMountMiniMapNative(true);
-      }
-    });
-    const placeholder = miniMapPlaceholderRef.current;
-    if (placeholder != null) {
-      placeholder.measureInWindow((px, py, pw, ph) => {
-        setMiniMapPlaceholderInWindow({ x: px, y: py, width: pw, height: ph });
-      });
-    } else {
-      setMiniMapPlaceholderInWindow(null);
-    }
-    const mapHost = miniMapMapHostRef.current;
-    if (mapHost != null) {
-      mapHost.measureInWindow((hx, hy, hw, hh) => {
-        setMiniMapHostInWindow({ x: hx, y: hy, width: hw, height: hh });
-      });
-    } else {
-      setMiniMapHostInWindow(null);
-    }
-  }, [hasMiniMap, insets.bottom, insets.top, scrollY]);
-
-  useEffect(() => {
-    if (!hasMiniMap) return;
-    const t = setTimeout(() => {
-      checkMiniMapInView();
-    }, 0);
-    return () => clearTimeout(t);
-  }, [hasMiniMap, checkMiniMapInView]);
+  }, [mapExpanded, dismiss]);
 
   const flushBannerHitScrollFromEvent = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -410,30 +309,6 @@ export function RopewikiPageScreenBody({
     },
     []
   );
-
-  const onScrollEndDragPage = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      flushBannerHitScrollFromEvent(e);
-      checkMiniMapInView();
-    },
-    [checkMiniMapInView, flushBannerHitScrollFromEvent]
-  );
-
-  const onMomentumScrollEndPage = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      flushBannerHitScrollFromEvent(e);
-      checkMiniMapInView();
-    },
-    [checkMiniMapInView, flushBannerHitScrollFromEvent]
-  );
-
-  const openPageFullMap = useCallback(() => {
-    setMapMode("expanded");
-  }, []);
-
-  const closePageFullMap = useCallback(() => {
-    setMapMode("collapsed");
-  }, []);
 
   const openBannerExpanded = useCallback(() => {
     if (bannerExpandSourceUrl == null) return;
@@ -450,15 +325,6 @@ export function RopewikiPageScreenBody({
     setBannerExpandAnchor(null);
   }, []);
 
-  useEffect(() => {
-    if (mapMode !== "expanded") return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      setMapMode("collapsed");
-      return true;
-    });
-    return () => sub.remove();
-  }, [mapMode]);
-
   const onScrollOffsetForBannerHit = useCallback((y: number) => {
     const q = Math.round(y * 2) / 2;
     if (Math.abs(q - lastBannerHitScrollRef.current) < 2) {
@@ -468,108 +334,11 @@ export function RopewikiPageScreenBody({
     setContentScrollY(q);
   }, []);
 
-  const onScrollYDebug = useCallback(
-    (y: number) => {
-      if (!hasMiniMap || mapMode !== "collapsed") return;
-      upsertPill({
-        key: debugScrollToastKey,
-        variant: "warning",
-        message: `scrollY: ${y.toFixed(2)}`,
-        durationMs: null,
-        allowedRoutes: [`/explore/${pageId}/page`, `/saved/${pageId}/page`],
-        horizontalInset: TOAST_HORIZONTAL_INSET,
-      });
-    },
-    [
-      hasMiniMap,
-      mapMode,
-      pageId,
-      upsertPill,
-      debugScrollToastKey,
-    ],
-  );
-
-  useEffect(() => {
-    if (mapMode === "expanded" || !hasMiniMap) {
-      dismiss(debugScrollToastKey);
-      dismiss(debugMiniMapAnchorToastKey);
-      dismiss(debugAnchorRectToastKey);
-    }
-  }, [
-    mapMode,
-    hasMiniMap,
-    dismiss,
-    debugScrollToastKey,
-    debugMiniMapAnchorToastKey,
-    debugAnchorRectToastKey,
-  ]);
-
-  useEffect(() => {
-    if (!hasMiniMap || mapMode !== "collapsed" || miniMapHostInWindow == null) {
-      dismiss(debugMiniMapAnchorToastKey);
-      return;
-    }
-    const left = miniMapHostInWindow.x.toFixed(2);
-    const top = miniMapHostInWindow.y.toFixed(2);
-    const height = miniMapHostInWindow.height.toFixed(2);
-    const pageRoutes = [`/explore/${pageId}/page`, `/saved/${pageId}/page`];
-    upsertPill({
-      key: debugMiniMapAnchorToastKey,
-      variant: "warning",
-      message: `MapView host L:${left} T:${top} H:${height}`,
-      durationMs: null,
-      allowedRoutes: pageRoutes,
-      horizontalInset: TOAST_HORIZONTAL_INSET,
-    });
-  }, [
-    hasMiniMap,
-    mapMode,
-    miniMapHostInWindow,
-    pageId,
-    upsertPill,
-    dismiss,
-    debugMiniMapAnchorToastKey,
-  ]);
-
-  useEffect(() => {
-    if (!hasMiniMap || mapMode !== "collapsed" || miniMapPlaceholderInWindow == null) {
-      dismiss(debugAnchorRectToastKey);
-      return;
-    }
-    const top = miniMapPlaceholderInWindow.y.toFixed(2);
-    const height = miniMapPlaceholderInWindow.height.toFixed(2);
-    upsertPill({
-      key: debugAnchorRectToastKey,
-      variant: "warning",
-      message: `minimapPlaceholder top: ${top}  height: ${height}`,
-      durationMs: null,
-      allowedRoutes: [`/explore/${pageId}/page`, `/saved/${pageId}/page`],
-      horizontalInset: TOAST_HORIZONTAL_INSET,
-    });
-  }, [
-    hasMiniMap,
-    mapMode,
-    miniMapPlaceholderInWindow,
-    pageId,
-    upsertPill,
-    dismiss,
-    debugAnchorRectToastKey,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      dismiss(debugScrollToastKey);
-      dismiss(debugMiniMapAnchorToastKey);
-      dismiss(debugAnchorRectToastKey);
-    };
-  }, [dismiss, debugScrollToastKey, debugMiniMapAnchorToastKey, debugAnchorRectToastKey]);
-
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       const y = e.contentOffset.y;
       scrollY.value = y;
       runOnJS(onScrollOffsetForBannerHit)(y);
-      runOnJS(onScrollYDebug)(y);
     },
   });
 
@@ -639,11 +408,12 @@ export function RopewikiPageScreenBody({
     Math.min(bannerHeightJs, cardTopWindowY)
   );
   const bannerHitActive =
-    bannerTapHeight >= 12 && !bannerImageLoading && mapMode !== "expanded";
+    bannerTapHeight >= 12 && !bannerImageLoading && !mapExpanded;
 
   return (
     <View style={styles.container}>
       <View
+        ref={expandAnchorRef}
         style={styles.shareBlockableLayer}
         pointerEvents={shareInteractionLocked ? "none" : "auto"}
         collapsable={false}
@@ -658,7 +428,7 @@ export function RopewikiPageScreenBody({
         onBannerImageLoadEnd={() => setBannerImageLoading(false)}
       />
 
-      {bannerExpandHitRect != null && mapMode !== "expanded" ? (
+      {bannerExpandHitRect != null && !mapExpanded ? (
         <Animated.View
           {...heroResponder.panHandlers}
           pointerEvents={bannerHitActive ? "box-only" : "none"}
@@ -709,29 +479,19 @@ export function RopewikiPageScreenBody({
         routeTypeResolved={routeTypeResolved}
         insets={insets}
         paddingTop={paddingTop}
-        mapExpanded={mapMode === "expanded"}
         onScroll={scrollHandler}
-        onScrollEndDrag={onScrollEndDragPage}
-        onMomentumScrollEnd={onMomentumScrollEndPage}
+        onScrollEndDrag={flushBannerHitScrollFromEvent}
+        onMomentumScrollEnd={flushBannerHitScrollFromEvent}
         onCardHeightLayout={setCardHeight}
-        miniMapGateRef={miniMapGateRef}
-        miniMapPlaceholderRef={miniMapPlaceholderRef}
-        showMiniMapPlaceholder={minimapForUi != null}
-        onMiniMapLayout={(width, height) => {
-          setMiniMapAnchorRect((prev) =>
-            prev == null
-              ? { x: 0, y: 0, width, height }
-              : { ...prev, width, height },
-          );
-        }}
-        checkMiniMapInView={checkMiniMapInView}
+        onMapExpandedChange={setMapExpanded}
+        expandAnchorRef={expandAnchorRef}
       />
 
       <PageSeamButtons
         url={data.url}
         scrollY={scrollY}
         paddingTop={paddingTop}
-        mapExpanded={mapMode === "expanded"}
+        mapExpanded={mapExpanded}
         isDownloaded={isDownloaded}
         downloading={downloading}
         downloadDisplayStep={
@@ -747,7 +507,7 @@ export function RopewikiPageScreenBody({
         onRemoveDownloadPress={onRemoveDownloadPress}
       />
 
-      {mapMode !== "expanded" && (
+      {!mapExpanded && (
         <>
           <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
           <SaveButton saved={saved} onPress={onSavePress} top={insets.top + HEADER_ROW_TOP} />
@@ -762,28 +522,6 @@ export function RopewikiPageScreenBody({
           />
         </>
       )}
-      {hasMiniMap ? (
-        <MiniMap
-          ref={miniMapRef}
-          {...({
-            miniMap: minimapForUi,
-            mountNativeMap: mountMiniMapNative,
-            expanded: mapMode === "expanded",
-            anchorRect: miniMapAnchorRect,
-            baseScrollY: baseScrollYRef.current,
-            scrollY,
-            onExpand: openPageFullMap,
-            onCollapse: closePageFullMap,
-            mapDirections: isPageMiniMapType(minimapForUi.miniMapType)
-              ? mapDirections
-              : centeredMiniMapDirections,
-            ...(isPageMiniMapType(minimapForUi.miniMapType)
-              ? { mapHostMeasureRef: miniMapMapHostRef }
-              : {}),
-          } as MiniMapProps)}
-        />
-      ) : null}
-
       {bannerExpanded &&
       bannerExpandAnchor != null &&
       bannerExpandSourceUrl != null ? (

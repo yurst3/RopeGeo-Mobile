@@ -40,7 +40,7 @@ import {
   VectorSource,
 } from "@rnmapbox/maps";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import type { ComponentRef, RefObject } from "react";
+import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import {
@@ -133,15 +133,12 @@ export type PageMiniMapViewProps = {
   miniMap: PageMiniMapTileProps;
   onCollapse: () => void;
   reloadRegisterRef?: MiniMapReloadRegisterRef;
-  /** RN host around `MapView`; parent can `measureInWindow` for debug vs scroll placeholder. */
-  mapHostMeasureRef?: RefObject<View | null> | null;
 };
 
 export function PageMiniMapView({
   miniMap,
   onCollapse,
   reloadRegisterRef,
-  mapHostMeasureRef,
 }: PageMiniMapViewProps) {
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
@@ -231,7 +228,7 @@ export function PageMiniMapView({
     b,
     captureHome,
     fitToBounds,
-    shell.anchorRect,
+    shell.layoutReady,
     shell.expanded,
     shell.mountNativeMap,
   ]);
@@ -552,7 +549,6 @@ export function PageMiniMapView({
     <>
       {shell.mapBodyVisible ? (
         <View
-          ref={mapHostMeasureRef ?? undefined}
           style={minimapStyles.map}
           pointerEvents={shell.expanded ? "auto" : "none"}
         >
