@@ -5,12 +5,12 @@ import {
   routesLoadingProgress01,
   type RoutesLoadToastSource,
 } from "./routesLoading";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import {
   TOAST_KEY_ROUTES_ERROR,
   TOAST_KEY_ROUTES_PROGRESS,
-  getToastArchetypeForKey,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/toastArchetypes";
+import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import { ToastKeyNotFoundError, useToast } from "@/context/ToastContext";
 import { usePathname } from "expo-router";
 import { useEffect, useRef } from "react";
@@ -115,7 +115,7 @@ export function useRoutesProgressToast(
     if (prev.loading) {
       try {
         updateToast(TOAST_KEY_ROUTES_PROGRESS, {
-          mode: "progress",
+          variant: "progress",
           progressKind: "success",
           title: formatRoutesLoadedSuccessTitle(received),
           durationMs:

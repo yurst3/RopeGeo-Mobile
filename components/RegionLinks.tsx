@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { isSavedRopewikiPagePath } from "@/lib/navigation/savedPagePath";
 import { usePathname, useRouter } from "expo-router";
 import { PageDataSource } from "ropegeo-common/models";
@@ -28,6 +29,7 @@ export function RegionLinks({
   styleAfterBlock,
   numberOfLines,
 }: RegionLinksProps) {
+  const themeColors = useColorTheme();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -61,14 +63,17 @@ export function RegionLinks({
       {regions.flatMap((region, i) => [
         <Text
           key={`region-${region.id}`}
-          style={styles.regionLink}
+          style={[styles.regionLink, { color: themeColors.text.link }]}
           onPress={() => onRegionPress(region.id)}
         >
           {region.name}
         </Text>,
         ...(i < regions.length - 1
           ? [
-              <Text key={`sep-${i}`} style={styles.regionSeparator}>
+              <Text
+                key={`sep-${i}`}
+                style={[styles.regionSeparator, { color: themeColors.text.secondary }]}
+              >
                 {" "}•{" "}
               </Text>,
             ]
@@ -84,10 +89,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   regionLink: {
-    color: "#3b82f6",
     textDecorationLine: "underline",
   },
-  regionSeparator: {
-    color: "#6b7280",
-  },
+  regionSeparator: {},
 });

@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import React from "react";
 import {
@@ -33,6 +34,8 @@ export function PageBanner({
   onBannerImageLoad,
   onBannerImageLoadEnd,
 }: PageBannerProps) {
+  const { image, loadingIndicator } = useColorTheme();
+
   return (
     <Animated.View pointerEvents="none" style={[styles.bannerWrap, imageFrameStyle]}>
       {bannerUrl ? (
@@ -49,24 +52,35 @@ export function PageBanner({
             />
           </View>
           {bannerImageLoading ? (
-            <View style={[StyleSheet.absoluteFill, styles.bannerLoadingOverlay]}>
-              <ActivityIndicator size="large" color="#fff" />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                styles.bannerLoadingOverlay,
+                { backgroundColor: image.background },
+              ]}
+            >
+              <ActivityIndicator size="large" color={loadingIndicator} />
             </View>
           ) : null}
         </>
       ) : (
-        <View style={styles.bannerNoImageWrap}>
+        <View style={[styles.bannerNoImageWrap, { backgroundColor: image.background }]}>
           <Image
             source={
               hasBannerImageObject
                 ? require("@/assets/images/icons/missingImage.png")
                 : require("@/assets/images/icons/noImage.png")
             }
-            style={styles.bannerNoImageIcon}
+            style={[
+              styles.bannerNoImageIcon,
+              { tintColor: image.missingIcon },
+            ]}
             contentFit="contain"
           />
           {hasBannerImageObject ? (
-            <Text style={styles.missingImageText}>Missing Image</Text>
+            <Text style={[styles.missingImageText, { color: image.missingText }]}>
+              Missing Image
+            </Text>
           ) : null}
         </View>
       )}
@@ -92,7 +106,6 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
   },
   bannerNoImageIcon: {
     width: 64,
@@ -101,13 +114,11 @@ const styles = StyleSheet.create({
   missingImageText: {
     marginTop: 8,
     fontSize: 13,
-    color: "#6b7280",
     fontWeight: "600",
   },
   bannerLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.25)",
   },
 });

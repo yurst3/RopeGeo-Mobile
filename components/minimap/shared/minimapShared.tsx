@@ -1,8 +1,20 @@
+import { AppleDirectionsButton } from "@/components/buttons/standard/AppleDirectionsButton";
+import { GoogleDirectionsButton } from "@/components/buttons/standard/GoogleDirectionsButton";
 import { openAppleMaps, openGoogleMaps } from "@/lib/openExternalMaps";
-import { Image } from "expo-image";
 import { useCallback } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { MiniMapType } from "ropegeo-common/models";
+
+import {
+  EXPAND_BUTTON_INSET,
+  MAP_OVERLAY_BUTTON_GAP,
+} from "./miniMapOverlayLayout";
+
+export {
+  EXPAND_BUTTON_SIZE,
+  EXPAND_BUTTON_INSET,
+  MAP_OVERLAY_BUTTON_GAP,
+} from "./miniMapOverlayLayout";
 
 /** True when the minimap is a page tile map ({@link MiniMapType.Page}). */
 export function isPageMiniMapType(t: MiniMapType): boolean {
@@ -19,10 +31,6 @@ export const MINI_MAP_BORDER_RADIUS = 12;
 export const MINI_MAP_COLLAPSED_Z_INDEX = 1100;
 /** Fullscreen expand: above page chrome while expanded. */
 export const MINI_MAP_EXPANDED_Z_INDEX = 5000;
-export const EXPAND_BUTTON_SIZE = 40;
-export const EXPAND_BUTTON_INSET = 8;
-/** Horizontal gap between grouped map overlay circle buttons (e.g. directions). */
-export const MAP_OVERLAY_BUTTON_GAP = 8;
 
 export const CAMERA_PADDING = {
   paddingTop: 12,
@@ -54,19 +62,6 @@ export const minimapStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  circleMapButton: {
-    width: EXPAND_BUTTON_SIZE,
-    height: EXPAND_BUTTON_SIZE,
-    borderRadius: EXPAND_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
   expandButton: {
     position: "absolute",
     bottom: EXPAND_BUTTON_INSET,
@@ -81,9 +76,6 @@ export const minimapStyles = StyleSheet.create({
     gap: MAP_OVERLAY_BUTTON_GAP,
   },
 });
-
-/** 22 × 1.2 — directions icons inside the 40pt overlay circles. */
-const DIRECTIONS_ICON_SIZE = 30;
 
 export function MiniMapDirectionsButtons({
   lat,
@@ -102,43 +94,8 @@ export function MiniMapDirectionsButtons({
 
   return (
     <View style={minimapStyles.directionsButtonRow} pointerEvents="box-none">
-      <Pressable
-        style={({ pressed }) => [
-          minimapStyles.circleMapButton,
-          pressed && { opacity: 0.85 },
-        ]}
-        onPress={onApple}
-        accessibilityLabel="Open Apple Maps"
-        accessibilityRole="button"
-      >
-        <Image
-          source={require("@/assets/images/icons/buttons/apple-directions.png")}
-          style={directionsIconStyles.icon}
-          contentFit="contain"
-        />
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          minimapStyles.circleMapButton,
-          pressed && { opacity: 0.85 },
-        ]}
-        onPress={onGoogle}
-        accessibilityLabel="Open Google Maps"
-        accessibilityRole="button"
-      >
-        <Image
-          source={require("@/assets/images/icons/buttons/google-directions.png")}
-          style={directionsIconStyles.icon}
-          contentFit="contain"
-        />
-      </Pressable>
+      <AppleDirectionsButton onPress={onApple} />
+      <GoogleDirectionsButton onPress={onGoogle} />
     </View>
   );
 }
-
-const directionsIconStyles = StyleSheet.create({
-  icon: {
-    width: DIRECTIONS_ICON_SIZE,
-    height: DIRECTIONS_ICON_SIZE,
-  },
-});

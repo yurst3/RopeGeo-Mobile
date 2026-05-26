@@ -1,28 +1,18 @@
+import { useMemo } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import RenderHtml from "react-native-render-html";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
+import {
+  buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_HTML_IGNORED_STYLES,
+} from "@/utils/ropewikiRenderHtml";
 
 const HORIZONTAL_INSET = 16;
 const CAPTION_PILL_PADDING_H = 12;
 const CAPTION_PILL_PADDING_V = 8;
 const CAPTION_PILL_RADIUS = 12;
-
-const EXPANDED_CAPTION_HTML_TAGS = {
-  a: {
-    color: "#93c5fd",
-    textDecorationLine: "underline" as const,
-  },
-  b: { fontWeight: "700" as const },
-  strong: { fontWeight: "700" as const },
-  i: { fontStyle: "italic" as const },
-  em: { fontStyle: "italic" as const },
-  caption: {
-    textAlign: "center" as const,
-    fontSize: 15,
-    color: "#ffffff",
-  },
-};
 
 /** Y coordinate (from stage top) of the bottom edge of a `contentFit="contain"` image. */
 export function containImageBottomY(
@@ -50,7 +40,7 @@ export type ExpandedImageCaptionProps = {
 };
 
 /**
- * Expanded image caption: white HTML on a subtle dark pill.
+ * Expanded image caption: themed HTML on a semi-transparent pill.
  * Vertically centered in the band between the image bottom and the stage bottom.
  */
 export function ExpandedImageCaption({
@@ -59,6 +49,17 @@ export function ExpandedImageCaption({
   imageBottomY,
   bottomInset,
 }: ExpandedImageCaptionProps) {
+  const themeColors = useColorTheme();
+  const captionTagsStyles = useMemo(
+    () =>
+      buildRopewikiHtmlTagsStyles({
+        link: themeColors.text.link,
+        secondary: themeColors.text.secondary,
+        captionColor: themeColors.image.text,
+        captionFontSize: 15,
+      }),
+    [themeColors.image.text, themeColors.text],
+  );
   const contentWidth = Math.max(0, stageWidth - HORIZONTAL_INSET * 2);
   const pillInnerWidth = Math.max(
     0,
@@ -83,15 +84,25 @@ export function ExpandedImageCaption({
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={styles.captionPill}>
+        <View
+          style={[
+            styles.captionPill,
+            { backgroundColor: themeColors.image.textBackground },
+          ]}
+        >
           <RenderHtml
             contentWidth={pillInnerWidth}
             source={{
               html: replaceEmbeddedImgTagsWithLinks(caption),
               baseUrl: ROPEWIKI_ORIGIN,
             }}
-            baseStyle={styles.htmlBase}
-            tagsStyles={EXPANDED_CAPTION_HTML_TAGS}
+            baseStyle={{
+              ...styles.htmlBase,
+              color: themeColors.image.text,
+            }}
+            tagsStyles={captionTagsStyles}
+            ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
+            enableUserAgentStyles={false}
           />
         </View>
       </ScrollView>
@@ -119,10 +130,8 @@ const styles = StyleSheet.create({
     paddingVertical: CAPTION_PILL_PADDING_V,
     paddingHorizontal: CAPTION_PILL_PADDING_H,
     borderRadius: CAPTION_PILL_RADIUS,
-    backgroundColor: "rgba(0,0,0,0.55)",
   },
   htmlBase: {
-    color: "#ffffff",
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",

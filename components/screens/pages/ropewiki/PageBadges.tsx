@@ -36,17 +36,18 @@ import { FourWDBadge } from "@/components/badges/vehicle/4WDBadge";
 import { FourWDVeryHighClearanceBadge } from "@/components/badges/vehicle/4WDVeryHighClearanceBadge";
 import { HighClearanceBadge } from "@/components/badges/vehicle/HighClearanceBadge";
 import { PassengerBadge } from "@/components/badges/vehicle/PassengerBadge";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { BadgeButton } from "@/components/buttons/nonstandard/BadgeButton";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 import {
-  AcaDifficulty,
-  AcaRiskRating,
-  AcaTechnicalRating,
-  AcaTimeRating,
-  AcaWaterRating,
+  AcaDifficultyRating,
+  AcaRiskSubRating,
+  AcaTechnicalSubRating,
+  AcaTimeSubRating,
+  AcaWaterSubRating,
   PermitStatus,
+  RopewikiVehicleType,
   type OfflineRopewikiPageView,
   type OnlineRopewikiPageView,
 } from "ropegeo-common/models";
@@ -54,53 +55,49 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BADGES_GRID_MIN_HEIGHT = 320;
 const CELL_WIDTH = SCREEN_WIDTH / 2;
-/** Fixed width for badge type label so badge position is consistent; long labels wrap. */
-const LABEL_WIDTH = 110;
-/** Fixed width for badge (circle + label) so all badges align in the same position. */
-const BADGE_BLOCK_WIDTH = 80;
 
 const TECHNICAL_BADGES: Record<
-  AcaTechnicalRating,
+  AcaTechnicalSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [AcaTechnicalRating.One]: NotTechnicalBadge,
-  [AcaTechnicalRating.Two]: ScramblingBadge,
-  [AcaTechnicalRating.Three]: TechnicalBadge,
-  [AcaTechnicalRating.Four]: VeryTechnicalBadge,
+  [AcaTechnicalSubRating.One]: NotTechnicalBadge,
+  [AcaTechnicalSubRating.Two]: ScramblingBadge,
+  [AcaTechnicalSubRating.Three]: TechnicalBadge,
+  [AcaTechnicalSubRating.Four]: VeryTechnicalBadge,
 };
 const WATER_BADGES: Record<
-  AcaWaterRating,
+  AcaWaterSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [AcaWaterRating.A]: MinimalWaterBadge,
-  [AcaWaterRating.B]: SwimmingWaterBadge,
-  [AcaWaterRating.C]: FlowingWaterBadge,
-  [AcaWaterRating.C1]: FlowingC1WaterBadge,
-  [AcaWaterRating.C2]: FlowingC2WaterBadge,
-  [AcaWaterRating.C3]: FlowingC3WaterBadge,
-  [AcaWaterRating.C4]: FlowingC4WaterBadge,
+  [AcaWaterSubRating.A]: MinimalWaterBadge,
+  [AcaWaterSubRating.B]: SwimmingWaterBadge,
+  [AcaWaterSubRating.C]: FlowingWaterBadge,
+  [AcaWaterSubRating.C1]: FlowingC1WaterBadge,
+  [AcaWaterSubRating.C2]: FlowingC2WaterBadge,
+  [AcaWaterSubRating.C3]: FlowingC3WaterBadge,
+  [AcaWaterSubRating.C4]: FlowingC4WaterBadge,
 };
 const TIME_BADGES: Record<
-  AcaTimeRating,
+  AcaTimeSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [AcaTimeRating.I]: ShortBadge,
-  [AcaTimeRating.II]: HalfDayBadge,
-  [AcaTimeRating.III]: FullDayBadge,
-  [AcaTimeRating.IV]: LongDayBadge,
-  [AcaTimeRating.V]: OvernightBadge,
-  [AcaTimeRating.VI]: MultipleDaysBadge,
+  [AcaTimeSubRating.I]: ShortBadge,
+  [AcaTimeSubRating.II]: HalfDayBadge,
+  [AcaTimeSubRating.III]: FullDayBadge,
+  [AcaTimeSubRating.IV]: LongDayBadge,
+  [AcaTimeSubRating.V]: OvernightBadge,
+  [AcaTimeSubRating.VI]: MultipleDaysBadge,
 };
 const RISK_BADGES: Record<
-  AcaRiskRating,
+  AcaRiskSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [AcaRiskRating.G]: MinimalRiskBadge,
-  [AcaRiskRating.PG]: SomeRiskBadge,
-  [AcaRiskRating.PG13]: ModerateRiskBadge,
-  [AcaRiskRating.R]: HighRiskBadge,
-  [AcaRiskRating.X]: VeryHighRiskBadge,
-  [AcaRiskRating.XX]: ExtremeRiskBadge,
+  [AcaRiskSubRating.G]: MinimalRiskBadge,
+  [AcaRiskSubRating.PG]: SomeRiskBadge,
+  [AcaRiskSubRating.PG13]: ModerateRiskBadge,
+  [AcaRiskSubRating.R]: HighRiskBadge,
+  [AcaRiskSubRating.X]: VeryHighRiskBadge,
+  [AcaRiskSubRating.XX]: ExtremeRiskBadge,
 };
 const PERMIT_BADGES: Record<
   PermitStatus,
@@ -144,24 +141,15 @@ const INFO_BADGE_TYPES: BadgeTypeKey[] = [
   "vehicle",
 ];
 
-/** RopeWiki vehicle type values. */
-const VEHICLE_TYPES = [
-  "Passenger",
-  "High Clearance",
-  "4WD",
-  "4WD - High Clearance",
-  "4WD - Very High Clearance",
-] as const;
-
 const VEHICLE_BADGES: Record<
-  (typeof VEHICLE_TYPES)[number],
+  RopewikiVehicleType,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  Passenger: PassengerBadge,
-  "High Clearance": HighClearanceBadge,
-  "4WD": FourWDBadge,
-  "4WD - High Clearance": FourWDHighClearanceBadge,
-  "4WD - Very High Clearance": FourWDVeryHighClearanceBadge,
+  [RopewikiVehicleType.passenger]: PassengerBadge,
+  [RopewikiVehicleType.highClearance]: HighClearanceBadge,
+  [RopewikiVehicleType.fourWd]: FourWDBadge,
+  [RopewikiVehicleType.fourWdHighClearance]: FourWDHighClearanceBadge,
+  [RopewikiVehicleType.fourWdVeryHighClearance]: FourWDVeryHighClearanceBadge,
 };
 
 export type PageBadgesProps = {
@@ -250,7 +238,7 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
   const pathname = usePathname();
   const infoBasePath = badgeInfoBasePath(pathname ?? "");
   const aca =
-    data.difficulty instanceof AcaDifficulty ? data.difficulty : null;
+    data.difficultyRating instanceof AcaDifficultyRating ? data.difficultyRating : null;
   const permit = data.permit ?? null;
   const technical = aca?.technical ?? null;
   const water = aca?.water ?? null;
@@ -332,12 +320,9 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
         if (vehicleVal == null) {
           return { node: <UnknownBadge showLabel />, value: null };
         }
-        const VC =
-          VEHICLE_TYPES.includes(vehicleVal as (typeof VEHICLE_TYPES)[number])
-            ? VEHICLE_BADGES[vehicleVal as (typeof VEHICLE_TYPES)[number]]
-            : null;
+        const VC = VEHICLE_BADGES[vehicleVal];
         return {
-          node: VC ? <VC showLabel /> : <UnknownBadge showLabel />,
+          node: <VC showLabel />,
           value: vehicleVal,
         };
       }
@@ -360,49 +345,22 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
     }
   };
 
-  const BadgeItem = ({
-    type,
-  }: {
-    type: BadgeTypeKey;
-  }) => {
+  const BadgeItem = ({ type }: { type: BadgeTypeKey }) => {
     const label = BADGE_TYPE_LABELS[type];
     const { node, value } = renderBadge(type);
     const hasInfo = showInfoButton(type);
-    const onPress = hasInfo
-      ? () => openInfo(router, type, value, infoBasePath)
-      : undefined;
 
     return (
-      <View style={styles.badgeItem}>
-        <View style={[styles.labelRow, { width: LABEL_WIDTH }]}>
-          {hasInfo ? (
-            <Pressable
-              onPress={onPress}
-              style={styles.infoButton}
-              hitSlop={8}
-              accessibilityLabel={`${label} info`}
-            >
-              <FontAwesome5 name="info-circle" size={18} color="#3b82f6" />
-            </Pressable>
-          ) : (
-            <View style={[styles.infoButton, { opacity: 0 }]} pointerEvents="none">
-              <FontAwesome5 name="info-circle" size={18} color="#3b82f6" />
-            </View>
-          )}
-          <View style={styles.labelTextWrap}>
-            <Text style={styles.typeLabel}>{label}</Text>
-          </View>
-        </View>
-        <View style={[styles.badgeRight, { width: BADGE_BLOCK_WIDTH }]}>
-          {onPress ? (
-            <Pressable onPress={onPress} style={styles.badgePressable}>
-              {node}
-            </Pressable>
-          ) : (
-            <View style={styles.badgeWrap}>{node}</View>
-          )}
-        </View>
-      </View>
+      <BadgeButton
+        badge={node}
+        badgeTypeLabel={label}
+        onPress={
+          hasInfo
+            ? () => openInfo(router, type, value, infoBasePath)
+            : undefined
+        }
+        accessibilityLabel={hasInfo ? `${label} info` : undefined}
+      />
     );
   };
 
@@ -461,41 +419,5 @@ const styles = StyleSheet.create({
     width: CELL_WIDTH,
     paddingHorizontal: 8,
     alignItems: "flex-start",
-  },
-  badgeItem: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    flex: 1,
-    minHeight: 0,
-  },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexShrink: 0,
-  },
-  labelTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  infoButton: {
-    padding: 2,
-  },
-  typeLabel: {
-    fontSize: 13,
-    color: "#6b7280",
-    fontWeight: "500",
-  },
-  badgeRight: {
-    flexShrink: 0,
-    alignSelf: "stretch",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgePressable: {
-    maxWidth: "100%",
-  },
-  badgeWrap: {
-    maxWidth: "100%",
   },
 });

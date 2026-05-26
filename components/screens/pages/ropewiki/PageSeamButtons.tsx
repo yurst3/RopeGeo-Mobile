@@ -1,5 +1,5 @@
-import { DownloadButton } from "@/components/buttons/DownloadButton";
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { DownloadButton } from "@/components/buttons/nonstandard/DownloadButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import Animated, {

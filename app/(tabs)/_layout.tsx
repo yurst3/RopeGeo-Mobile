@@ -1,17 +1,34 @@
 import { SavedTabBarIcon } from "@/components/navigation/SavedTabBarIcon";
 import { SavedTabHighlightProvider } from "@/context/SavedTabHighlightContext";
 import { ShareSheetDimmerOverlay } from "@/context/ShareSheetDimmerContext";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { Tabs, router } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 const EXPLORE_TAB_HREF = "/(tabs)/explore" as const;
 
 export default function TabsLayout() {
+  const { tabBar } = useColorTheme();
+
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      tabBarActiveTintColor: tabBar.iconFocused,
+      tabBarInactiveTintColor: tabBar.iconUnfocused,
+      tabBarStyle: {
+        backgroundColor: tabBar.background,
+        borderTopColor: tabBar.background,
+      },
+    }),
+    [tabBar],
+  );
+
   return (
     <SavedTabHighlightProvider>
       <View style={styles.tabsHost}>
-        <Tabs>
+        <Tabs screenOptions={screenOptions}>
           <Tabs.Screen
             name="explore"
             listeners={({ navigation }) => ({
@@ -26,9 +43,12 @@ export default function TabsLayout() {
             })}
             options={{
               title: "explore",
-              headerShown: false,
-              tabBarIcon: ({ color, size, focused }) => (
-                <FontAwesome name={focused ? "map" : "map-o"} size={size} color={color} />
+              tabBarIcon: ({ size, focused }) => (
+                <FontAwesome
+                  name={focused ? "map" : "map-o"}
+                  size={size}
+                  color={focused ? tabBar.iconFocused : tabBar.iconUnfocused}
+                />
               ),
             }}
           />
@@ -36,9 +56,8 @@ export default function TabsLayout() {
             name="saved"
             options={{
               title: "saved",
-              headerShown: false,
-              tabBarIcon: ({ color, size, focused }) => (
-                <SavedTabBarIcon color={color} size={size} focused={focused} />
+              tabBarIcon: ({ size, focused }) => (
+                <SavedTabBarIcon size={size} focused={focused} />
               ),
             }}
           />

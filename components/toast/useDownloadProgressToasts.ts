@@ -1,8 +1,6 @@
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
-import {
-  TOAST_KEY_DOWNLOAD_PROGRESS,
-  getToastArchetypeForKey,
-} from "@/constants/toastArchetypes";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { TOAST_KEY_DOWNLOAD_PROGRESS } from "@/constants/toasts/toastArchetypes";
+import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import { useToast } from "@/context/ToastContext";
 import type { DownloadTaskSnapshot } from "@/lib/downloadQueue/downloadQueue";
 import { useEffect, useMemo } from "react";

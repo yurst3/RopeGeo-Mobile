@@ -1,1 +1,1 @@
-export { default } from "@/components/pageRoutes/RopewikiPageRouteScreen";
+export { default } from "@/components/screens/pages/PageRouteScreen";

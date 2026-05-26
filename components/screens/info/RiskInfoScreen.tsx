@@ -4,69 +4,62 @@ import { ModerateRiskBadge } from "@/components/badges/difficulty/ModerateRiskBa
 import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadge";
 import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
 import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
-import { DifficultyRisk } from "ropegeo-common/models";
+import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { AcaRiskSubRating } from "ropegeo-common/models";
 import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 
-const RISK_ORDER: DifficultyRisk[] = Object.values(DifficultyRisk);
+const RISK_ORDER: AcaRiskSubRating[] = Object.values(AcaRiskSubRating);
 
-/** Fixed width for the badge column so badges center and descriptions align. */
-const BADGE_COLUMN_WIDTH = 80;
-
-const RISK_BADGES: Record<DifficultyRisk, React.ComponentType<{ showLabel?: boolean }>> = {
-  [DifficultyRisk.G]: MinimalRiskBadge,
-  [DifficultyRisk.PG]: SomeRiskBadge,
-  [DifficultyRisk.PG13]: ModerateRiskBadge,
-  [DifficultyRisk.R]: HighRiskBadge,
-  [DifficultyRisk.X]: VeryHighRiskBadge,
-  [DifficultyRisk.XX]: ExtremeRiskBadge,
+const RISK_BADGES: Record<AcaRiskSubRating, React.ComponentType<{ showLabel?: boolean }>> = {
+  [AcaRiskSubRating.G]: MinimalRiskBadge,
+  [AcaRiskSubRating.PG]: SomeRiskBadge,
+  [AcaRiskSubRating.PG13]: ModerateRiskBadge,
+  [AcaRiskSubRating.R]: HighRiskBadge,
+  [AcaRiskSubRating.X]: VeryHighRiskBadge,
+  [AcaRiskSubRating.XX]: ExtremeRiskBadge,
 };
 
 /** Descriptions aligned with ACA canyon risk ratings. See canyoneeringusa.com, ropewiki.com/ACA_rating, dankat.com. */
 const RISK_DESCRIPTIONS: Record<
-  DifficultyRisk,
+  AcaRiskSubRating,
   { minimumFor?: string; body: string }
 > = {
-  [DifficultyRisk.G]: {
+  [AcaRiskSubRating.G]: {
     minimumFor: "technical rating 1",
     body:
       "Minimal risk. Normal risk factors are present. Non-technical canyon hiking; no rope required. " +
       "May involve easy scrambling with occasional use of hands for balance. Appropriate for beginners.",
   },
-  [DifficultyRisk.PG]: {
+  [AcaRiskSubRating.PG]: {
     minimumFor: "technical rating 2",
     body:
       "Some additional considerations. Scrambling, easy climbing or downclimbing; a rope may be handy for handlines, " +
       "belays, lowering packs and emergency use. Exit or retreat possible upcanyon without fixed ropes. " +
       "Suitable for hikers with reasonable fitness.",
   },
-  [DifficultyRisk.PG13]: {
+  [AcaRiskSubRating.PG13]: {
     minimumFor: "technical rating 3 and 4",
     body:
       "Every class 3 and class 4 canyon is at least PG13 because rappels and technical terrain introduce significant risk. " +
       "Rope required for belays and single-pitch rappels (Class 3) or complex rope work such as multi-pitch rappels, " +
       "re-belays, or guided rappels (Class 4). Not appropriate for beginners; solid technical skills and sound judgment required.",
   },
-  [DifficultyRisk.R]: {
+  [AcaRiskSubRating.R]: {
     body:
       "Risky. One or more extraordinary risk factors exist that complicate the descent. " +
       "Solid technical skills and sound judgment critical. Not appropriate for beginners, even with competent leadership. " +
       "May include difficult rappels, exposed climbing or traversing, difficult anchors, loose or dangerous rock, " +
       "committing route finding, or prolonged water immersion. See the route description for specific factors.",
   },
-  [DifficultyRisk.X]: {
+  [AcaRiskSubRating.X]: {
     body:
       "Very high. Multiple risk factors exist that will complicate the descent. " +
       "Errors in technique or judgment will likely result in serious injury or death. " +
       "Descent should be attempted by expert canyoneers only.",
   },
-  [DifficultyRisk.XX]: {
+  [AcaRiskSubRating.XX]: {
     body:
       "Extreme. The most serious rating. Multiple severe risk factors; only for highly experienced canyoneers. " +
       "Consequences of error are severe. Use varies among beta providers; read the route description carefully.",
@@ -74,25 +67,14 @@ const RISK_DESCRIPTIONS: Record<
 };
 
 export type RiskInfoScreenProps = {
-  highlightedRisk?: DifficultyRisk | null;
+  highlightedRisk?: AcaRiskSubRating | null;
 };
 
 export function RiskInfoScreen({ highlightedRisk }: RiskInfoScreenProps) {
-  const insets = useSafeAreaInsets();
+  const styles = useInfoScreenStyles();
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: 12,
-          paddingBottom: insets.bottom + 24,
-          paddingLeft: 16 + insets.left,
-          paddingRight: 16 + insets.right,
-        },
-      ]}
-    >
+    <InfoScreenLayout title="Effective Risk">
       <Text style={styles.subtitle}>
         The ACA rating system uses &quot;additional risk&quot; to denote elevated risk factors above the norm.
         &quot;Effective risk&quot; takes into account the technical rating
@@ -123,59 +105,6 @@ export function RiskInfoScreen({ highlightedRisk }: RiskInfoScreenProps) {
           </View>
         );
       })}
-    </ScrollView>
+    </InfoScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 16,
-  },
-  rowHighlighted: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  badgeWrap: {
-    width: BADGE_COLUMN_WIDTH,
-    flexShrink: 0,
-    alignItems: "center",
-  },
-  descriptionWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  minimumFor: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 4,
-  },
-  body: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-});

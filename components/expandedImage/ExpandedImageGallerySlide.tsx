@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { type ImageLoadEventData } from "expo-image";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ExpandedImageZoomableImage } from "./ExpandedImageZoomableImage";
 import type { ExpandedImageGalleryPage } from "./types";
@@ -36,6 +37,7 @@ export function ExpandedImageGallerySlide({
   onZoomedChange,
   onActiveImageGeometry,
 }: ExpandedImageGallerySlideProps) {
+  const { loadingIndicator, image } = useColorTheme();
   const [fullImageLoaded, setFullImageLoaded] = useState(false);
   const [intrinsic, setIntrinsic] = useState({ width: 0, height: 0 });
   /** Drives pan activation: full pan when zoomed, restricted pan at 1× so the pager scrolls. */
@@ -118,8 +120,14 @@ export function ExpandedImageGallerySlide({
           />
         ) : null}
         {overlayShowsFullImage && !fullImageLoaded ? (
-          <View style={styles.placeholderOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#fff" />
+          <View
+            style={[
+              styles.placeholderOverlay,
+              { backgroundColor: image.blurOverlay },
+            ]}
+            pointerEvents="none"
+          >
+            <ActivityIndicator size="large" color={loadingIndicator} />
           </View>
         ) : null}
       </View>
@@ -140,6 +148,5 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
   },
 });

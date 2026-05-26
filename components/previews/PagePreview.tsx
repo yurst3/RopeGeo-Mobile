@@ -1,5 +1,6 @@
-import { MiniDownloadButton } from "@/components/buttons/MiniDownloadButton";
+import { MiniDownloadButton } from "@/components/buttons/nonstandard/MiniDownloadButton";
 import { StarRating } from "@/components/StarRating";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useRouter } from "expo-router";
@@ -13,7 +14,7 @@ import {
   View,
 } from "react-native";
 import {
-  AcaDifficulty,
+  AcaDifficultyRating,
   type OfflinePagePreview,
   type OnlinePagePreview,
   PageDataSource,
@@ -21,10 +22,13 @@ import {
 
 const IMAGE_SIZE = 96;
 const NO_IMAGE_ICON_SIZE = 36;
-/** Matches `RegionPreview` thumbnail badge sizing. */
+/** Circular badge on thumbnail (matches `RegionPreview` region icon overlay). */
 const SOURCE_ICON_OVERLAY_SIZE = 28;
+/** Trailing-column source logo circle (no border; shadow like `ExternalLinkButton`). */
+const SOURCE_ICON_CIRCLE_SIZE = 32;
+const SOURCE_ICON_INNER_SIZE = 18;
 const REGION_MAX = 3;
-function formatPageDifficulty(d: AcaDifficulty): string {
+function formatPageDifficulty(d: AcaDifficultyRating): string {
   const main = [d.technical, d.water]
     .filter((x): x is NonNullable<typeof x> => x != null)
     .map((x) => String(x))
@@ -60,6 +64,9 @@ export function PagePreview({
   pageHref = "explore",
   showMiniDownload = false,
 }: Props) {
+  const themeColors = useColorTheme();
+  const { text, image, preview: previewColors, button } = themeColors;
+  const { sourceIconBackground } = previewColors.page;
   const router = useRouter();
   const { savedEntries, removeDownloadBundle } = useSavedPages();
   const { getTaskSnapshot, enqueueSavedPageDownload } = useDownloadQueue();
@@ -106,8 +113,8 @@ export function PagePreview({
     void removeDownloadBundle(preview.id);
   }, [preview.id, removeDownloadBundle]);
   const difficultyText =
-    preview.difficulty instanceof AcaDifficulty
-      ? formatPageDifficulty(preview.difficulty)
+    preview.difficultyRating instanceof AcaDifficultyRating
+      ? formatPageDifficulty(preview.difficultyRating)
       : "";
   const regionLine =
     preview.regions?.length > 0
@@ -142,12 +149,17 @@ export function PagePreview({
         onPress={onPress}
         style={({ pressed }) => [styles.cardMain, pressed && styles.cardPressed]}
       >
-        <View style={styles.imageWrap}>
+        <View style={[styles.imageWrap, { backgroundColor: image.background }]}>
           {previewImageUri ? (
             <>
               {imageLoading && (
-                <View style={styles.imageLoadingOverlay}>
-                  <ActivityIndicator size="small" color="#6b7280" />
+                <View
+                  style={[
+                    styles.imageLoadingOverlay,
+                    { backgroundColor: image.background },
+                  ]}
+                >
+                  <ActivityIndicator size="small" color={themeColors.loadingIndicator} />
                 </View>
               )}
               <Image
@@ -159,39 +171,55 @@ export function PagePreview({
               />
             </>
           ) : (
-            <View style={styles.noImageWrap}>
+            <View style={[styles.noImageWrap, { backgroundColor: image.background }]}>
               <Image
                 source={require("@/assets/images/icons/noImage.png")}
-                style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
+                style={[
+                  styles.noImageIcon,
+                  {
+                    width: NO_IMAGE_ICON_SIZE,
+                    height: NO_IMAGE_ICON_SIZE,
+                    tintColor: image.missingIcon,
+                  },
+                ]}
                 contentFit="contain"
               />
             </View>
           )}
           {showMiniDownload && icon != null ? (
-            <View style={styles.sourceIconOverlay} pointerEvents="none">
+            <View
+              style={[
+                styles.sourceIconOverlay,
+                {
+                  backgroundColor: sourceIconBackground,
+                  shadowColor: button.shadowColor,
+                },
+              ]}
+              pointerEvents="none"
+            >
               <Image source={icon} style={styles.sourceIconOnImage} contentFit="contain" />
             </View>
           ) : null}
         </View>
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={2}>
+            <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
               {preview.title}
             </Text>
             {difficultyText ? (
-              <Text style={styles.difficulty} numberOfLines={1}>
+              <Text style={[styles.difficulty, { color: text.secondary }]} numberOfLines={1}>
                 {difficultyText}
               </Text>
             ) : null}
           </View>
           {preview.aka?.length > 0 ? (
-            <Text style={[styles.meta, styles.akaLine]} numberOfLines={1}>
-              <Text style={styles.meta}>AKA: </Text>
+            <Text style={[styles.meta, styles.akaLine, { color: text.secondary }]} numberOfLines={1}>
+              <Text style={{ color: text.secondary }}>AKA: </Text>
               <Text style={styles.akaNamesBold}>{preview.aka.join(", ")}</Text>
             </Text>
           ) : null}
           {regionLine ? (
-            <Text style={styles.meta} numberOfLines={2}>
+            <Text style={[styles.meta, { color: text.secondary }]} numberOfLines={2}>
               {regionLine}
             </Text>
           ) : null}
@@ -199,7 +227,6 @@ export function PagePreview({
             rating={rating}
             count={ratingCount}
             size={14}
-            emptyStarColor="#d1d5db"
             style={styles.stars}
             textStyle={styles.starText}
           />
@@ -216,13 +243,24 @@ export function PagePreview({
           />
           {miniDownloadState.phaseStepForLabel != null &&
           miniDownloadState.phaseTotalForLabel != null ? (
-            <Text style={styles.downloadPhaseLabel}>
+            <Text style={[styles.downloadPhaseLabel, { color: text.secondary }]}>
               {`(${miniDownloadState.phaseStepForLabel}/${miniDownloadState.phaseTotalForLabel})`}
             </Text>
           ) : null}
         </View>
       ) : !showMiniDownload && icon != null ? (
-        <Image source={icon} style={styles.sourceIcon} contentFit="contain" />
+        <View
+          style={[
+            styles.sourceIconCircle,
+            {
+              backgroundColor: sourceIconBackground,
+              shadowColor: button.shadowColor,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Image source={icon} style={styles.sourceIconInner} contentFit="contain" />
+        </View>
       ) : null}
     </View>
   );
@@ -252,7 +290,6 @@ const styles = StyleSheet.create({
     height: IMAGE_SIZE,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: "#eee",
   },
   sourceIconOverlay: {
     position: "absolute",
@@ -261,10 +298,8 @@ const styles = StyleSheet.create({
     width: SOURCE_ICON_OVERLAY_SIZE,
     height: SOURCE_ICON_OVERLAY_SIZE,
     borderRadius: SOURCE_ICON_OVERLAY_SIZE / 2,
-    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
@@ -272,8 +307,24 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   sourceIconOnImage: {
-    width: 18,
-    height: 18,
+    width: SOURCE_ICON_INNER_SIZE,
+    height: SOURCE_ICON_INNER_SIZE,
+  },
+  sourceIconCircle: {
+    marginLeft: 8,
+    width: SOURCE_ICON_CIRCLE_SIZE,
+    height: SOURCE_ICON_CIRCLE_SIZE,
+    borderRadius: SOURCE_ICON_CIRCLE_SIZE / 2,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  sourceIconInner: {
+    width: SOURCE_ICON_INNER_SIZE,
+    height: SOURCE_ICON_INNER_SIZE,
   },
   image: {
     width: "100%",
@@ -281,7 +332,6 @@ const styles = StyleSheet.create({
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
@@ -309,15 +359,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
   },
   difficulty: {
     fontSize: 16,
-    color: "#374151",
   },
   meta: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 2,
   },
   akaLine: {
@@ -332,7 +379,6 @@ const styles = StyleSheet.create({
   starText: {
     marginLeft: 4,
     fontSize: 12,
-    color: "#6b7280",
   },
   downloadRail: {
     marginLeft: 8,
@@ -344,12 +390,5 @@ const styles = StyleSheet.create({
   downloadPhaseLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#4b5563",
-  },
-  /** Trailing column when `showMiniDownload` is false — same as `RegionPreview`. */
-  sourceIcon: {
-    width: 56,
-    height: 32,
-    marginLeft: 8,
   },
 });

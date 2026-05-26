@@ -1,32 +1,16 @@
+import type { ReactNode } from "react";
 import type { ImageSourcePropType } from "react-native";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
 
-export const BadgeBackgroundColor = {
-  Green: "Green",
-  Yellow: "Yellow",
-  Orange: "Orange",
-  LightOrange: "LightOrange",
-  Red: "Red",
-  Black: "Black",
-  Brown: "Brown",
-  Blue: "Blue",
-  Grey: "Grey",
-} as const;
-export type BadgeBackgroundColorType =
-  (typeof BadgeBackgroundColor)[keyof typeof BadgeBackgroundColor];
-
-const BACKGROUND_COLORS: Record<BadgeBackgroundColorType, string> = {
-  Green: "#22c55e",
-  Yellow: "#eab308",
-  Orange: "#f97316",
-  LightOrange: "#fdba74",
-  Red: "#ef4444",
-  Black: "#171717",
-  Brown: "#d4a574",
-  Blue: "#93c5fd",
-  Grey: "#d1d5db",
-};
+import { useColorTheme } from "@/context/ColorThemeContext";
 
 const SUB_RATIO = 2 / 5; // sub circle width : main circle width
 
@@ -35,7 +19,7 @@ const DEFAULT_SIZE = 56;
 export type BadgeProps = {
   /** When omitted, only the colored circle is shown (no main icon). */
   icon?: ImageSourcePropType;
-  backgroundColor: BadgeBackgroundColorType;
+  backgroundColor: string;
   /** When omitted, the sub badge is not rendered. */
   subIcon?: ImageSourcePropType;
   size?: number;
@@ -45,8 +29,12 @@ export type BadgeProps = {
   subIconScale?: number;
   /** Optional label shown below the badge. */
   label?: string;
-  /** Tint color for the main icon only. Default black. */
+  /** Tint color for the main icon only. */
   iconColor?: string;
+  /** Stroke color for main and sub circles when `outline` is true. */
+  borderColor?: string;
+  subBackgroundColor?: string;
+  subIconColor?: string;
   /** When true (default), main and sub circles use a stroke border. */
   outline?: boolean;
 };
@@ -62,9 +50,18 @@ export function Badge({
   iconScale = 1,
   subIconScale = 1,
   label,
-  iconColor = "#000",
+  iconColor,
+  borderColor: borderColorProp,
+  subBackgroundColor: subBackgroundColorProp,
+  subIconColor: subIconColorProp,
   outline = true,
 }: BadgeProps) {
+  const themeColors = useColorTheme();
+  const borderColor = borderColorProp ?? themeColors.badge.border;
+  const subBackgroundColor =
+    subBackgroundColorProp ?? themeColors.badge.subBadge.background;
+  const subIconColor = subIconColorProp ?? themeColors.badge.subBadge.icon;
+
   const subSize = size * SUB_RATIO;
   const mainRadius = size / 2;
   const subRadius = subSize / 2;
@@ -78,12 +75,14 @@ export function Badge({
     <View
       style={[
         styles.mainCircle,
-        outline ? styles.mainCircleOutline : null,
+        outline
+          ? [styles.mainCircleOutline, { borderColor }]
+          : null,
         {
           width: size,
           height: size,
           borderRadius: mainRadius,
-          backgroundColor: BACKGROUND_COLORS[backgroundColor],
+          backgroundColor,
         },
       ]}
     >
@@ -99,13 +98,14 @@ export function Badge({
         <View
           style={[
             styles.sub,
-            outline ? styles.subOutline : null,
+            outline ? [styles.subOutline, { borderColor }] : null,
             {
               width: subSize,
               height: subSize,
               borderRadius: subRadius,
               right: -subSize / 7,
               bottom: -subSize / 7,
+              backgroundColor: subBackgroundColor,
             },
           ]}
         >
@@ -113,7 +113,7 @@ export function Badge({
             source={subIcon}
             style={[styles.subIcon, { width: subIconSize, height: subIconSize }]}
             contentFit="contain"
-            tintColor="#000"
+            tintColor={subIconColor}
           />
         </View>
       )}
@@ -124,7 +124,7 @@ export function Badge({
     return (
       <View style={styles.withLabel}>
         {circle}
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: themeColors.text.secondary }]}>
           {label}
         </Text>
       </View>
@@ -141,7 +141,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 11,
     fontWeight: "700",
-    color: "#333",
     textAlign: "center",
     maxWidth: DEFAULT_SIZE + 16,
   },
@@ -151,20 +150,15 @@ const styles = StyleSheet.create({
   },
   mainCircleOutline: {
     borderWidth: 1.5,
-    borderColor: "#000",
   },
   mainIcon: {},
   sub: {
     position: "absolute",
-    backgroundColor: "#9ca3af",
     alignItems: "center",
     justifyContent: "center",
   },
   subOutline: {
     borderWidth: 1.5,
-    borderColor: "#000",
   },
-  subIcon: {
-    tintColor: "#000",
-  },
+  subIcon: {},
 });

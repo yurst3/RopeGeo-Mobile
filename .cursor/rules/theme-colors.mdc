@@ -1,0 +1,95 @@
+---
+description: Theme colors — define all colors in constants/colors/*Theme, obey ThemeColors shape, avoid hardcoded component colors and circular deps
+globs: Mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Theme colors
+
+## Source of truth
+
+- **All theme color values** are defined under `Mobile/constants/colors/` inside a folder named `*Theme` (e.g. `lightTheme/`, `darkTheme/`).
+- **`ThemeColors` is the contract**: `Mobile/constants/colors/types.ts` (and its subtypes) define the required shape for every theme object. Theme definitions must fully obey those types.
+- **No circular imports**: avoid require cycles across theme files/modules. When in doubt, **copy the hex/rgba value** into each theme definition instead of importing a shared constant.
+
+## Using colors in components
+
+- Components must **not** hard-code color values in stylesheets or constants.
+- Components should read colors from the theme via `useColorTheme()` (ColorThemeContext).
+- Small exceptions are allowed only for **computed/derived colors** (e.g. minimap segment halo colors computed from theme inputs).
+
+### ✅ GOOD (component uses theme colors)
+
+```tsx
+import { useColorTheme } from "@/context/ColorThemeContext";
+import { Text, View } from "react-native";
+
+export function Example() {
+  const themeColors = useColorTheme();
+  return (
+    <View style={{ backgroundColor: themeColors.card.background }}>
+      <Text style={{ color: themeColors.text.primary }}>Hello</Text>
+    </View>
+  );
+}
+```
+
+### ❌ BAD (hard-coded colors in component)
+
+```tsx
+import { Text, View } from "react-native";
+
+export function Example() {
+  return (
+    <View style={{ backgroundColor: "#ffffff" }}>
+      <Text style={{ color: "#111827" }}>Hello</Text>
+    </View>
+  );
+}
+```
+
+## Mapped component colors: use key constants
+
+For families of similar components with a shared prototype (e.g. **Buttons**, **Badges**), define **key constants** that are used to map a key to its theme colors:
+
+- Use constants like `Mobile/constants/buttons.ts` or `Mobile/constants/badges.ts`.
+- Use the key to select a color entry under the appropriate theme subtree (e.g. `themeColors.button.standard[KEY]`).
+- **Exception**: if a component is already mapped to a shared enum in another package (e.g. difficulty badges keyed by `ACADifficultyRatings` from `ropegeo-common`), use that enum as the key instead of creating a new constant key.
+
+### ✅ GOOD (component picks a theme entry by key)
+
+```tsx
+import { useColorTheme } from "@/context/ColorThemeContext";
+import { SOME_BUTTON_KEY } from "@/constants/buttons";
+import { Pressable, Text } from "react-native";
+
+export function ExampleButton() {
+  const themeColors = useColorTheme();
+  const colors = themeColors.button.standard[SOME_BUTTON_KEY];
+  return (
+    <Pressable style={{ backgroundColor: colors.backgroundColor }}>
+      <Text style={{ color: colors.textColor }}>Tap</Text>
+    </Pressable>
+  );
+}
+```
+
+### ❌ BAD (prototype component hard-codes its colors)
+
+```tsx
+import { Pressable, Text } from "react-native";
+
+export function ExampleButton() {
+  return (
+    <Pressable style={{ backgroundColor: "#2563eb" }}>
+      <Text style={{ color: "#ffffff" }}>Tap</Text>
+    </Pressable>
+  );
+}
+```
+
+## Defining new theme colors
+
+- Add/extend types in `Mobile/constants/colors/types.ts` first (or alongside) so the shape is explicit.
+- Add the new color values to **every** theme folder under `Mobile/constants/colors/*Theme/` and ensure they satisfy the types.
+- Prefer repeating literals over importing between theme modules to avoid cycles.

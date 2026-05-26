@@ -1,3 +1,4 @@
+import { lightTheme } from "@/constants/colors/lightTheme";
 import * as FileSystem from "expo-file-system/legacy";
 import { offlineManager } from "@rnmapbox/maps";
 import {
@@ -457,7 +458,7 @@ export class DownloadTask {
         .createPack(
           {
             name: packName,
-            styleURL: "mapbox://styles/mapbox/outdoors-v12",
+            styleURL: lightTheme.map.styleUrl,
             bounds: [
               [bounds.east, bounds.north],
               [bounds.west, bounds.south],

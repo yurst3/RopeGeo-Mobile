@@ -1,29 +1,26 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
+import { colorWithAlpha } from "@/utils/colorWithAlpha";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
 type Props = {
-  color: string;
   size?: number;
   focused: boolean;
 };
 
 /** Halo diameter — matches prior layout. */
 const HALO_SIZE = 56;
-/** Layered solid circles (simulated radial); avoids react-native-svg RadialGradient on Fabric (shows “Unimplemented”). */
-const HALO_LAYERS = [
-  { size: HALO_SIZE, color: "rgba(74, 222, 128, 0.32)" },
-  { size: 40, color: "rgba(74, 222, 128, 0.42)" },
-  { size: 26, color: "rgba(134, 239, 172, 0.55)" },
-] as const;
+const HALO_LAYER_SIZES = [HALO_SIZE, 40, 26] as const;
+const HALO_LAYER_ALPHAS = [0.32, 0.42, 0.55] as const;
 
 const HALO_SHRINK_MS = 240;
 
-function SavedTabHalo() {
+function SavedTabHalo({ layers }: { layers: readonly { size: number; color: string }[] }) {
   return (
     <View style={styles.haloSlot} pointerEvents="none">
-      {HALO_LAYERS.map(({ size, color }) => {
+      {layers.map(({ size, color }) => {
         const offset = (HALO_SIZE - size) / 2;
         return (
           <View
@@ -50,7 +47,21 @@ function SavedTabHalo() {
  * Saved tab icon; shows a layered circular halo when {@link SavedTabHighlightContext} is active
  * (e.g. “Page saved” toast on RopewikiPageScreen).
  */
-export function SavedTabBarIcon({ color, size, focused }: Props) {
+export function SavedTabBarIcon({ size, focused }: Props) {
+  const themeColors = useColorTheme();
+  const { tabBar } = themeColors;
+  const iconColor = focused ? tabBar.iconFocused : tabBar.iconUnfocused;
+  const haloLayers = useMemo(
+    () =>
+      HALO_LAYER_SIZES.map((layerSize, index) => ({
+        size: layerSize,
+        color: colorWithAlpha(
+          tabBar.iconHighlight,
+          HALO_LAYER_ALPHAS[index] ?? HALO_LAYER_ALPHAS[0],
+        ),
+      })),
+    [tabBar.iconHighlight],
+  );
   const { highlightSavedTab } = useSavedTabHighlight();
   const dim = size ?? 26;
   const [renderHalo, setRenderHalo] = useState(false);
@@ -94,7 +105,7 @@ export function SavedTabBarIcon({ color, size, focused }: Props) {
             { transform: [{ scale: haloScale }] },
           ]}
         >
-          <SavedTabHalo />
+          <SavedTabHalo layers={haloLayers} />
         </Animated.View>
       ) : null}
       <Image
@@ -103,7 +114,7 @@ export function SavedTabBarIcon({ color, size, focused }: Props) {
             ? require("@/assets/images/icons/buttons/saved-solid.png")
             : require("@/assets/images/icons/buttons/saved.png")
         }
-        style={[styles.icon, { width: dim, height: dim, tintColor: color }]}
+        style={[styles.icon, { width: dim, height: dim, tintColor: iconColor }]}
         contentFit="contain"
       />
     </View>

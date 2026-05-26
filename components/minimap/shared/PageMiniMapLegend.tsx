@@ -1,4 +1,5 @@
 import { parseStrokeColor, parseStrokeWidth } from "@/components/minimap/shared/pageMiniMapSegments";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
 import { LegendFeatureType, LineLegendItem, PolygonLegendItem } from "ropegeo-common/models";
@@ -39,20 +40,35 @@ export type PageMiniMapLegendProps = {
   onSelectLegendId: (id: string) => void;
 };
 
-function LegendItemSwatch({ item }: { item: LegendItem }) {
+function LegendItemSwatch({
+  item,
+  pointMarkerTint,
+  defaultLineStroke,
+}: {
+  item: LegendItem;
+  pointMarkerTint: string;
+  defaultLineStroke: string;
+}) {
   if (item.featureType === LegendFeatureType.Point) {
     return (
       <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
-        <Image source={POINT_MARKER_IMAGE} style={styles.swatchPointMarker} accessibilityIgnoresInvertColors />
+        <Image
+          source={POINT_MARKER_IMAGE}
+          style={[styles.swatchPointMarker, { tintColor: pointMarkerTint }]}
+          accessibilityIgnoresInvertColors
+        />
       </View>
     );
   }
   if (item.featureType === LegendFeatureType.Polygon) {
     const G = item as PolygonLegendItem;
-    const stroke = parseStrokeColor(G.borderColor ?? G.fillColor);
+    const stroke = parseStrokeColor(
+      G.borderColor ?? G.fillColor,
+      defaultLineStroke,
+    );
     const fillColor =
       G.fillColor !== undefined && String(G.fillColor).trim() !== ""
-        ? parseStrokeColor(G.fillColor)
+        ? parseStrokeColor(G.fillColor, defaultLineStroke)
         : undefined;
     return (
       <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
@@ -69,7 +85,7 @@ function LegendItemSwatch({ item }: { item: LegendItem }) {
     );
   }
   const L = item as LineLegendItem;
-  const stroke = parseStrokeColor(L.strokeColor);
+  const stroke = parseStrokeColor(L.strokeColor, defaultLineStroke);
   const strokeWidth = parseStrokeWidth(L.strokeWidth);
   return (
     <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
@@ -98,6 +114,52 @@ export function PageMiniMapLegend({
   onToggleExpanded,
   onSelectLegendId,
 }: PageMiniMapLegendProps) {
+  const themeColors = useColorTheme();
+  const { minimap, focusedLineSegment } = themeColors.map;
+  const { text, cardHighlight } = themeColors;
+  const { bodyBackground, headerBackground, shadow } = minimap.legend;
+
+  const cardStyle = useMemo(
+    () => [
+      styles.card,
+      {
+        maxWidth,
+        shadowColor: shadow,
+      },
+    ],
+    [maxWidth, shadow],
+  );
+
+  const headerStyle = useMemo(
+    () => [styles.header, { backgroundColor: headerBackground }],
+    [headerBackground],
+  );
+
+  const listBodyStyle = useMemo(
+    () => ({ backgroundColor: bodyBackground }),
+    [bodyBackground],
+  );
+
+  const headerTitleStyle = useMemo(
+    () => [styles.headerTitle, { color: text.primary }],
+    [text.primary],
+  );
+
+  const rowStyle = useMemo(
+    () => [styles.row, { borderTopColor: themeColors.separator }],
+    [themeColors.separator],
+  );
+
+  const rowLabelStyle = useMemo(
+    () => [styles.rowLabel, { color: text.primary }],
+    [text.primary],
+  );
+
+  const rowSelectedStyle = useMemo(
+    () => ({ backgroundColor: cardHighlight }),
+    [cardHighlight],
+  );
+
   const bodyHeight = useSharedValue(0);
   const bodyOpacity = useSharedValue(0);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -165,20 +227,30 @@ export function PageMiniMapLegend({
       style={[styles.anchor, { bottom: bottomOffset, right: rightInset + 12, maxWidth }]}
       pointerEvents="box-none"
     >
-      <View style={[styles.card, { maxWidth }]}>
+      <View style={cardStyle}>
         <Pressable
           onPress={onToggleExpanded}
-          style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
+          style={({ pressed }) => [
+            headerStyle,
+            pressed && styles.headerPressed,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={expanded ? "Collapse map legend" : "Expand map legend"}
         >
-          <Text style={styles.headerTitle}>Map Legend</Text>
-          <FontAwesome5 name={expanded ? "chevron-down" : "chevron-up"} size={14} color="#111" />
+          <Text style={headerTitleStyle}>Map Legend</Text>
+          <FontAwesome5
+            name={expanded ? "chevron-down" : "chevron-up"}
+            size={14}
+            color={minimap.legend.collapseIcon}
+          />
         </Pressable>
-        <Animated.View style={animatedBodyStyle} pointerEvents={expanded ? "auto" : "none"}>
+        <Animated.View
+          style={[animatedBodyStyle, listBodyStyle]}
+          pointerEvents={expanded ? "auto" : "none"}
+        >
           <ScrollView
             ref={scrollRef}
-            style={{ maxHeight }}
+            style={[{ maxHeight }, listBodyStyle]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator
           >
@@ -191,16 +263,19 @@ export function PageMiniMapLegend({
                     rowYRef.current[item.id] = e.nativeEvent.layout.y;
                   }}
                   onPress={() => onSelectLegendId(item.id)}
-                  style={({ pressed }) => [
-                    styles.row,
-                    selected && styles.rowSelected,
-                    pressed && !selected && styles.rowPressed,
-                  ]}
+                  style={[rowStyle, selected && rowSelectedStyle]}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                 >
-                  <LegendItemSwatch item={item} />
-                  <Text style={[styles.rowLabel, selected && styles.rowLabelSelected]} numberOfLines={3}>
+                  <LegendItemSwatch
+                    item={item}
+                    pointMarkerTint={minimap.legend.markerIcon}
+                    defaultLineStroke={focusedLineSegment}
+                  />
+                  <Text
+                    style={[rowLabelStyle, selected && styles.rowLabelSelected]}
+                    numberOfLines={3}
+                  >
                     {item.name}
                   </Text>
                 </Pressable>
@@ -220,10 +295,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 12,
     overflow: "hidden",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 4,
@@ -244,7 +317,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#111",
   },
   row: {
     flexDirection: "row",
@@ -253,13 +325,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
-  },
-  rowPressed: {
-    backgroundColor: "#f3f4f6",
-  },
-  rowSelected: {
-    backgroundColor: "#dbeafe",
   },
   swatchWrap: {
     width: 36,
@@ -284,7 +349,6 @@ const styles = StyleSheet.create({
   rowLabel: {
     flex: 1,
     fontSize: 14,
-    color: "#111",
   },
   rowLabelSelected: {
     fontWeight: "600",

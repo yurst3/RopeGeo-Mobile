@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -5,6 +6,8 @@ const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 
 /** Shown at the end of a list when offline but more pages exist on the server. */
 export function OfflineLoadMoreBlockedFooter() {
+  const { text: themeText } = useColorTheme();
+
   return (
     <View style={styles.wrap}>
       <Image
@@ -13,7 +16,9 @@ export function OfflineLoadMoreBlockedFooter() {
         contentFit="contain"
         accessibilityLabel="Missing image"
       />
-      <Text style={styles.text}>Unable to load more data</Text>
+      <Text style={[styles.text, { color: themeText.error }]}>
+        Unable to load more data
+      </Text>
     </View>
   );
 }
@@ -31,7 +36,6 @@ const styles = StyleSheet.create({
   text: {
     marginTop: 8,
     fontSize: 14,
-    color: "#dc2626",
     textAlign: "center",
   },
 });

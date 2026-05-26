@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { BackButton } from "@/components/buttons/BackButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
+import { useColorTheme } from "@/context/ColorThemeContext";
 
 const BACK_SLOT_WIDTH = 52; /* 44px button + 8px breathing room, aligned with app headers */
 
@@ -31,6 +32,7 @@ export function ExpandedImageHeader({
   onBack,
   top,
 }: ExpandedImageHeaderProps) {
+  const themeColors = useColorTheme();
   const trimmedSubtitle = sectionSubtitle?.trim() ?? "";
   const showSubtitle = trimmedSubtitle.length > 0;
   const sectionLine =
@@ -44,15 +46,23 @@ export function ExpandedImageHeader({
         <BackButton onPress={onBack} />
       </View>
       <View style={styles.titleSlot} pointerEvents="none">
-        <View style={styles.titlePill}>
+        <View
+          style={[
+            styles.titlePill,
+            { backgroundColor: themeColors.image.textBackground },
+          ]}
+        >
           <Text
-            style={styles.pageTitle}
+            style={[styles.pageTitle, { color: themeColors.image.text }]}
             numberOfLines={showSubtitle ? 2 : 1}
           >
             {pageTitle}
           </Text>
           {showSubtitle ? (
-            <Text style={styles.sectionSubtitle} numberOfLines={2}>
+            <Text
+              style={[styles.sectionSubtitle, { color: themeColors.image.text }]}
+              numberOfLines={2}
+            >
               {sectionLine}
             </Text>
           ) : null}
@@ -89,20 +99,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.55)",
     alignItems: "center",
   },
   pageTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#ffffff",
     textAlign: "center",
   },
   sectionSubtitle: {
     marginTop: 2,
     fontSize: 15,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.88)",
     textAlign: "center",
   },
 });

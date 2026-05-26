@@ -7,23 +7,22 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import type { ToastStyle } from "@/constants/colors/types";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
-  DOWNLOAD_COMPLETE_BG,
-  DOWNLOAD_COMPLETE_TEXT,
-  DOWNLOAD_FAIL_BG,
-  DOWNLOAD_FAIL_TEXT,
-  DOWNLOAD_TOAST_BG,
   DOWNLOAD_TOAST_FADE_IN_MS,
   DOWNLOAD_TOAST_FADE_OUT_MS,
-  DOWNLOAD_TOAST_TEXT,
   TOAST_HORIZONTAL_INSET,
   TOAST_STACK_REPOSITION_MS,
-} from "@/constants/toast";
+} from "@/constants/toasts";
 
-export type ProgressToastKind = "progress" | "success" | "error";
+import type { ProgressToastKind } from "@/constants/toasts/types";
+
+export type { ProgressToastKind } from "@/constants/toasts/types";
 
 export type ProgressToastProps = {
   kind: ProgressToastKind;
+  style: ToastStyle;
   /** Primary line; caller formats (e.g. phase label, success copy). */
   title: string;
   /** 0–1 bar width when `kind === 'progress'`; ignored for success/error. */
@@ -45,6 +44,7 @@ export type ProgressToastProps = {
  */
 export function ProgressToast({
   kind,
+  style,
   title,
   progress = 0,
   top,
@@ -55,6 +55,8 @@ export function ProgressToast({
   onExitComplete,
   wrapStyle,
 }: ProgressToastProps) {
+  const { background, text, filledTrack, unfilledTrack } =
+    useColorTheme().toast[style];
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -140,30 +142,26 @@ export function ProgressToast({
     >
       <Animated.View style={[styles.opacityShell, { opacity }]}>
         {kind === "progress" ? (
-          <View style={[styles.inner, styles.innerProgress]}>
-            <Text style={styles.titleProgress} numberOfLines={4}>
+          <View style={[styles.inner, { backgroundColor: background }]}>
+            <Text style={[styles.title, { color: text }]} numberOfLines={4}>
               {title}
             </Text>
-            <View style={styles.track}>
+            <View style={[styles.track, { backgroundColor: unfilledTrack }]}>
               <View
                 style={[
                   styles.fill,
-                  { width: `${Math.round(progress01 * 100)}%` },
+                  {
+                    width: `${Math.round(progress01 * 100)}%`,
+                    backgroundColor: filledTrack,
+                  },
                 ]}
               />
             </View>
           </View>
         ) : null}
-        {kind === "success" ? (
-          <View style={[styles.inner, styles.innerSuccess]}>
-            <Text style={styles.titleSuccess} numberOfLines={4}>
-              {title}
-            </Text>
-          </View>
-        ) : null}
-        {kind === "error" ? (
-          <View style={[styles.inner, styles.innerError]}>
-            <Text style={styles.titleError} numberOfLines={4}>
+        {kind === "success" || kind === "error" ? (
+          <View style={[styles.inner, { backgroundColor: background }]}>
+            <Text style={[styles.title, { color: text }]} numberOfLines={4}>
               {title}
             </Text>
           </View>
@@ -189,43 +187,19 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     alignSelf: "stretch",
   },
-  innerProgress: {
-    backgroundColor: DOWNLOAD_TOAST_BG,
-  },
-  titleProgress: {
-    color: DOWNLOAD_TOAST_TEXT,
+  title: {
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
     textAlign: "center",
   },
   track: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.25)",
     overflow: "hidden",
+    marginTop: 8,
   },
   fill: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: DOWNLOAD_TOAST_TEXT,
-  },
-  innerSuccess: {
-    backgroundColor: DOWNLOAD_COMPLETE_BG,
-  },
-  titleSuccess: {
-    color: DOWNLOAD_COMPLETE_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  innerError: {
-    backgroundColor: DOWNLOAD_FAIL_BG,
-  },
-  titleError: {
-    color: DOWNLOAD_FAIL_TEXT,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
   },
 });

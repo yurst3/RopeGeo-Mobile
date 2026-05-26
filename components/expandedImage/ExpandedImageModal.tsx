@@ -36,6 +36,7 @@ import {
   ExpandedImageHeader,
   type ExpandedImageSectionImagePosition,
 } from "./ExpandedImageHeader";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "./types";
 import { useExpandedImageExpandAnimation } from "./useExpandedImageExpandAnimation";
 
@@ -91,6 +92,7 @@ export function ExpandedImageModal({
   headerSectionSubtitle,
   onDismissed,
 }: ExpandedImageModalProps) {
+  const themeColors = useColorTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const pageWidth = windowWidth;
@@ -368,7 +370,13 @@ export function ExpandedImageModal({
     <Modal visible transparent animationType="none" statusBarTranslucent>
       <GestureHandlerRootView style={styles.modalRoot}>
         <View style={styles.modalInner} pointerEvents="box-none">
-          <Animated.View style={[styles.expandedCard, cardStyle]}>
+          <Animated.View
+            style={[
+              styles.expandedCard,
+              { backgroundColor: themeColors.background },
+              cardStyle,
+            ]}
+          >
             <View
               style={styles.expandedImageStage}
               onLayout={(e) => {
@@ -386,7 +394,10 @@ export function ExpandedImageModal({
                 {overlayShowsFullImage &&
                 pages.some((p) => p.bannerUrl != null) ? (
                   <View
-                    style={styles.expandedBlurDarken}
+                    style={[
+                      styles.expandedBlurDarken,
+                      { backgroundColor: themeColors.image.blurOverlay },
+                    ]}
                     pointerEvents="none"
                   />
                 ) : null}
@@ -426,8 +437,17 @@ export function ExpandedImageModal({
                     }}
                   />
                 ) : (
-                  <View style={styles.loadingOverlay} pointerEvents="none">
-                    <ActivityIndicator size="large" color="#fff" />
+                  <View
+                    style={[
+                      styles.loadingOverlay,
+                      { backgroundColor: themeColors.background },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <ActivityIndicator
+                      size="large"
+                      color={themeColors.loadingIndicator}
+                    />
                   </View>
                 )}
               </View>
@@ -478,7 +498,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   expandedCard: {
-    backgroundColor: "#000",
     zIndex: 1,
   },
   expandedImageStage: {
@@ -492,7 +511,6 @@ const styles = StyleSheet.create({
   },
   expandedBlurDarken: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.38)",
     zIndex: 0,
   },
   galleryFlatList: {
@@ -503,7 +521,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#111",
   },
   chromeHeaderLayer: {
     ...StyleSheet.absoluteFillObject,

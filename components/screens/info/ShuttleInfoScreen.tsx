@@ -1,14 +1,13 @@
 import { NoShuttleBadge } from "@/components/badges/shuttle/NoShuttleBadge";
 import { ShuttleRequiredBadge } from "@/components/badges/shuttle/ShuttleRequiredBadge";
+import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 
 type ShuttleStatus = "0" | "1";
 
 const SHUTTLE_ORDER: ShuttleStatus[] = ["0", "1"];
-
-const BADGE_COLUMN_WIDTH = 80;
 
 const SHUTTLE_BADGES: Record<
   ShuttleStatus,
@@ -37,20 +36,10 @@ export type ShuttleInfoScreenProps = {
 export function ShuttleInfoScreen({
   highlightedShuttle,
 }: ShuttleInfoScreenProps) {
-  const insets = useSafeAreaInsets();
+  const styles = useInfoScreenStyles();
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: 12,
-          paddingLeft: 16 + insets.left,
-          paddingRight: 16 + insets.right,
-        },
-      ]}
-    >
+    <InfoScreenLayout title="Shuttle">
       <Text style={styles.subtitle}>
         Shuttle status indicates whether the canyon exit returns you to the
         start. Plan your vehicles or shuttle accordingly before your trip.
@@ -77,41 +66,6 @@ export function ShuttleInfoScreen({
           </View>
         );
       })}
-    </ScrollView>
+    </InfoScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16 },
-  subtitle: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 16,
-  },
-  rowHighlighted: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  badgeWrap: {
-    width: BADGE_COLUMN_WIDTH,
-    flexShrink: 0,
-    alignItems: "center",
-  },
-  descriptionWrap: { flex: 1, minWidth: 0 },
-  body: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-});

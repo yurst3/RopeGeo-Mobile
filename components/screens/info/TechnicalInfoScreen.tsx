@@ -2,45 +2,44 @@ import { NotTechnicalBadge } from "@/components/badges/difficulty/NotTechnicalBa
 import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge";
 import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
 import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
-import { DifficultyTechnical } from "ropegeo-common/models";
+import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { AcaTechnicalSubRating } from "ropegeo-common/models";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 
-const TECHNICAL_ORDER: DifficultyTechnical[] = Object.values(DifficultyTechnical);
-
-const BADGE_COLUMN_WIDTH = 80;
+const TECHNICAL_ORDER: AcaTechnicalSubRating[] = Object.values(AcaTechnicalSubRating);
 
 const TECHNICAL_BADGES: Record<
-  DifficultyTechnical,
+  AcaTechnicalSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyTechnical.One]: NotTechnicalBadge,
-  [DifficultyTechnical.Two]: ScramblingBadge,
-  [DifficultyTechnical.Three]: TechnicalBadge,
-  [DifficultyTechnical.Four]: VeryTechnicalBadge,
+  [AcaTechnicalSubRating.One]: NotTechnicalBadge,
+  [AcaTechnicalSubRating.Two]: ScramblingBadge,
+  [AcaTechnicalSubRating.Three]: TechnicalBadge,
+  [AcaTechnicalSubRating.Four]: VeryTechnicalBadge,
 };
 
 /** Descriptions aligned with ACA technical class. See ropewiki.com/ACA_rating, canyoneeringusa.com, dankat.com. */
-const TECHNICAL_DESCRIPTIONS: Record<DifficultyTechnical, { body: string }> = {
-  [DifficultyTechnical.One]: {
+const TECHNICAL_DESCRIPTIONS: Record<AcaTechnicalSubRating, { body: string }> = {
+  [AcaTechnicalSubRating.One]: {
     body:
       "Canyon hiking. Non-technical; no rope required. A hike through a canyon with no special physical obstacles, " +
       "though navigation may be difficult. May involve easy scrambling with occasional use of hands for balance.",
   },
-  [DifficultyTechnical.Two]: {
+  [AcaTechnicalSubRating.Two]: {
     body:
       "Basic canyoneering. Scrambling, easy climbing or downclimbing; a rope may be handy for handlines, belays, " +
       "lowering packs and emergency use. Exit or retreat possible upcanyon without fixed ropes. " +
       "Suitable for hikers with reasonable fitness.",
   },
-  [DifficultyTechnical.Three]: {
+  [AcaTechnicalSubRating.Three]: {
     body:
       "Intermediate canyoneering. Rappels or technical climbing and/or downclimbing. Rope required for belays and " +
       "single-pitch rappels. Retreat upcanyon would require ascending fixed ropes. " +
       "Basic pothole escape techniques may be required.",
   },
-  [DifficultyTechnical.Four]: {
+  [AcaTechnicalSubRating.Four]: {
     body:
       "Advanced canyoneering. May involve multi-pitch rappels, complex rope work (re-belays, tyrollean traverse, " +
       "guided rappels), difficult pothole escapes, serious squeezing, extensive high-risk downclimbing, or " +
@@ -49,26 +48,16 @@ const TECHNICAL_DESCRIPTIONS: Record<DifficultyTechnical, { body: string }> = {
 };
 
 export type TechnicalInfoScreenProps = {
-  highlightedTechnical?: DifficultyTechnical | null;
+  highlightedTechnical?: AcaTechnicalSubRating | null;
 };
 
 export function TechnicalInfoScreen({
   highlightedTechnical,
 }: TechnicalInfoScreenProps) {
-  const insets = useSafeAreaInsets();
+  const styles = useInfoScreenStyles();
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: 12,
-          paddingLeft: 16 + insets.left,
-          paddingRight: 16 + insets.right,
-        },
-      ]}
-    >
+    <InfoScreenLayout title="Technical ratings">
       <Text style={styles.subtitle}>
         The first number in an ACA rating denotes the degree of technical skill
         (especially rope work) required to complete the canyon successfully.
@@ -92,41 +81,6 @@ export function TechnicalInfoScreen({
           </View>
         );
       })}
-    </ScrollView>
+    </InfoScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16 },
-  subtitle: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 16,
-  },
-  rowHighlighted: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  badgeWrap: {
-    width: BADGE_COLUMN_WIDTH,
-    flexShrink: 0,
-    alignItems: "center",
-  },
-  descriptionWrap: { flex: 1, minWidth: 0 },
-  body: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-});

@@ -19,7 +19,12 @@ import type {
   OnlineBetaSection,
 } from "ropegeo-common/models";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
+import {
+  buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_HTML_IGNORED_STYLES,
+} from "@/utils/ropewikiRenderHtml";
 import { BetaSectionImages } from "./BetaSectionImages";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -28,26 +33,15 @@ const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
 const TEXT_MAX_HEIGHT = 150;
 const EXPAND_COLLAPSE_MS = 280;
 
-const HTML_TAGS_STYLES = {
-  a: {
-    color: "#3b82f6",
-    textDecorationLine: "underline" as const,
-  },
-  b: { fontWeight: "700" as const },
-  strong: { fontWeight: "700" as const },
-  i: { fontStyle: "italic" as const },
-  em: { fontStyle: "italic" as const },
-  caption: {
-    textAlign: "center" as const,
-    fontSize: 14,
-    color: "#6b7280",
-  },
-};
-
 type HtmlSource = { html: string; baseUrl: string };
 
 /** Owns expand + measure state so a `key` on this block resets cleanly when `section.text` changes. */
 function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
+  const themeColors = useColorTheme();
+  const htmlTagsStyles = useMemo(
+    () => buildRopewikiHtmlTagsStyles(themeColors.text),
+    [themeColors.text],
+  );
   const [textExpanded, setTextExpanded] = useState(false);
   const [fullContentHeight, setFullContentHeight] = useState(0);
   const maxHeight = useSharedValue(TEXT_MAX_HEIGHT);
@@ -92,8 +86,13 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
           <RenderHtml
             contentWidth={CONTENT_WIDTH}
             source={htmlSource}
-            baseStyle={styles.htmlBase}
-            tagsStyles={HTML_TAGS_STYLES}
+            baseStyle={{
+              ...styles.htmlBase,
+              color: themeColors.text.primary,
+            }}
+            tagsStyles={htmlTagsStyles}
+            ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
+            enableUserAgentStyles={false}
           />
         </ScrollView>
       </Animated.View>
@@ -103,7 +102,9 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
           style={styles.showMoreButton}
           accessibilityLabel={textExpanded ? "Show less" : "Show more"}
         >
-          <Text style={styles.showMoreText}>
+          <Text
+            style={[styles.showMoreText, { color: themeColors.text.link }]}
+          >
             {textExpanded ? "Show less" : "Show more"}
           </Text>
         </Pressable>
@@ -119,6 +120,7 @@ export type BetaSectionProps = {
 };
 
 export function BetaSection({ section, pageTitle }: BetaSectionProps) {
+  const themeColors = useColorTheme();
   const hasImages = section.images.length > 0;
   const sortedImages = hasImages
     ? [...section.images].sort((a, b) => a.order - b.order)
@@ -134,7 +136,9 @@ export function BetaSection({ section, pageTitle }: BetaSectionProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{section.title}</Text>
+      <Text style={[styles.title, { color: themeColors.text.primary }]}>
+        {section.title}
+      </Text>
 
       {section.text ? (
         <CollapsibleHtmlBlock key={section.text} htmlSource={htmlSource} />
@@ -158,7 +162,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#000",
     marginBottom: 12,
   },
   textBlock: {
@@ -170,7 +173,6 @@ const styles = StyleSheet.create({
   },
   htmlBase: {
     fontSize: 15,
-    color: "#374151",
     lineHeight: 22,
   },
   showMoreButton: {
@@ -179,7 +181,6 @@ const styles = StyleSheet.create({
   },
   showMoreText: {
     fontSize: 15,
-    color: "#3b82f6",
     fontWeight: "500",
   },
 });

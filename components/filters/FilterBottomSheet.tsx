@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   Dimensions,
@@ -102,6 +103,7 @@ export function FilterBottomSheet({
   onClose,
   mode,
 }: FilterBottomSheetProps) {
+  const { background, text, placeholder, filter, separator } = useColorTheme();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(400);
 
@@ -183,6 +185,7 @@ export function FilterBottomSheet({
           style={[
             styles.sheet,
             {
+              backgroundColor: background,
               paddingBottom: Math.max(insets.bottom, 12),
               maxHeight: maxH,
             },
@@ -191,8 +194,10 @@ export function FilterBottomSheet({
         >
           <GestureDetector gesture={pan}>
             <View style={styles.grabArea}>
-              <View style={styles.grabPill} />
-              <Text style={styles.sheetTitle}>{titleForMode(mode)}</Text>
+              <View style={[styles.grabPill, { backgroundColor: placeholder }]} />
+              <Text style={[styles.sheetTitle, { color: text.primary }]}>
+                {titleForMode(mode)}
+              </Text>
             </View>
           </GestureDetector>
             <KeyboardAvoidingView
@@ -227,15 +232,34 @@ export function FilterBottomSheet({
               </ScrollView>
             </KeyboardAvoidingView>
             {showFooter ? (
-              <View style={styles.footer}>
+              <View
+                style={[
+                  styles.footer,
+                  { borderTopColor: separator },
+                ]}
+              >
                 {mode.kind === "region-route" ? (
                   <Pressable style={styles.secondaryBtn} onPress={mode.onReset}>
-                    <Text style={styles.secondaryBtnText}>Reset</Text>
+                    <Text
+                      style={[
+                        styles.secondaryBtnText,
+                        { color: filter.revertText },
+                      ]}
+                    >
+                      Reset
+                    </Text>
                   </Pressable>
                 ) : null}
                 {showRevert ? (
                   <Pressable style={styles.secondaryBtn} onPress={handleRevert}>
-                    <Text style={styles.secondaryBtnText}>Revert to defaults</Text>
+                    <Text
+                      style={[
+                        styles.secondaryBtnText,
+                        { color: filter.revertText },
+                      ]}
+                    >
+                      Revert to defaults
+                    </Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -335,7 +359,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 8,
@@ -349,13 +372,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#d1d5db",
     marginBottom: 12,
   },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#111827",
     alignSelf: "flex-start",
   },
   scrollPad: {
@@ -367,11 +388,10 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: FILTER_SHEET_HORIZONTAL_INSET,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
   },
   secondaryBtn: {
     paddingVertical: 12,
     alignItems: "center",
   },
-  secondaryBtnText: { color: "#1d4ed8", fontSize: 15, fontWeight: "500" },
+  secondaryBtnText: { fontSize: 15, fontWeight: "500" },
 });

@@ -27,7 +27,12 @@ import type {
   ExpandedImageGalleryPage,
 } from "@/components/expandedImage/types";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
+import {
+  buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_HTML_IGNORED_STYLES,
+} from "@/utils/ropewikiRenderHtml";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
@@ -36,22 +41,6 @@ const IMAGE_HEIGHT = 220;
 const IMAGE_INDICATOR_HEIGHT = 28;
 
 const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
-
-const HTML_TAGS_STYLES = {
-  a: {
-    color: "#3b82f6",
-    textDecorationLine: "underline" as const,
-  },
-  b: { fontWeight: "700" as const },
-  strong: { fontWeight: "700" as const },
-  i: { fontStyle: "italic" as const },
-  em: { fontStyle: "italic" as const },
-  caption: {
-    textAlign: "center" as const,
-    fontSize: 14,
-    color: "#6b7280",
-  },
-};
 
 type BetaSectionImageSlideProps = {
   item: OnlineBetaSectionImage | OfflineBetaSectionImage;
@@ -67,6 +56,11 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   onOpenExpand,
   onLayoutRef,
 }: BetaSectionImageSlideProps) {
+  const themeColors = useColorTheme();
+  const captionTagsStyles = useMemo(
+    () => buildRopewikiHtmlTagsStyles(themeColors.text),
+    [themeColors.text],
+  );
   const itemKey = item.linkUrl + item.order;
   const fullUrl = item.fetchType === "online" ? item.fullUrl : item.downloadedFullPath;
   const bannerUrl =
@@ -102,6 +96,7 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
         onPress={onPress}
         style={({ pressed }) => [
           styles.imageContainer,
+          { backgroundColor: themeColors.image.background },
           canExpand && pressed && styles.imageContainerPressed,
         ]}
       >
@@ -117,13 +112,28 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
               contentFit="cover"
             />
           ) : (
-            <View style={styles.missingImageWrap}>
+            <View
+              style={[
+                styles.missingImageWrap,
+                { backgroundColor: themeColors.image.background },
+              ]}
+            >
               <Image
                 source={MISSING_IMAGE}
-                style={styles.missingImageIcon}
+                style={[
+                  styles.missingImageIcon,
+                  { tintColor: themeColors.image.missingIcon },
+                ]}
                 contentFit="contain"
               />
-              <Text style={styles.missingImageText}>Missing Image</Text>
+              <Text
+                style={[
+                  styles.missingImageText,
+                  { color: themeColors.image.missingText },
+                ]}
+              >
+                Missing Image
+              </Text>
             </View>
           )}
         </View>
@@ -133,8 +143,13 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
           <RenderHtml
             contentWidth={CONTENT_WIDTH}
             source={captionSource}
-            baseStyle={styles.caption}
-            tagsStyles={HTML_TAGS_STYLES}
+            baseStyle={{
+              ...styles.caption,
+              color: themeColors.text.secondary,
+            }}
+            tagsStyles={captionTagsStyles}
+            ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
+            enableUserAgentStyles={false}
           />
         </View>
       ) : null}
@@ -164,6 +179,7 @@ export function BetaSectionImages({
   pageTitle,
   sectionTitle,
 }: BetaSectionImagesProps) {
+  const themeColors = useColorTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.order - b.order),
@@ -348,7 +364,15 @@ export function BetaSectionImages({
       />
       {sortedImages.length > 1 && (
         <View style={styles.imageIndicator}>
-          <Text style={styles.imageIndicatorText}>
+          <Text
+            style={[
+              styles.imageIndicatorText,
+              {
+                color: themeColors.image.text,
+                backgroundColor: themeColors.image.textBackground,
+              },
+            ]}
+          >
             {currentIndex + 1}/{sortedImages.length}
           </Text>
         </View>
@@ -387,7 +411,6 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#e5e7eb",
   },
   imageContainerPressed: {
     opacity: 0.92,
@@ -404,7 +427,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e5e7eb",
   },
   missingImageIcon: {
     width: 52,
@@ -413,7 +435,6 @@ const styles = StyleSheet.create({
   missingImageText: {
     marginTop: 8,
     fontSize: 13,
-    color: "#6b7280",
     fontWeight: "600",
   },
   captionWrap: {
@@ -421,7 +442,6 @@ const styles = StyleSheet.create({
   },
   caption: {
     fontSize: 13,
-    color: "#6b7280",
     lineHeight: 18,
   },
   imageIndicator: {
@@ -436,8 +456,6 @@ const styles = StyleSheet.create({
   },
   imageIndicatorText: {
     fontSize: 13,
-    color: "#fff",
-    backgroundColor: "rgba(0,0,0,0.6)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,

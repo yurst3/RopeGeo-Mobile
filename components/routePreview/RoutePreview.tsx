@@ -1,6 +1,6 @@
-import { SavedPageGlyph } from "@/components/buttons/SavedPageGlyph";
+import { SavedPageGlyph } from "@/components/buttons/standard/SavedPageGlyph";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toastArchetypes";
+import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toasts/toastArchetypes";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { loadDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -34,15 +34,16 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { StarRating } from "@/components/StarRating";
 import {
-  AcaDifficulty,
+  AcaDifficultyRating,
   type OnlinePagePreview,
   type OfflinePagePreview,
   RouteType,
 } from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
 
 const CARD_BORDER_RADIUS = 12;
@@ -71,8 +72,8 @@ const ROUTE_PREVIEW_LOADER_IDLE_ROUTE_ID = "__ropegeo_route_preview_inactive__";
 
 type PreviewCardData = OnlinePagePreview | OfflinePagePreview;
 
-function hasDifficultyInfo(difficulty: PreviewCardData["difficulty"]): boolean {
-  if (!(difficulty instanceof AcaDifficulty)) return false;
+function hasDifficultyInfo(difficulty: PreviewCardData["difficultyRating"]): boolean {
+  if (!(difficulty instanceof AcaDifficultyRating)) return false;
   return (
     difficulty.technical != null ||
     difficulty.water != null ||
@@ -89,7 +90,7 @@ function showBadges(
     preview.permit != null ||
     routeType === RouteType.Cave ||
     routeType === RouteType.POI ||
-    hasDifficultyInfo(preview.difficulty)
+    hasDifficultyInfo(preview.difficultyRating)
   );
 }
 
@@ -104,6 +105,8 @@ function SinglePreviewCard({
   badgeScale?: number;
   onPress?: (preview: PreviewCardData) => void;
 }) {
+  const themeColors = useColorTheme();
+  const { text, image, background } = themeColors;
   const previewImageUri =
     preview.fetchType === "online" ? preview.imageUrl : preview.downloadedImagePath;
   const [imageLoading, setImageLoading] = useState(!!previewImageUri);
@@ -120,15 +123,14 @@ function SinglePreviewCard({
         rating={rating}
         count={ratingCount}
         size={14}
-        emptyStarColor="#999"
         style={styles.starRatingRow}
         textStyle={styles.starRatingText}
       />
-      <Text style={styles.title} numberOfLines={2}>
+      <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
         {preview.title}
       </Text>
       {location ? (
-        <Text style={styles.regions} numberOfLines={2}>
+        <Text style={[styles.regions, { color: text.secondary }]} numberOfLines={2}>
           {location}
         </Text>
       ) : null}
@@ -136,14 +138,19 @@ function SinglePreviewCard({
   );
 
   const cardContent = (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: background }]}>
       <View style={styles.cardContent}>
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, { backgroundColor: image.background }]}>
           {previewImageUri ? (
             <>
               {imageLoading && (
-                <View style={styles.imageLoadingOverlay}>
-                  <ActivityIndicator size="small" color="#666" />
+                <View
+                  style={[
+                    styles.imageLoadingOverlay,
+                    { backgroundColor: image.background },
+                  ]}
+                >
+                  <ActivityIndicator size="small" color={themeColors.loadingIndicator} />
                 </View>
               )}
               <Image
@@ -155,10 +162,19 @@ function SinglePreviewCard({
               />
             </>
           ) : (
-            <View style={styles.noImageWrap}>
+            <View
+              style={[styles.noImageWrap, { backgroundColor: image.background }]}
+            >
               <Image
                 source={require("@/assets/images/icons/noImage.png")}
-                style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
+                style={[
+                  styles.noImageIcon,
+                  {
+                    width: NO_IMAGE_ICON_SIZE,
+                    height: NO_IMAGE_ICON_SIZE,
+                    tintColor: image.missingIcon,
+                  },
+                ]}
                 contentFit="contain"
               />
             </View>
@@ -169,7 +185,7 @@ function SinglePreviewCard({
             <>
               {topContent}
               <BadgeRow
-                difficulty={preview.difficulty}
+                difficultyRating={preview.difficultyRating}
                 permit={preview.permit}
                 routeType={routeType}
                 scale={badgeScale}
@@ -248,6 +264,7 @@ function RoutePreviewDataView({
   onPreviewPress?: (preview: PreviewCardData) => void;
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
 }) {
+  const themeColors = useColorTheme();
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { isSaved } = useSavedPages();
@@ -276,7 +293,16 @@ function RoutePreviewDataView({
       />
       {currentPreview != null && isSaved(currentPreview.id) && (
         <View style={styles.savedGlyphWrap} pointerEvents="none">
-          <View style={styles.savedGlyphCircle} pointerEvents="none">
+          <View
+            style={[
+              styles.savedGlyphCircle,
+              {
+                backgroundColor: themeColors.background,
+                shadowColor: themeColors.button.shadowColor,
+              },
+            ]}
+            pointerEvents="none"
+          >
             <SavedPageGlyph isSaved />
           </View>
         </View>
@@ -331,7 +357,12 @@ function RoutePreviewDataView({
                 key={i}
                 style={[
                   styles.dot,
-                  i === currentIndex ? styles.dotActive : styles.dotInactive,
+                  {
+                    backgroundColor:
+                      i === currentIndex
+                        ? themeColors.text.primary
+                        : themeColors.placeholder,
+                  },
                 ]}
               />
             ))}
@@ -600,10 +631,8 @@ const styles = StyleSheet.create({
     width: SAVED_GLYPH_BUTTON_SIZE,
     height: SAVED_GLYPH_BUTTON_SIZE,
     borderRadius: SAVED_GLYPH_BUTTON_SIZE / 2,
-    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -628,13 +657,11 @@ const styles = StyleSheet.create({
   },
   card: {
     minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    backgroundColor: "#fff",
     borderRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
@@ -648,7 +675,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderBottomLeftRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
-    backgroundColor: "#eee",
   },
   image: {
     width: "100%",
@@ -681,17 +707,14 @@ const styles = StyleSheet.create({
   starRatingText: {
     marginLeft: 6,
     fontSize: 12,
-    color: "#333",
   },
   title: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111",
     marginBottom: 2,
   },
   regions: {
     fontSize: 12,
-    color: "#666",
     marginBottom: 2,
   },
   dots: {
@@ -705,11 +728,5 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  dotActive: {
-    backgroundColor: "#333",
-  },
-  dotInactive: {
-    backgroundColor: "#ccc",
   },
 });

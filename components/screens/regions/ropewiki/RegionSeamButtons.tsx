@@ -1,4 +1,4 @@
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import Animated, {

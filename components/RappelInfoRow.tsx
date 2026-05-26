@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -47,6 +48,8 @@ export function RappelInfoRow({
   jumps,
   technicalRating,
 }: RappelInfoRowProps) {
+  const { text, separator } = useColorTheme();
+
   if (!shouldShowRow({ rappelCount, longestRappel, jumps, technicalRating })) {
     return null;
   }
@@ -69,19 +72,23 @@ export function RappelInfoRow({
       <View style={styles.separator} />
       <View style={rowStyle}>
         <View style={columnStyle}>
-          <Text style={styles.value}>{formatRappelCount(rappelCount)}</Text>
-          <Text style={styles.label}>Number of Rappels</Text>
+          <Text style={[styles.value, { color: text.primary }]}>
+            {formatRappelCount(rappelCount)}
+          </Text>
+          <Text style={[styles.label, { color: text.secondary }]}>Number of Rappels</Text>
         </View>
         {showLongest && (
           <View style={columnStyle}>
-            <Text style={styles.value}>{formatLongestRappel(longestRappel)}</Text>
-            <Text style={styles.label}>Longest Rappel</Text>
+            <Text style={[styles.value, { color: text.primary }]}>
+              {formatLongestRappel(longestRappel)}
+            </Text>
+            <Text style={[styles.label, { color: text.secondary }]}>Longest Rappel</Text>
           </View>
         )}
         {showJumps && (
           <View style={columnStyle}>
-            <Text style={styles.value}>{jumps}</Text>
-            <Text style={styles.label}>Jumps</Text>
+            <Text style={[styles.value, { color: text.primary }]}>{jumps}</Text>
+            <Text style={[styles.label, { color: text.secondary }]}>Jumps</Text>
           </View>
         )}
       </View>
@@ -95,7 +102,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: "#e5e7eb",
     marginBottom: 16,
   },
   row: {
@@ -114,13 +120,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#000",
     marginBottom: 2,
     textAlign: "center",
   },
   label: {
     fontSize: 13,
-    color: "#6b7280",
     textAlign: "center",
   },
 });

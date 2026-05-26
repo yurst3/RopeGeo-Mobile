@@ -61,16 +61,17 @@ export function lineSelectionBounds(
 export function lineSelectionStyle(
   key: string,
   legend: Record<string, LegendItem> | undefined,
+  defaultStroke: string,
 ): { stroke: string; strokeWidth: number } {
   const item = legendItemForKey(legend, key);
   if (item?.featureType === LegendFeatureType.Line) {
     const L = item as LineLegendItem;
     return {
-      stroke: parseStrokeColor(L.strokeColor),
+      stroke: parseStrokeColor(L.strokeColor, defaultStroke),
       strokeWidth: parseStrokeWidth(L.strokeWidth),
     };
   }
-  return { stroke: DEFAULT_STROKE, strokeWidth: DEFAULT_STROKE_WIDTH };
+  return { stroke: defaultStroke, strokeWidth: DEFAULT_STROKE_WIDTH };
 }
 
 /**
@@ -136,7 +137,6 @@ export function boundsFromLegendItem(item: LegendItem): Bounds {
   }
 }
 
-const DEFAULT_STROKE = "#2563eb";
 const DEFAULT_STROKE_WIDTH = 2.5;
 
 export function segmentKeyFromLineFeature(f: GeoJSON.Feature<GeoJSON.LineString>): string {
@@ -189,14 +189,14 @@ function expandHex3(s: string): string {
   return s.toLowerCase();
 }
 
-export function parseStrokeColor(raw: unknown): string {
-  if (typeof raw !== "string" || raw.trim() === "") return DEFAULT_STROKE;
+export function parseStrokeColor(raw: unknown, defaultStroke: string): string {
+  if (typeof raw !== "string" || raw.trim() === "") return defaultStroke;
   let s = raw.trim();
-  if (s[0] !== "#") return DEFAULT_STROKE;
+  if (s[0] !== "#") return defaultStroke;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) s = expandHex3(s);
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
   if (/^#[0-9a-fA-F]{8}$/.test(s)) return `#${s.slice(1, 7)}`.toLowerCase();
-  return DEFAULT_STROKE;
+  return defaultStroke;
 }
 
 export function parseStrokeWidth(raw: unknown): number {

@@ -1,6 +1,7 @@
 import { ActionToast } from "@/components/toast/ActionToast";
-import { ProgressToast, type ProgressToastKind } from "@/components/toast/ProgressToast";
-import { Toast, type ToastVariant } from "@/components/toast/Toast";
+import { ProgressToast } from "@/components/toast/ProgressToast";
+import { Toast } from "@/components/toast/Toast";
+import type { ToastStyle } from "@/constants/colors/types";
 import { STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP } from "@/components/minimap/shared/fullScreenMapLayout";
 import {
   DOWNLOAD_TOAST_FADE_OUT_MS,
@@ -12,12 +13,14 @@ import {
   TOAST_STACK_ROW_HEIGHT_PILL_SUBTITLE,
   TOAST_STACK_ROW_HEIGHT_PROGRESS_BAR,
   TOAST_STACK_ROW_HEIGHT_PROGRESS_PILL,
-} from "@/constants/toast";
+} from "@/constants/toasts";
 import {
   getToastArchetypeForKey,
+  resolveToastStyle,
   routeAllowedByPatterns,
   toastStackPriorityForKey,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/helpers";
+import type { ProgressToastKind } from "@/constants/toasts/types";
 import {
   createContext,
   useCallback,
@@ -56,6 +59,7 @@ export class ToastKeyNotFoundError extends Error {
 
 type BaseToastModel = {
   key: string;
+  style: ToastStyle;
   /**
    * Route whitelist; supports dynamic path params (`[id]`). `null` means globally allowed.
    */
@@ -78,27 +82,22 @@ type BaseToastModel = {
 };
 
 export type PillToastModel = BaseToastModel & {
-  mode: "pill";
-  variant: ToastVariant;
+  variant: "pill";
   message: string;
   subtitle?: string;
 };
 
 export type ProgressToastModel = BaseToastModel & {
-  mode: "progress";
+  variant: "progress";
   progressKind: ProgressToastKind;
   title: string;
   progress: number;
 };
 
 export type ActionToastModel = BaseToastModel & {
-  mode: "action";
+  variant: "action";
   message: string;
   icon: ImageSourcePropType;
-  /** Foreground (text and icon tint). */
-  color: string;
-  /** Panel background; omit for default warning-style panel. */
-  backgroundColor?: string;
 };
 
 export type ToastModel = PillToastModel | ProgressToastModel | ActionToastModel;
@@ -107,7 +106,8 @@ export type ToastKey = string;
 
 export type ShowPillToastOptions = {
   key: ToastKey;
-  variant: ToastVariant;
+  /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
+  style?: ToastStyle;
   message: string;
   subtitle?: string;
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
@@ -137,10 +137,10 @@ export type ShowProgressToastOptions = {
 
 export type ShowActionToastOptions = {
   key: ToastKey;
+  /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
+  style?: ToastStyle;
   message: string;
   icon: ImageSourcePropType;
-  color: string;
-  backgroundColor?: string;
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
   allowedRoutes?: string[] | null;
   multiple?: number;
@@ -152,11 +152,11 @@ export type ShowActionToastOptions = {
   onPress: () => void;
 };
 
-/** Partial update; set `mode` to switch between pill and progress for the same `key`. */
+/** Partial update; set `variant` to switch between pill and progress for the same `key`. */
 export type ToastUpdate =
   | ({
-      mode?: "pill";
-      variant?: ToastVariant;
+      variant?: "pill";
+      style?: ToastStyle;
       message?: string;
       subtitle?: string;
       multiple?: number;
@@ -166,7 +166,8 @@ export type ToastUpdate =
       durationMs?: number | null;
     } & { convertTo?: never })
   | {
-      mode: "progress";
+      variant: "progress";
+      style?: ToastStyle;
       progressKind?: ProgressToastKind;
       title?: string;
       progress?: number;
@@ -177,8 +178,8 @@ export type ToastUpdate =
       durationMs?: number | null;
     }
   | {
-      mode: "pill";
-      variant?: ToastVariant;
+      variant: "pill";
+      style?: ToastStyle;
       message?: string;
       subtitle?: string;
       multiple?: number;
@@ -188,11 +189,10 @@ export type ToastUpdate =
       durationMs?: number | null;
     }
   | {
-      mode: "action";
+      variant: "action";
+      style?: ToastStyle;
       message?: string;
       icon?: ImageSourcePropType;
-      color?: string;
-      backgroundColor?: string;
       multiple?: number;
       allowedRoutes?: string[] | null;
       horizontalInset?: number;
@@ -201,17 +201,17 @@ export type ToastUpdate =
     };
 
 function estimatedStackRowHeight(t: ToastModel): number {
-  if (t.mode === "pill") {
+  if (t.variant === "pill") {
     const hasSubtitle =
       t.subtitle != null && String(t.subtitle).trim().length > 0;
     return hasSubtitle
       ? TOAST_STACK_ROW_HEIGHT_PILL_SUBTITLE
       : TOAST_STACK_ROW_HEIGHT_PILL_SINGLE;
   }
-  if (t.mode === "action") {
+  if (t.variant === "action") {
     return TOAST_STACK_ROW_HEIGHT_ACTION;
   }
-  if (t.mode === "progress") {
+  if (t.variant === "progress") {
     return t.progressKind === "progress"
       ? TOAST_STACK_ROW_HEIGHT_PROGRESS_BAR
       : TOAST_STACK_ROW_HEIGHT_PROGRESS_PILL;
@@ -262,17 +262,31 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     p.allowedRoutes === undefined
       ? cur.allowedRoutes
       : (p.allowedRoutes as string[] | null);
-  const targetMode =
-    p.mode !== undefined && p.mode != null
-      ? (p.mode as ToastModel["mode"])
-      : cur.mode;
+  const targetVariant =
+    p.variant !== undefined && p.variant != null
+      ? (p.variant as ToastModel["variant"])
+      : cur.variant;
+  const nextStyle = resolveToastStyle(cur.key, {
+    style: p.style as ToastStyle | undefined,
+    progressKind: p.progressKind as ProgressToastKind | undefined,
+  });
 
-  if (targetMode === "progress") {
-    if (cur.mode === "pill") {
+  if (targetVariant === "progress") {
+    const progressKind =
+      (p.progressKind as ProgressToastKind | undefined) ??
+      (cur.variant === "progress"
+        ? (cur as ProgressToastModel).progressKind
+        : "progress");
+    const style = resolveToastStyle(cur.key, {
+      style: p.style as ToastStyle | undefined,
+      progressKind,
+    });
+    if (cur.variant === "pill") {
       const c = cur as PillToastModel;
       return {
         key: c.key,
-        mode: "progress",
+        style,
+        variant: "progress",
         allowedRoutes: nextAllowedRoutes,
         horizontalInset:
           (p.horizontalInset as number | undefined) ?? c.horizontalInset,
@@ -281,8 +295,7 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
           p.durationMs !== undefined
             ? (p.durationMs as number | null)
             : c.durationMs,
-        progressKind:
-          (p.progressKind as ProgressToastKind | undefined) ?? "progress",
+        progressKind,
         title: (p.title as string | undefined) ?? "",
         progress: (p.progress as number | undefined) ?? 0,
         multiple: (p.multiple as number | undefined) ?? c.multiple,
@@ -290,11 +303,12 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         exiting: c.exiting,
       };
     }
-    if (cur.mode === "action") {
+    if (cur.variant === "action") {
       const c = cur as ActionToastModel;
       return {
         key: c.key,
-        mode: "progress",
+        style,
+        variant: "progress",
         allowedRoutes: nextAllowedRoutes,
         horizontalInset:
           (p.horizontalInset as number | undefined) ?? c.horizontalInset,
@@ -303,8 +317,7 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
           p.durationMs !== undefined
             ? (p.durationMs as number | null)
             : c.durationMs,
-        progressKind:
-          (p.progressKind as ProgressToastKind | undefined) ?? "progress",
+        progressKind,
         title: (p.title as string | undefined) ?? c.message,
         progress: (p.progress as number | undefined) ?? 0,
         multiple: (p.multiple as number | undefined) ?? c.multiple,
@@ -315,9 +328,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     const c = cur as ProgressToastModel;
     return {
       ...c,
+      style,
       allowedRoutes: nextAllowedRoutes,
-      progressKind:
-        (p.progressKind as ProgressToastKind | undefined) ?? c.progressKind,
+      progressKind,
       title: (p.title as string | undefined) ?? c.title,
       progress: (p.progress as number | undefined) ?? c.progress,
       multiple: (p.multiple as number | undefined) ?? c.multiple,
@@ -331,7 +344,7 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     };
   }
 
-  if (cur.mode === "progress" && targetMode === "pill") {
+  if (cur.variant === "progress" && targetVariant === "pill") {
     const c = cur as ProgressToastModel;
     const message =
       (typeof p.message === "string" ? p.message : undefined) ??
@@ -339,7 +352,8 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
       "";
     return {
       key: c.key,
-      mode: "pill",
+      style: nextStyle,
+      variant: "pill",
       allowedRoutes: nextAllowedRoutes,
       horizontalInset:
         (p.horizontalInset as number | undefined) ?? c.horizontalInset,
@@ -348,7 +362,6 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         p.durationMs !== undefined
           ? (p.durationMs as number | null)
           : c.durationMs,
-      variant: (p.variant as ToastVariant | undefined) ?? "warning",
       message,
       multiple: (p.multiple as number | undefined) ?? c.multiple,
       subtitle:
@@ -358,7 +371,7 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     };
   }
 
-  if (cur.mode === "progress" && targetMode === "action") {
+  if (cur.variant === "progress" && targetVariant === "action") {
     const c = cur as ProgressToastModel;
     const icon = p.icon as ImageSourcePropType | undefined;
     if (icon == null) {
@@ -366,13 +379,11 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     }
     return {
       key: c.key,
-      mode: "action",
+      style: nextStyle,
+      variant: "action",
       allowedRoutes: nextAllowedRoutes,
       message: (typeof p.message === "string" ? p.message : undefined) ?? c.title,
       icon,
-      color: (typeof p.color === "string" ? p.color : undefined) ?? "#ffffff",
-      backgroundColor:
-        typeof p.backgroundColor === "string" ? p.backgroundColor : undefined,
       horizontalInset:
         (p.horizontalInset as number | undefined) ?? c.horizontalInset,
       zIndex: (p.zIndex as number | undefined) ?? c.zIndex,
@@ -386,7 +397,7 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     };
   }
 
-  if (cur.mode === "pill" && targetMode === "action") {
+  if (cur.variant === "pill" && targetVariant === "action") {
     const c = cur as PillToastModel;
     const icon = p.icon as ImageSourcePropType | undefined;
     if (icon == null) {
@@ -394,13 +405,11 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     }
     return {
       key: c.key,
-      mode: "action",
+      style: nextStyle,
+      variant: "action",
       allowedRoutes: nextAllowedRoutes,
       message: (typeof p.message === "string" ? p.message : undefined) ?? c.message,
       icon,
-      color: (typeof p.color === "string" ? p.color : undefined) ?? "#ffffff",
-      backgroundColor:
-        typeof p.backgroundColor === "string" ? p.backgroundColor : undefined,
       horizontalInset:
         (p.horizontalInset as number | undefined) ?? c.horizontalInset,
       zIndex: (p.zIndex as number | undefined) ?? c.zIndex,
@@ -414,14 +423,15 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     };
   }
 
-  if (cur.mode === "action") {
+  if (cur.variant === "action") {
     const c = cur as ActionToastModel;
-    if (targetMode === "pill") {
+    if (targetVariant === "pill") {
       const message =
         (typeof p.message === "string" ? p.message : undefined) ?? c.message;
       return {
         key: c.key,
-        mode: "pill",
+        style: nextStyle,
+        variant: "pill",
         allowedRoutes: nextAllowedRoutes,
         horizontalInset:
           (p.horizontalInset as number | undefined) ?? c.horizontalInset,
@@ -430,7 +440,6 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
           p.durationMs !== undefined
             ? (p.durationMs as number | null)
             : c.durationMs,
-        variant: (p.variant as ToastVariant | undefined) ?? "warning",
         message,
         multiple: (p.multiple as number | undefined) ?? c.multiple,
         subtitle:
@@ -441,14 +450,10 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
     }
     return {
       ...c,
+      style: nextStyle,
       allowedRoutes: nextAllowedRoutes,
       message: (typeof p.message === "string" ? p.message : undefined) ?? c.message,
       icon: (p.icon as ImageSourcePropType | undefined) ?? c.icon,
-      color: (typeof p.color === "string" ? p.color : undefined) ?? c.color,
-      backgroundColor:
-        typeof p.backgroundColor === "string"
-          ? p.backgroundColor
-          : c.backgroundColor,
       multiple: (p.multiple as number | undefined) ?? c.multiple,
       horizontalInset:
         (p.horizontalInset as number | undefined) ?? c.horizontalInset,
@@ -463,8 +468,8 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
   const c = cur as PillToastModel;
   return {
     ...c,
+    style: nextStyle,
     allowedRoutes: nextAllowedRoutes,
-    variant: (p.variant as ToastVariant | undefined) ?? c.variant,
     message: (typeof p.message === "string" ? p.message : undefined) ?? c.message,
     multiple: (p.multiple as number | undefined) ?? c.multiple,
     subtitle:
@@ -665,9 +670,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
         const zIndex = opts.zIndex ?? 99999 + base.length;
         const entry: PillToastModel = {
           key: opts.key,
-          mode: "pill",
+          style: resolveToastStyle(opts.key, { style: opts.style }),
+          variant: "pill",
           allowedRoutes,
-          variant: opts.variant,
           message: opts.message,
           subtitle: opts.subtitle,
           multiple: opts.multiple ?? 1,
@@ -729,12 +734,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
         const zIndex = opts.zIndex ?? 99999 + base.length;
         const entry: ActionToastModel = {
           key: opts.key,
-          mode: "action",
+          style: resolveToastStyle(opts.key, { style: opts.style }),
+          variant: "action",
           allowedRoutes,
           message: opts.message,
           icon: opts.icon,
-          color: opts.color,
-          backgroundColor: opts.backgroundColor,
           multiple: opts.multiple ?? 1,
           horizontalInset,
           zIndex,
@@ -784,12 +788,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
           const zIndex = opts.zIndex ?? 99999 + prev.length;
           const entry: ActionToastModel = {
             key: opts.key,
-            mode: "action",
+            style: resolveToastStyle(opts.key, { style: opts.style }),
+            variant: "action",
             allowedRoutes,
             message: opts.message,
             icon: opts.icon,
-            color: opts.color,
-            backgroundColor: opts.backgroundColor,
             multiple: opts.multiple ?? 1,
             horizontalInset,
             zIndex,
@@ -805,14 +808,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
         const prevRow = prev[i]!;
         const insertedAt = prevRow.insertedAt;
         const nextRow: ActionToastModel =
-          prevRow.mode === "action"
+          prevRow.variant === "action"
             ? {
                 ...(mergeToast(prevRow, {
-                  mode: "action",
+                  variant: "action",
+                  style: opts.style,
                   message: opts.message,
                   icon: opts.icon,
-                  color: opts.color,
-                  backgroundColor: opts.backgroundColor,
                   allowedRoutes: opts.allowedRoutes,
                   multiple: opts.multiple,
                   horizontalInset: opts.horizontalInset,
@@ -824,12 +826,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
               }
             : {
                 key: opts.key,
-                mode: "action",
+                style: resolveToastStyle(opts.key, { style: opts.style }),
+                variant: "action",
                 allowedRoutes,
                 message: opts.message,
                 icon: opts.icon,
-                color: opts.color,
-                backgroundColor: opts.backgroundColor,
                 multiple: opts.multiple ?? 1,
                 horizontalInset,
                 zIndex: opts.zIndex ?? prevRow.zIndex,
@@ -879,9 +880,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
           const zIndex = opts.zIndex ?? 99999 + prev.length;
           const entry: PillToastModel = {
             key: opts.key,
-            mode: "pill",
+            style: resolveToastStyle(opts.key, { style: opts.style }),
+            variant: "pill",
             allowedRoutes,
-            variant: opts.variant,
             message: opts.message,
             subtitle: opts.subtitle,
             multiple: opts.multiple ?? 1,
@@ -898,8 +899,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
         const nextToast: ToastModel = {
           ...mergeToast(prev[i]!, {
-            mode: "pill",
-            variant: opts.variant,
+            variant: "pill",
+            style: opts.style,
             message: opts.message,
             subtitle: opts.subtitle,
             allowedRoutes: opts.allowedRoutes,
@@ -956,7 +957,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
         const zIndex = opts.zIndex ?? 99999 + base.length;
         const entry: ProgressToastModel = {
           key: opts.key,
-          mode: "progress",
+          style: resolveToastStyle(opts.key, { progressKind: opts.progressKind }),
+          variant: "progress",
           allowedRoutes,
           progressKind: opts.progressKind,
           title: opts.title,
@@ -1008,7 +1010,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
           const zIndex = opts.zIndex ?? 99999 + prev.length;
           const entry: ProgressToastModel = {
             key: opts.key,
-            mode: "progress",
+            style: resolveToastStyle(opts.key, { progressKind: opts.progressKind }),
+            variant: "progress",
             allowedRoutes,
             progressKind: opts.progressKind,
             title: opts.title,
@@ -1027,7 +1030,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
         const nextToast: ToastModel = {
           ...mergeToast(prev[i]!, {
-            mode: "progress",
+            variant: "progress",
             progressKind: opts.progressKind,
             title: opts.title,
             allowedRoutes: opts.allowedRoutes,
@@ -1192,11 +1195,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
       {children}
       <View style={styles.host} pointerEvents="box-none">
         {layoutToasts.map((t) => {
-          if (t.mode === "pill") {
+          if (t.variant === "pill") {
             return (
               <Toast
                 key={t.key}
-                variant={t.variant}
+                style={t.style}
                 message={withMultipleSuffix(t.message, t.multiple)}
                 subtitle={t.subtitle}
                 top={t.top}
@@ -1208,14 +1211,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
               />
             );
           }
-          if (t.mode === "action") {
+          if (t.variant === "action") {
             return (
               <ActionToast
                 key={t.key}
+                style={t.style}
                 message={withMultipleSuffix(t.message, t.multiple)}
                 icon={t.icon}
-                color={t.color}
-                backgroundColor={t.backgroundColor}
                 top={t.top}
                 horizontalInset={t.horizontalInset}
                 zIndex={t.zIndex}
@@ -1232,6 +1234,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             <ProgressToast
               key={t.key}
               kind={t.progressKind}
+              style={t.style}
               title={withMultipleSuffix(t.title, t.multiple)}
               progress={t.progress}
               top={t.top}

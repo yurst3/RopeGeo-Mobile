@@ -1,7 +1,7 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
-import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
-import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
-import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { MAP_BUTTON_TOP_OFFSET } from "./shared/fullScreenMapLayout";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
@@ -22,10 +22,12 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
-import { TRAIL_VECTOR_LINE_STYLE } from "./shared/trailVectorLineStyle";
+import { useColorTheme } from "@/context/ColorThemeContext";
+import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
+import { pagePointLabelSymbolStyle } from "@/components/screens/explore/mapMarkerLayerStyles";
 import {
   ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
 } from "@/components/screens/explore/routeMarkerIcons";
@@ -140,6 +142,8 @@ export function PageMiniMapView({
   onCollapse,
   reloadRegisterRef,
 }: PageMiniMapViewProps) {
+  const themeColors = useColorTheme();
+  const { map } = themeColors;
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const b = miniMap.bounds;
@@ -344,7 +348,11 @@ export function PageMiniMapView({
       setSelectedLineStyle(null);
       return;
     }
-    const style = lineSelectionStyle(selectedSegmentKey, miniMap.legend);
+    const style = lineSelectionStyle(
+      selectedSegmentKey,
+      miniMap.legend,
+      map.focusedLineSegment,
+    );
     const legend = miniMap.legend;
     const key = selectedSegmentKey;
     let cancelled = false;
@@ -393,6 +401,7 @@ export function PageMiniMapView({
     mapFinishedLoading,
     shell.expanded,
     miniMap.legend,
+    map.focusedLineSegment,
     miniMapReloadKey,
     windowWidth,
     windowHeight,
@@ -545,6 +554,28 @@ export function PageMiniMapView({
     [tabBarHeight],
   );
 
+  const pagePointLabelStyle = useMemo(
+    () => pagePointLabelSymbolStyle(map.marker),
+    [map.marker],
+  );
+
+  const pagePointIconStyle = useMemo(
+    () => ({
+      iconImage: pointIconImageExpr,
+      iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+      iconColor: map.marker.defaultIcon,
+      iconAllowOverlap: true,
+      iconIgnorePlacement: true,
+      iconAnchor: "center" as const,
+    }),
+    [map.marker.defaultIcon, pointIconImageExpr],
+  );
+
+  const pageLineLayerStyle = useMemo(
+    () => trailVectorLineStyle(map.focusedLineSegment),
+    [map.focusedLineSegment],
+  );
+
   return (
     <>
       {shell.mapBodyVisible ? (
@@ -554,7 +585,7 @@ export function PageMiniMapView({
         >
           <MapView
             ref={mapRef}
-            styleURL="mapbox://styles/mapbox/outdoors-v12"
+            styleURL={map.styleUrl}
             style={StyleSheet.absoluteFill}
             projection="globe"
             pointerEvents={shell.expanded ? "auto" : "none"}
@@ -589,36 +620,19 @@ export function PageMiniMapView({
                 id={PAGE_LINE_LAYER_ID}
                 sourceLayerID={miniMap.polyLineLayerId}
                 filter={LINE_ONLY_FILTER}
-                style={TRAIL_VECTOR_LINE_STYLE}
+                style={pageLineLayerStyle}
               />
               <SymbolLayer
                 id={PAGE_POINT_LABEL_LAYER_ID}
                 sourceLayerID={miniMap.pointLayerId}
                 filter={POINT_ONLY_FILTER}
-                style={{
-                  textField: ["coalesce", ["get", "name"], " "],
-                  textSize: 11,
-                  textColor: "#111111",
-                  textHaloColor: "#ffffff",
-                  textHaloWidth: 1.2,
-                  textOffset: [0, 2.1],
-                  textAnchor: "top",
-                  textAllowOverlap: true,
-                  textIgnorePlacement: true,
-                  textMaxWidth: 8,
-                }}
+                style={pagePointLabelStyle}
               />
               <SymbolLayer
                 id={PAGE_POINT_ICON_LAYER_ID}
                 sourceLayerID={miniMap.pointLayerId}
                 filter={POINT_ONLY_FILTER}
-                style={{
-                  iconImage: pointIconImageExpr,
-                  iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
-                  iconAllowOverlap: true,
-                  iconIgnorePlacement: true,
-                  iconAnchor: "center",
-                }}
+                style={pagePointIconStyle}
               />
             </VectorSource>
             {selectedLineHighlight != null &&

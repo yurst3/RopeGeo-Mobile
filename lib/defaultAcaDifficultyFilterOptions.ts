@@ -1,9 +1,9 @@
 import {
   AcaDifficultyFilterOptions,
-  AcaRiskRating,
-  AcaTechnicalRating,
-  AcaTimeRating,
-  AcaWaterRating,
+  AcaRiskSubRating,
+  AcaTechnicalSubRating,
+  AcaTimeSubRating,
+  AcaWaterSubRating,
   RiskMinMax,
   TechnicalMinMax,
   TimeMinMax,
@@ -13,9 +13,9 @@ import {
 /** Widest ACA ranges (matches “no difficulty constraint” when passed to the API). */
 export function fullRangeAcaDifficultyFilterOptions(): AcaDifficultyFilterOptions {
   return new AcaDifficultyFilterOptions(
-    new TechnicalMinMax(AcaTechnicalRating.One, AcaTechnicalRating.Four),
-    new WaterMinMax(AcaWaterRating.A, AcaWaterRating.C4),
-    new TimeMinMax(AcaTimeRating.I, AcaTimeRating.VI),
-    new RiskMinMax(AcaRiskRating.G, AcaRiskRating.XX),
+    new TechnicalMinMax(AcaTechnicalSubRating.One, AcaTechnicalSubRating.Four),
+    new WaterMinMax(AcaWaterSubRating.A, AcaWaterSubRating.C4),
+    new TimeMinMax(AcaTimeSubRating.I, AcaTimeSubRating.VI),
+    new RiskMinMax(AcaRiskSubRating.G, AcaRiskSubRating.XX),
   );
 }

@@ -1,10 +1,10 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
-import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
-import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
-import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
+import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   RouteMarkersLayer,
@@ -21,6 +21,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
 import { CAMERA_PADDING, minimapStyles } from "./shared/minimapShared";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
@@ -78,6 +79,7 @@ export function RegionMiniMapView({
   onRoutesStateChange,
   reloadRegisterRef,
 }: RegionMiniMapViewProps) {
+  const { map } = useColorTheme();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -280,7 +282,7 @@ export function RegionMiniMapView({
     <>
       {shell.mapBodyVisible ? (
         <MapView
-          styleURL="mapbox://styles/mapbox/outdoors-v12"
+          styleURL={map.styleUrl}
           style={minimapStyles.map}
           projection="globe"
           pointerEvents={shell.expanded ? "auto" : "none"}

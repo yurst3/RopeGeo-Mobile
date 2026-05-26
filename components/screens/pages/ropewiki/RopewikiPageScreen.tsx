@@ -11,8 +11,8 @@ import {
 } from "./RopewikiPageScreenBody";
 import {
   TOAST_HORIZONTAL_INSET,
-} from "@/constants/toast";
-import { TOAST_KEY_PAGE_ERROR } from "@/constants/toastArchetypes";
+} from "@/constants/toasts";
+import { TOAST_KEY_PAGE_ERROR } from "@/constants/toasts/toastArchetypes";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
@@ -155,7 +155,6 @@ export function RopewikiPageScreen({
           try {
             upsertPill({
               key: `${TOAST_KEY_PAGE_ERROR}-offline-bundle`,
-              variant: "error",
               message: "Couldn't open saved page",
               subtitle: subtitle !== "" ? subtitle : undefined,
               durationMs: null,
@@ -168,7 +167,6 @@ export function RopewikiPageScreen({
             }
             upsertPill({
               key: `${TOAST_KEY_PAGE_ERROR}-offline-bundle`,
-              variant: "error",
               message: "Couldn't open saved page",
               subtitle: subtitle !== "" ? subtitle : undefined,
               durationMs: null,

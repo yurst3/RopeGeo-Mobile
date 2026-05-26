@@ -1,4 +1,5 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { MiniMap } from "@/components/minimap/MiniMap";
 import type { RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
@@ -10,7 +11,7 @@ import {
 import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMoreBlockedFooter";
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toastArchetypes";
+import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toasts/toastArchetypes";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -118,6 +119,7 @@ export function RegionContent({
   onRoutesStateChange,
   onVerticalScrollActiveChange,
 }: RegionContentProps) {
+  const { background, text, loadingIndicator } = useColorTheme();
   const { isOnline } = useNetworkStatus();
   const isOnlineRef = useRef(isOnline);
   isOnlineRef.current = isOnline;
@@ -360,7 +362,11 @@ export function RegionContent({
               onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
             >
               <View
-                style={[styles.cardWrap, mapExpanded && styles.cardWrapMapExpanded]}
+                style={[
+                  styles.cardWrap,
+                  { backgroundColor: background },
+                  mapExpanded && styles.cardWrapMapExpanded,
+                ]}
                 collapsable={false}
               >
                 <RegionPreviewsToasts
@@ -379,12 +385,16 @@ export function RegionContent({
                     },
                   ]}
                 >
-                  <Text style={styles.title}>{region.name}</Text>
+                  <Text style={[styles.title, { color: text.primary }]}>
+                    {region.name}
+                  </Text>
                   <RegionLinks
                     source={PageDataSource.Ropewiki}
                     regions={regions}
                   />
-                  <Text style={styles.counts}>{countsText}</Text>
+                  <Text style={[styles.counts, { color: text.secondary }]}>
+                    {countsText}
+                  </Text>
                   {region.overview != null ? (
                     <BetaSection section={region.overview} pageTitle={region.name} />
                   ) : null}
@@ -431,7 +441,10 @@ export function RegionContent({
                         { minHeight: INITIAL_LOADING_MIN_HEIGHT - 120 },
                       ]}
                     >
-                      <ActivityIndicator size="small" />
+                      <ActivityIndicator
+                        size="small"
+                        color={loadingIndicator}
+                      />
                     </View>
                   ) : errors != null && items.length === 0 ? (
                     <OfflineLoadMoreBlockedFooter />
@@ -491,7 +504,6 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     position: "relative",
-    backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
@@ -506,12 +518,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#000",
     marginBottom: 6,
   },
   counts: {
     fontSize: 16,
-    color: "#6b7280",
   },
   miniMapWrap: {
     marginTop: 16,

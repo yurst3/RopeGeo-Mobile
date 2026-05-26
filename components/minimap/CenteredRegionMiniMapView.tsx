@@ -1,7 +1,7 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
-import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
-import { ResetCameraToBoundsButton } from "@/components/buttons/ResetCameraToBoundsButton";
-import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
+import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   CLUSTER_RADIUS,
@@ -10,12 +10,16 @@ import {
   type RoutesState,
 } from "@/components/screens/explore/RouteMarkersLayer";
 import {
-  ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
   ROUTE_MARKER_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
 } from "@/components/screens/explore/routeMarkerIcons";
+import {
+  clusterRouteMarkerSymbolStyle,
+  unclusteredRouteMarkerSymbolStyle,
+} from "@/components/screens/explore/mapMarkerLayerStyles";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
   MAP_BUTTON_TOP_OFFSET,
   routePreviewDockedPaddingBottom,
@@ -108,6 +112,7 @@ export function CenteredRegionMiniMapView({
   onCollapse,
   reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
+  const { map } = useColorTheme();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -203,6 +208,21 @@ export function CenteredRegionMiniMapView({
         markerAccentRouteId,
       ),
     [shell.expanded, focusedRouteId, markerAccentRouteId],
+  );
+
+  const offlineUnclusteredStyle = useMemo(
+    () =>
+      unclusteredRouteMarkerSymbolStyle(
+        map.marker,
+        offlineUnclusteredIconImage,
+        offlineUnclusteredIconSize,
+      ),
+    [map.marker, offlineUnclusteredIconImage, offlineUnclusteredIconSize],
+  );
+
+  const offlineClusterStyle = useMemo(
+    () => clusterRouteMarkerSymbolStyle(map.marker),
+    [map.marker],
   );
 
   const {
@@ -446,7 +466,7 @@ export function CenteredRegionMiniMapView({
     <>
       {shell.mapBodyVisible ? (
         <MapView
-          styleURL="mapbox://styles/mapbox/outdoors-v12"
+          styleURL={map.styleUrl}
           style={minimapStyles.map}
           projection="globe"
           pointerEvents={shell.expanded ? "auto" : "none"}
@@ -509,47 +529,12 @@ export function CenteredRegionMiniMapView({
               <SymbolLayer
                 id="centered-offline-unclustered"
                 filter={["!", ["has", "point_count"]]}
-                style={{
-                  iconImage: offlineUnclusteredIconImage,
-                  iconSize: offlineUnclusteredIconSize,
-                  iconAllowOverlap: true,
-                  iconIgnorePlacement: true,
-                  iconAnchor: "bottom",
-                  textField: ["get", "name"],
-                  textSize: 12,
-                  textColor: "#333333",
-                  textHaloColor: "#ffffff",
-                  textHaloWidth: 1.5,
-                  textOffset: [0, 0.2],
-                  textAnchor: "top",
-                  textAllowOverlap: true,
-                  textIgnorePlacement: true,
-                }}
+                style={offlineUnclusteredStyle}
               />
               <SymbolLayer
                 id="centered-offline-clusters"
                 filter={["has", "point_count"]}
-                style={{
-                  iconImage: "route-marker-cluster",
-                  iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
-                  iconAllowOverlap: true,
-                  iconIgnorePlacement: true,
-                  iconAnchor: "bottom",
-                  textField: [
-                    "concat",
-                    "(",
-                    ["to-string", ["get", "point_count"]],
-                    ")",
-                  ],
-                  textSize: 12,
-                  textColor: "#333333",
-                  textHaloColor: "#ffffff",
-                  textHaloWidth: 1.5,
-                  textOffset: [0, 0.2],
-                  textAnchor: "top",
-                  textAllowOverlap: true,
-                  textIgnorePlacement: true,
-                }}
+                style={offlineClusterStyle}
               />
               <Images images={{ ...ROUTE_MARKER_IMAGES }} />
             </ShapeSource>

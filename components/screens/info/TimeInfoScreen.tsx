@@ -4,76 +4,65 @@ import { LongDayBadge } from "@/components/badges/difficulty/LongDayBadge";
 import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBadge";
 import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
 import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
-import { DifficultyTime } from "ropegeo-common/models";
+import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { AcaTimeSubRating } from "ropegeo-common/models";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 
-const TIME_ORDER: DifficultyTime[] = Object.values(DifficultyTime);
-
-const BADGE_COLUMN_WIDTH = 80;
+const TIME_ORDER: AcaTimeSubRating[] = Object.values(AcaTimeSubRating);
 
 const TIME_BADGES: Record<
-  DifficultyTime,
+  AcaTimeSubRating,
   React.ComponentType<{ showLabel?: boolean }>
 > = {
-  [DifficultyTime.I]: ShortBadge,
-  [DifficultyTime.II]: HalfDayBadge,
-  [DifficultyTime.III]: FullDayBadge,
-  [DifficultyTime.IV]: LongDayBadge,
-  [DifficultyTime.V]: OvernightBadge,
-  [DifficultyTime.VI]: MultipleDaysBadge,
+  [AcaTimeSubRating.I]: ShortBadge,
+  [AcaTimeSubRating.II]: HalfDayBadge,
+  [AcaTimeSubRating.III]: FullDayBadge,
+  [AcaTimeSubRating.IV]: LongDayBadge,
+  [AcaTimeSubRating.V]: OvernightBadge,
+  [AcaTimeSubRating.VI]: MultipleDaysBadge,
 };
 
 /** Descriptions aligned with ACA duration (time) rating. See ropewiki.com/ACA_rating, canyoneeringusa.com, dankat.com. */
-const TIME_DESCRIPTIONS: Record<DifficultyTime, { body: string }> = {
-  [DifficultyTime.I]: {
+const TIME_DESCRIPTIONS: Record<AcaTimeSubRating, { body: string }> = {
+  [AcaTimeSubRating.I]: {
     body:
       "Short. A couple of hours (typically 1–3 hours). Estimates are for a small team of experienced, " +
       "fit adults at a good pace; allow more time if your group is less proficient.",
   },
-  [DifficultyTime.II]: {
+  [AcaTimeSubRating.II]: {
     body:
       "Half day. Normally requires about half a day (typically 4–6 hours).",
   },
-  [DifficultyTime.III]: {
+  [AcaTimeSubRating.III]: {
     body:
       "Full day. Normally requires most of a day (typically 7–12 hours).",
   },
-  [DifficultyTime.IV]: {
+  [AcaTimeSubRating.IV]: {
     body:
       "Long day. Expected to take 13–18 hours. Get an early start, bring a headlamp. " +
       "Possible unintended bivy.",
   },
-  [DifficultyTime.V]: {
+  [AcaTimeSubRating.V]: {
     body:
       "Overnight. More than one day; normally done in two days (1–2 days).",
   },
-  [DifficultyTime.VI]: {
+  [AcaTimeSubRating.VI]: {
     body:
       "Multi-day. Two full days or more. Plan accordingly for a multi-day canyon trip.",
   },
 };
 
 export type TimeInfoScreenProps = {
-  highlightedTime?: DifficultyTime | null;
+  highlightedTime?: AcaTimeSubRating | null;
 };
 
 export function TimeInfoScreen({ highlightedTime }: TimeInfoScreenProps) {
-  const insets = useSafeAreaInsets();
+  const styles = useInfoScreenStyles();
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: 12,
-          paddingLeft: 16 + insets.left,
-          paddingRight: 16 + insets.right,
-        },
-      ]}
-    >
+    <InfoScreenLayout title="Time ratings">
       <Text style={styles.subtitle}>
         The Roman numerals in an ACA rating indicate approximately how long the
         entire canyon trip generally takes a typical group. Actual time can vary
@@ -100,41 +89,6 @@ export function TimeInfoScreen({ highlightedTime }: TimeInfoScreenProps) {
           </View>
         );
       })}
-    </ScrollView>
+    </InfoScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16 },
-  subtitle: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 16,
-  },
-  rowHighlighted: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  badgeWrap: {
-    width: BADGE_COLUMN_WIDTH,
-    flexShrink: 0,
-    alignItems: "center",
-  },
-  descriptionWrap: { flex: 1, minWidth: 0 },
-  body: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-});

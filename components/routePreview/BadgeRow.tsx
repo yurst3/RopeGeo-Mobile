@@ -30,46 +30,46 @@ import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
 import { CaveBadge } from "@/components/badges/routeType/CaveBadge";
 import { PoiBadge } from "@/components/badges/routeType/PoiBadge";
 import {
-  AcaDifficulty,
-  AcaRiskRating,
-  AcaTechnicalRating,
-  AcaTimeRating,
-  AcaWaterRating,
-  type Difficulty,
+  AcaDifficultyRating,
+  AcaRiskSubRating,
+  AcaTechnicalSubRating,
+  AcaTimeSubRating,
+  AcaWaterSubRating,
+  type DifficultyRating,
   PermitStatus,
   RouteType,
 } from "ropegeo-common/models";
 
-const TECHNICAL_BADGES: Record<AcaTechnicalRating, React.ComponentType> = {
-  [AcaTechnicalRating.One]: NotTechnicalBadge,
-  [AcaTechnicalRating.Two]: ScramblingBadge,
-  [AcaTechnicalRating.Three]: TechnicalBadge,
-  [AcaTechnicalRating.Four]: VeryTechnicalBadge,
+const TECHNICAL_BADGES: Record<AcaTechnicalSubRating, React.ComponentType> = {
+  [AcaTechnicalSubRating.One]: NotTechnicalBadge,
+  [AcaTechnicalSubRating.Two]: ScramblingBadge,
+  [AcaTechnicalSubRating.Three]: TechnicalBadge,
+  [AcaTechnicalSubRating.Four]: VeryTechnicalBadge,
 };
-const WATER_BADGES: Record<AcaWaterRating, React.ComponentType> = {
-  [AcaWaterRating.A]: MinimalWaterBadge,
-  [AcaWaterRating.B]: SwimmingWaterBadge,
-  [AcaWaterRating.C]: FlowingWaterBadge,
-  [AcaWaterRating.C1]: FlowingC1WaterBadge,
-  [AcaWaterRating.C2]: FlowingC2WaterBadge,
-  [AcaWaterRating.C3]: FlowingC3WaterBadge,
-  [AcaWaterRating.C4]: FlowingC4WaterBadge,
+const WATER_BADGES: Record<AcaWaterSubRating, React.ComponentType> = {
+  [AcaWaterSubRating.A]: MinimalWaterBadge,
+  [AcaWaterSubRating.B]: SwimmingWaterBadge,
+  [AcaWaterSubRating.C]: FlowingWaterBadge,
+  [AcaWaterSubRating.C1]: FlowingC1WaterBadge,
+  [AcaWaterSubRating.C2]: FlowingC2WaterBadge,
+  [AcaWaterSubRating.C3]: FlowingC3WaterBadge,
+  [AcaWaterSubRating.C4]: FlowingC4WaterBadge,
 };
-const TIME_BADGES: Record<AcaTimeRating, React.ComponentType> = {
-  [AcaTimeRating.I]: ShortBadge,
-  [AcaTimeRating.II]: HalfDayBadge,
-  [AcaTimeRating.III]: FullDayBadge,
-  [AcaTimeRating.IV]: LongDayBadge,
-  [AcaTimeRating.V]: OvernightBadge,
-  [AcaTimeRating.VI]: MultipleDaysBadge,
+const TIME_BADGES: Record<AcaTimeSubRating, React.ComponentType> = {
+  [AcaTimeSubRating.I]: ShortBadge,
+  [AcaTimeSubRating.II]: HalfDayBadge,
+  [AcaTimeSubRating.III]: FullDayBadge,
+  [AcaTimeSubRating.IV]: LongDayBadge,
+  [AcaTimeSubRating.V]: OvernightBadge,
+  [AcaTimeSubRating.VI]: MultipleDaysBadge,
 };
-const RISK_BADGES: Record<AcaRiskRating, React.ComponentType> = {
-  [AcaRiskRating.G]: MinimalRiskBadge,
-  [AcaRiskRating.PG]: SomeRiskBadge,
-  [AcaRiskRating.PG13]: ModerateRiskBadge,
-  [AcaRiskRating.R]: HighRiskBadge,
-  [AcaRiskRating.X]: VeryHighRiskBadge,
-  [AcaRiskRating.XX]: ExtremeRiskBadge,
+const RISK_BADGES: Record<AcaRiskSubRating, React.ComponentType> = {
+  [AcaRiskSubRating.G]: MinimalRiskBadge,
+  [AcaRiskSubRating.PG]: SomeRiskBadge,
+  [AcaRiskSubRating.PG13]: ModerateRiskBadge,
+  [AcaRiskSubRating.R]: HighRiskBadge,
+  [AcaRiskSubRating.X]: VeryHighRiskBadge,
+  [AcaRiskSubRating.XX]: ExtremeRiskBadge,
 };
 const PERMIT_BADGES: Record<
   PermitStatus,
@@ -84,14 +84,14 @@ const PERMIT_BADGES: Record<
 const MAX_BADGES = 5;
 
 export type BadgeRowProps = {
-  difficulty: Difficulty;
+  difficultyRating: DifficultyRating;
   permit?: PermitStatus | null;
   routeType?: RouteType | null;
   scale?: number;
 };
 
 export function BadgeRow({
-  difficulty,
+  difficultyRating,
   permit = null,
   routeType = null,
   scale = 1,
@@ -102,20 +102,20 @@ export function BadgeRow({
   } else if (routeType === RouteType.POI) {
     badges.push(React.createElement(PoiBadge, { key: "routeType" }));
   }
-  if (difficulty instanceof AcaDifficulty) {
-    if (difficulty.technical != null) {
-      const C = TECHNICAL_BADGES[difficulty.technical];
+  if (difficultyRating instanceof AcaDifficultyRating) {
+    if (difficultyRating.technical != null) {
+      const C = TECHNICAL_BADGES[difficultyRating.technical];
       if (C) badges.push(React.createElement(C, { key: "technical" }));
     }
-    if (difficulty.water != null) {
-      const C = WATER_BADGES[difficulty.water];
+    if (difficultyRating.water != null) {
+      const C = WATER_BADGES[difficultyRating.water];
       if (C) badges.push(React.createElement(C, { key: "water" }));
     }
-    if (difficulty.time != null) {
-      const C = TIME_BADGES[difficulty.time];
+    if (difficultyRating.time != null) {
+      const C = TIME_BADGES[difficultyRating.time];
       if (C) badges.push(React.createElement(C, { key: "time" }));
     }
-    const risk = difficulty.getEffectiveRiskForDisplay();
+    const risk = difficultyRating.getEffectiveRiskForDisplay();
     if (risk != null) {
       const C = RISK_BADGES[risk];
       if (C) badges.push(React.createElement(C, { key: "risk" }));

@@ -1,6 +1,7 @@
-import { BackButton } from "@/components/buttons/BackButton";
-import { ExternalLinkButton } from "@/components/buttons/ExternalLinkButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import {
@@ -54,35 +55,49 @@ export function RopewikiPagePlaceholder({
   source,
   errorMessage,
 }: RopewikiPagePlaceholderProps) {
+  const { background, placeholder, image, text, loadingIndicator } =
+    useColorTheme();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const seamTop = HALF_HEIGHT - CARD_BORDER_RADIUS - SEAM_FLOAT_OFFSET;
   const linkUrl = externalLinkForSource(source);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.banner, { height: HALF_HEIGHT }]}>
+    <View style={[styles.container, { backgroundColor: background }]}>
+      <View
+        style={[
+          styles.banner,
+          { height: HALF_HEIGHT, backgroundColor: image.background },
+        ]}
+      >
         {isError ? (
           <>
             <Image
               source={require("@/assets/images/icons/missingImage.png")}
-              style={styles.missingImage}
+              style={[styles.missingImage, { tintColor: image.missingIcon }]}
               contentFit="contain"
             />
-            <Text style={styles.errorTitle}>{errorMessage}</Text>
+            <Text style={[styles.errorTitle, { color: text.error }]}>
+              {errorMessage}
+            </Text>
           </>
         ) : (
-          <ActivityIndicator size="large" color="#666" />
+          <ActivityIndicator size="large" color={loadingIndicator} />
         )}
       </View>
 
-      <View style={[styles.card, { marginTop: -CARD_BORDER_RADIUS }]}>
-        <View style={styles.titleBar} />
-        <View style={[styles.line, { width: "62%" }]} />
-        <View style={[styles.line, { width: "44%" }]} />
+      <View
+        style={[
+          styles.card,
+          { marginTop: -CARD_BORDER_RADIUS, backgroundColor: background },
+        ]}
+      >
+        <View style={[styles.titleBar, { backgroundColor: placeholder }]} />
+        <View style={[styles.line, { width: "62%", backgroundColor: placeholder }]} />
+        <View style={[styles.line, { width: "44%", backgroundColor: placeholder }]} />
         <View style={styles.badgeRow}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <View key={i} style={styles.badge} />
+            <View key={i} style={[styles.badge, { backgroundColor: placeholder }]} />
           ))}
         </View>
         <View style={styles.miniMapWrap}>
@@ -115,11 +130,9 @@ export function RopewikiPagePlaceholder({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
   },
   banner: {
     width: SCREEN_WIDTH,
-    backgroundColor: "#d1d5db",
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
@@ -131,13 +144,11 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#dc2626",
     textAlign: "center",
     paddingHorizontal: 24,
   },
   card: {
     flex: 1,
-    backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     paddingHorizontal: 20,
@@ -148,12 +159,10 @@ const styles = StyleSheet.create({
     height: 22,
     width: "70%",
     borderRadius: 6,
-    backgroundColor: "#e5e7eb",
   },
   line: {
     height: 12,
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
   },
   badgeRow: {
     flexDirection: "row",
@@ -165,7 +174,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 24,
     borderRadius: 8,
-    backgroundColor: "#e5e7eb",
   },
   miniMapWrap: {
     marginTop: 12,

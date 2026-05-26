@@ -1,5 +1,6 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
 import { StarRating } from "@/components/StarRating";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
   ActivityIndicator,
   Dimensions,
@@ -24,16 +25,34 @@ export type RoutePreviewPlaceholderProps = {
 export function RoutePreviewPlaceholder({
   errorMessage,
 }: RoutePreviewPlaceholderProps) {
+  const themeColors = useColorTheme();
+  const { text, image, background, placeholder, loadingIndicator } = themeColors;
   const isError = errorMessage != null && errorMessage !== "";
 
   return (
     <View style={styles.outer}>
-      <View style={[styles.card, { overflow: "hidden" }]}>
+      <View
+        style={[
+          styles.card,
+          { overflow: "hidden", backgroundColor: background },
+        ]}
+      >
         <View style={styles.cardContent}>
-          <View style={[styles.imageContainer, styles.placeholderImageSlot]}>
+          <View
+            style={[
+              styles.imageContainer,
+              styles.placeholderImageSlot,
+              { backgroundColor: image.background },
+            ]}
+          >
             {!isError ? (
-              <View style={styles.imageLoadingOverlay}>
-                <ActivityIndicator size="small" color="#666" />
+              <View
+                style={[
+                  styles.imageLoadingOverlay,
+                  { backgroundColor: image.background },
+                ]}
+              >
+                <ActivityIndicator size="small" color={loadingIndicator} />
               </View>
             ) : null}
           </View>
@@ -42,24 +61,35 @@ export function RoutePreviewPlaceholder({
               rating={0}
               count={0}
               size={14}
-              emptyStarColor="#999"
+              placeholderColor
               style={styles.starRatingRow}
               textStyle={styles.starRatingText}
             />
             {isError ? (
-              <Text style={styles.errorMessage} numberOfLines={4}>
+              <Text
+                style={[styles.errorMessage, { color: text.error }]}
+                numberOfLines={4}
+              >
                 {errorMessage}
               </Text>
             ) : (
-              <View style={styles.titlePlaceholder} />
+              <View
+                style={[styles.titlePlaceholder, { backgroundColor: placeholder }]}
+              />
             )}
             <View style={styles.regionPlaceholderRow}>
-              <View style={[styles.regionBar, { width: "40%" }]} />
-              <Text style={styles.regionDot}> • </Text>
-              <View style={[styles.regionBar, { width: "40%" }]} />
+              <View
+                style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
+              />
+              <Text style={[styles.regionDot, { color: text.tertiary }]}> • </Text>
+              <View
+                style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
+              />
             </View>
             <View style={styles.regionPlaceholderRow}>
-              <View style={[styles.regionBar, { width: "30%" }]} />
+              <View
+                style={[styles.regionBar, { width: "30%", backgroundColor: placeholder }]}
+              />
             </View>
             <View style={styles.badgePlaceholderRow}>
               {[0, 1, 2, 3, 4].map((i) => (
@@ -80,7 +110,6 @@ const styles = StyleSheet.create({
   },
   card: {
     minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    backgroundColor: "#fff",
     borderRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
   },
@@ -93,15 +122,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderBottomLeftRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
-    backgroundColor: "#eee",
   },
   placeholderImageSlot: {
-    backgroundColor: "#e5e7eb",
     minHeight: PREVIEW_CARD_MIN_HEIGHT,
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
@@ -122,19 +148,16 @@ const styles = StyleSheet.create({
   starRatingText: {
     marginLeft: 6,
     fontSize: 12,
-    color: "#333",
   },
   titlePlaceholder: {
     height: 16,
     width: "66%",
     alignSelf: "flex-start",
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
     marginBottom: 8,
   },
   errorMessage: {
     alignSelf: "stretch",
-    color: "#dc2626",
     fontSize: 15,
     fontWeight: "600",
     marginBottom: 8,
@@ -147,11 +170,9 @@ const styles = StyleSheet.create({
   regionBar: {
     height: 10,
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
   },
   regionDot: {
     fontSize: 10,
-    color: "#ccc",
   },
   badgePlaceholderRow: {
     flexDirection: "row",

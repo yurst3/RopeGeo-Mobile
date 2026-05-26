@@ -1,6 +1,7 @@
-import { BackButton } from "@/components/buttons/BackButton";
-import { SaveButton } from "@/components/buttons/SaveButton";
-import { ShareButton } from "@/components/buttons/ShareButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
+import { SaveButton } from "@/components/buttons/standard/SaveButton";
+import { ShareButton } from "@/components/buttons/standard/ShareButton";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useDownloadQueue } from "@/context/DownloadQueueContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
@@ -12,12 +13,12 @@ import { PageContent as PageScrollContent } from "./PageContent";
 import { PageSeamButtons } from "./PageSeamButtons";
 import {
   TOAST_HORIZONTAL_INSET,
-} from "@/constants/toast";
+} from "@/constants/toasts";
 import {
-  getToastArchetypeForKey,
   TOAST_KEY_DOWNLOAD_CANCELLED,
   TOAST_KEY_PAGE_SAVED,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/toastArchetypes";
+import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import {
   pageDownloadUiFromTaskSnapshot,
   useDownloadProgressToasts,
@@ -82,6 +83,7 @@ export function RopewikiPageScreenBody({
   pageId,
   data,
 }: RopewikiPageScreenBodyProps) {
+  const { background } = useColorTheme();
   const insets = useSafeAreaInsets();
   const { showPill, dismiss, upsertPill } = useToast();
   const router = useRouter();
@@ -125,7 +127,6 @@ export function RopewikiPageScreenBody({
     try {
       showPill({
         key: TOAST_KEY_PAGE_SAVED,
-        variant: "success",
         message: "Page saved",
         durationMs: savedToastDurationMs,
         allowedRoutes: pageAllowedRoutes,
@@ -140,7 +141,6 @@ export function RopewikiPageScreenBody({
       }
       upsertPill({
         key: TOAST_KEY_PAGE_SAVED,
-        variant: "success",
         message: "Page saved",
         durationMs: savedToastDurationMs,
         allowedRoutes: pageAllowedRoutes,
@@ -164,7 +164,6 @@ export function RopewikiPageScreenBody({
         try {
           showPill({
             key: cancelKey,
-            variant: "error",
             message: "Download cancelled",
             durationMs: cancelDurationMs,
             allowedRoutes: pageAllowedRoutes,
@@ -176,7 +175,6 @@ export function RopewikiPageScreenBody({
           }
           upsertPill({
             key: cancelKey,
-            variant: "error",
             message: "Download cancelled",
             durationMs: cancelDurationMs,
             allowedRoutes: pageAllowedRoutes,
@@ -411,7 +409,7 @@ export function RopewikiPageScreenBody({
     bannerTapHeight >= 12 && !bannerImageLoading && !mapExpanded;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: background }]}>
       <View
         ref={expandAnchorRef}
         style={styles.shareBlockableLayer}
@@ -548,7 +546,6 @@ export function RopewikiPageScreenBody({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
   },
   heroBannerLayer: {
     position: "absolute",

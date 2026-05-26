@@ -1,13 +1,9 @@
-import {
-  DOWNLOAD_TOAST_BG,
-  DOWNLOAD_TOAST_TEXT,
-  NETWORK_REQUEST_SLOW_THRESHOLD_MS,
-} from "@/constants/toast";
+import { NETWORK_REQUEST_SLOW_THRESHOLD_MS } from "@/constants/toasts";
 import {
   TOAST_KEY_NETWORK_OFFLINE,
   TOAST_KEY_NETWORK_RETRY,
-  getToastArchetypeForKey,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/toastArchetypes";
+import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { useToast } from "@/context/ToastContext";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
@@ -111,7 +107,6 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
       const message = `Waiting for network response ${args.timeoutCountdown}s`;
       upsertPill({
         key: slowToastKey,
-        variant: "warning",
         message,
         durationMs: null,
         allowedRoutes: [pathname],
@@ -133,7 +128,6 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
       prevResetKeyForErrorBumpRef.current = resetNow;
       upsertPill({
         key: errorToastKey,
-        variant: "error",
         message,
         subtitle,
         durationMs: null,
@@ -157,8 +151,6 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
           key: TOAST_KEY_NETWORK_RETRY,
           message: "Retry",
           icon: RETRY_ICON,
-          color: DOWNLOAD_TOAST_TEXT,
-          backgroundColor: DOWNLOAD_TOAST_BG,
           durationMs: null,
           allowedRoutes: [pathname],
           onPress: () => {
@@ -178,76 +170,55 @@ export function useNetworkRequestToasts(args: UseNetworkRequestToastsArgs): void
     isFocused,
     isOnline,
     pathname,
-    errorMessageKey,
     args.timeoutCountdown,
-    dismiss,
+    errorMessageKey,
     args.errorToastTitle,
-    errorToastKey,
+    args.onRetryRequest,
+    dismiss,
     upsertPill,
     upsertActionToast,
     slowToastKey,
+    errorToastKey,
     incrementMultiple,
     args.resetKey,
     args.incrementErrorMultipleOnCollision,
   ]);
 
   useEffect(() => {
-    if (!watchOffline) {
-      dismiss(offlineToastKey);
-      prevOnlineRef.current = null;
+    if (!watchOffline || !offlineSurfaceActive || !isFocused) {
       return;
     }
-
-    if (prevOnlineRef.current === null) {
-      prevOnlineRef.current = isOnline;
-      if (!isOnline && offlineSurfaceActive && isFocused) {
-        const defaultAllowed = getToastArchetypeForKey(offlineToastKey)?.allowedRoutes;
-        upsertPill({
-          key: offlineToastKey,
-          variant: "error",
-          message: NO_NETWORK_MESSAGE,
-          durationMs: null,
-          allowedRoutes: defaultAllowed,
-        });
-      }
-      return;
-    }
-
     const wasOnline = prevOnlineRef.current;
     prevOnlineRef.current = isOnline;
-
-    if (isOnline && !wasOnline) {
-      dismiss(offlineToastKey);
-    }
-
-    if (!offlineSurfaceActive) {
-      dismiss(offlineToastKey);
+    if (wasOnline === isOnline) {
       return;
     }
-
-    if (!isOnline && wasOnline) {
+    if (!isOnline) {
+      const defaultAllowed = getToastArchetypeForKey(offlineToastKey)?.allowedRoutes;
+      if (wasOnline === true) {
+        upsertPill({
+          key: offlineToastKey,
+          message: NO_NETWORK_MESSAGE,
+          durationMs: null,
+          allowedRoutes: defaultAllowed,
+        });
+      } else if (wasOnline === null) {
+        upsertPill({
+          key: offlineToastKey,
+          message: NO_NETWORK_MESSAGE,
+          durationMs: null,
+          allowedRoutes: defaultAllowed,
+        });
+      } else {
+        upsertPill({
+          key: offlineToastKey,
+          message: NO_NETWORK_MESSAGE,
+          durationMs: null,
+          allowedRoutes: defaultAllowed,
+        });
+      }
+    } else {
       dismiss(offlineToastKey);
-      if (isFocused) {
-        const defaultAllowed = getToastArchetypeForKey(offlineToastKey)?.allowedRoutes;
-        upsertPill({
-          key: offlineToastKey,
-          variant: "error",
-          message: NO_NETWORK_MESSAGE,
-          durationMs: null,
-          allowedRoutes: defaultAllowed,
-        });
-      }
-    } else if (!isOnline) {
-      if (isFocused) {
-        const defaultAllowed = getToastArchetypeForKey(offlineToastKey)?.allowedRoutes;
-        upsertPill({
-          key: offlineToastKey,
-          variant: "error",
-          message: NO_NETWORK_MESSAGE,
-          durationMs: null,
-          allowedRoutes: defaultAllowed,
-        });
-      }
     }
   }, [isFocused, isOnline, watchOffline, offlineSurfaceActive, dismiss, offlineToastKey, upsertPill]);
 }

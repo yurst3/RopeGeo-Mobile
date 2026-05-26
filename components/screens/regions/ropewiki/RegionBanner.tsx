@@ -6,7 +6,8 @@ import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,
 } from "ropegeo-common/models";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -112,6 +113,7 @@ function RegionBannerCarousel({
   verticalScrollActive,
   controlRef,
 }: RegionBannerCarouselProps) {
+  const { image, loadingIndicator } = useColorTheme();
   const { upsertPill, dismiss } = useToast();
   const pathname = usePathname();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -130,7 +132,6 @@ function RegionBannerCarousel({
       const subtitle = bannerLoadMoreError.message?.trim();
       upsertPill({
         key: bannerImagesErrorToastKey,
-        variant: "error",
         message: `Error loading ${regionName} banner images`,
         subtitle: subtitle === "" ? undefined : subtitle,
         durationMs: null,
@@ -450,27 +451,39 @@ function RegionBannerCarousel({
               </Animated.View>
               {imageLoading ? (
                 <View
-                  style={styles.imageLoadingOverlay}
+                  style={[
+                    styles.imageLoadingOverlay,
+                    { backgroundColor: image.background },
+                  ]}
                   pointerEvents="none"
                 >
-                  <ActivityIndicator size="large" color="#6b7280" />
+                  <ActivityIndicator size="large" color={loadingIndicator} />
                 </View>
               ) : null}
             </>
           ) : (
-            <View style={styles.bannerNoImageWrap} pointerEvents="auto">
+            <View
+              style={[
+                styles.bannerNoImageWrap,
+                { backgroundColor: image.background },
+              ]}
+              pointerEvents="auto"
+            >
               <Image
                 source={require("@/assets/images/icons/missingImage.png")}
-                style={styles.bannerNoImageIcon}
+                style={[styles.bannerNoImageIcon, { tintColor: image.missingIcon }]}
                 contentFit="contain"
               />
-              <Text style={styles.missingImageText}>Missing Image</Text>
+              <Text style={[styles.missingImageText, { color: image.missingText }]}>
+                Missing Image
+              </Text>
             </View>
           )}
         </View>
       );
     },
     [
+      image,
       imageFrameStyle,
       layoutHeight,
       layoutWidth,
@@ -503,14 +516,26 @@ function RegionBannerCarousel({
     >
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {loading ? (
-          <View style={styles.bannerNoImageWrap} pointerEvents="box-none">
-            <ActivityIndicator size="large" color="#6b7280" />
+          <View
+            style={[
+              styles.bannerNoImageWrap,
+              { backgroundColor: image.background },
+            ]}
+            pointerEvents="box-none"
+          >
+            <ActivityIndicator size="large" color={loadingIndicator} />
           </View>
         ) : showPlaceholder ? (
-          <View style={styles.bannerNoImageWrap} pointerEvents="box-none">
+          <View
+            style={[
+              styles.bannerNoImageWrap,
+              { backgroundColor: image.background },
+            ]}
+            pointerEvents="box-none"
+          >
             <Image
               source={require("@/assets/images/icons/noImage.png")}
-              style={styles.bannerNoImageIcon}
+              style={[styles.bannerNoImageIcon, { tintColor: image.missingIcon }]}
               contentFit="contain"
             />
           </View>
@@ -539,8 +564,14 @@ function RegionBannerCarousel({
             onScrollToIndexFailed={onScrollToIndexFailed}
           />
         ) : (
-          <View style={styles.bannerNoImageWrap} pointerEvents="box-none">
-            <ActivityIndicator size="large" color="#6b7280" />
+          <View
+            style={[
+              styles.bannerNoImageWrap,
+              { backgroundColor: image.background },
+            ]}
+            pointerEvents="box-none"
+          >
+            <ActivityIndicator size="large" color={loadingIndicator} />
           </View>
         )}
       </View>
@@ -651,7 +682,6 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
   },
   bannerNoImageIcon: {
     width: 64,
@@ -660,12 +690,10 @@ const styles = StyleSheet.create({
   missingImageText: {
     marginTop: 8,
     fontSize: 13,
-    color: "#6b7280",
     fontWeight: "600",
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(229, 231, 235, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,

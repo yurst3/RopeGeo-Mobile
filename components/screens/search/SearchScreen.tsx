@@ -1,5 +1,5 @@
 import { type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
-import { TOAST_KEY_DISTANCE_GPS_TIMEOUT } from "@/constants/toastArchetypes";
+import { TOAST_KEY_DISTANCE_GPS_TIMEOUT } from "@/constants/toasts/toastArchetypes";
 import {
   ToastKeyCollisionError,
   ToastKeyNotFoundError,
@@ -153,7 +153,6 @@ export function SearchScreen() {
       try {
         showToast({
           key: TOAST_KEY_DISTANCE_GPS_TIMEOUT,
-          variant: "error",
           message: DISTANCE_GPS_TIMEOUT_TOAST,
           durationMs: null,
         });
@@ -163,8 +162,7 @@ export function SearchScreen() {
         }
         try {
           updateToast(TOAST_KEY_DISTANCE_GPS_TIMEOUT, {
-            mode: "pill",
-            variant: "error",
+            variant: "pill",
             message: DISTANCE_GPS_TIMEOUT_TOAST,
             durationMs: null,
           });

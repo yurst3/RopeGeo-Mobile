@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { RopewikiPageView } from "ropegeo-common/models";
@@ -42,6 +43,7 @@ export function Lengths({
   descentLength,
   exitLength,
 }: LengthsProps) {
+  const { text } = useColorTheme();
   const items: { value: string; label: string }[] = [];
   if (hasLength(overallLength))
     items.push({ value: formatMiles(overallLength!), label: LABELS.overallLength });
@@ -71,8 +73,8 @@ export function Lengths({
       <View style={[rowStyle, styles.rowWrap]}>
         {items.map((item) => (
           <View key={item.label} style={columnStyle}>
-            <Text style={styles.value}>{item.value}</Text>
-            <Text style={styles.label}>{item.label}</Text>
+            <Text style={[styles.value, { color: text.primary }]}>{item.value}</Text>
+            <Text style={[styles.label, { color: text.secondary }]}>{item.label}</Text>
           </View>
         ))}
       </View>
@@ -103,13 +105,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#000",
     marginBottom: 2,
     textAlign: "center",
   },
   label: {
     fontSize: 13,
-    color: "#6b7280",
     textAlign: "center",
   },
 });

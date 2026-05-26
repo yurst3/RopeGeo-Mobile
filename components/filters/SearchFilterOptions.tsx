@@ -14,6 +14,7 @@ import {
 } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
 import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
+import { useFilterTheme } from "./useFilterTheme";
 
 const SEARCH_ORDERS: SearchOrder[] = ["similarity", "quality", "distance"];
 
@@ -39,6 +40,19 @@ export function SearchFilterOptions({
   onChange,
   livePosition,
 }: SearchFilterOptionsProps) {
+  const {
+    filter: filterColors,
+    sectionLabel,
+    hintText,
+    bodyText,
+    switchLabel,
+    switchLabelMuted,
+    disableSection,
+    switchProps,
+    text,
+  } = useFilterTheme();
+  const { radioButton, slider, noteText } = filterColors;
+
   const patch = (fn: (s: SearchFilter) => void) => {
     const s = cloneFilter(filter);
     fn(s);
@@ -70,7 +84,6 @@ export function SearchFilterOptions({
   const includeResultsInvalid =
     !filter.includePages && !filter.includeRegions;
 
-  /** Single full-bleed grey when region row is order-disabled and AKA row is off (no pages). */
   const mergedDisabledGreyBand =
     regionsDisabledByOrder && akaDisabled;
 
@@ -79,10 +92,15 @@ export function SearchFilterOptions({
     patch((s) => s.setSimilarityThreshold(rounded));
   };
 
+  const disabledBandStyle = [
+    styles.switchBlockDisabled,
+    disableSection,
+  ];
+
   return (
     <>
       <View>
-        <Text style={[styles.sectionLabel, styles.sectionLabelFirst]}>
+        <Text style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}>
           Search Order
         </Text>
         <View style={styles.radioGroup}>
@@ -101,16 +119,25 @@ export function SearchFilterOptions({
                 <View
                   style={[
                     styles.radioOuter,
+                    { borderColor: radioButton.uncheckedOutline },
                     disabled && styles.radioOuterDisabled,
-                    selected && styles.radioOuterSelected,
+                    selected && { borderColor: radioButton.checkedFill },
                   ]}
                 >
-                  {selected ? <View style={styles.radioInner} /> : null}
+                  {selected ? (
+                    <View
+                      style={[
+                        styles.radioInner,
+                        { backgroundColor: radioButton.checkedFill },
+                      ]}
+                    />
+                  ) : null}
                 </View>
                 <Text
                   style={[
                     styles.radioLabel,
-                    disabled && styles.radioLabelDisabled,
+                    bodyText,
+                    disabled && { color: text.tertiary },
                   ]}
                 >
                   {ORDER_LABELS[order]}
@@ -120,7 +147,7 @@ export function SearchFilterOptions({
           })}
         </View>
         {!canDistance ? (
-          <Text style={styles.hint}>
+          <Text style={[styles.hint, hintText]}>
             Enable location to use distance ranking.
           </Text>
         ) : null}
@@ -130,54 +157,46 @@ export function SearchFilterOptions({
 
       <View>
         {includeResultsInvalid ? (
-          <Text style={styles.includeGroupWarning}>
+          <Text style={[styles.includeGroupWarning, { color: noteText }]}>
             Must include either page or region results
           </Text>
         ) : null}
         <View style={styles.includeSwitchGroup}>
           <View style={[styles.switchRow, styles.switchRowIncludePages]}>
-            <Text style={styles.switchLabel}>Include Page Results</Text>
+            <Text style={switchLabel}>Include Page Results</Text>
             <Switch
               value={filter.includePages}
               onValueChange={(v) => patch((s) => s.setIncludePages(v))}
+              {...switchProps}
             />
           </View>
           {mergedDisabledGreyBand ? (
-            <View style={styles.switchBlockDisabled}>
+            <View style={disabledBandStyle}>
               <View style={styles.switchBlockDisabledInner}>
                 <View style={styles.switchRow}>
-                  <Text
-                    style={[
-                      styles.switchLabel,
-                      styles.switchLabelMuted,
-                    ]}
-                  >
-                    Include Region Results
-                  </Text>
+                  <Text style={switchLabelMuted}>Include Region Results</Text>
                   <Switch
                     value={filter.includeRegions}
                     onValueChange={(v) => patch((s) => s.setIncludeRegions(v))}
                     disabled
+                    {...switchProps}
                   />
                 </View>
-                <Text style={styles.switchDisabledReason}>
+                <Text style={[styles.switchDisabledReason, { color: noteText }]}>
                   No region results when order is &quot;Distance&quot;
                 </Text>
                 <View
                   style={[styles.switchRow, styles.switchRowInMergedGreyBand]}
                 >
-                  <Text
-                    style={[styles.switchLabel, styles.switchLabelMuted]}
-                  >
-                    Match Page Aka Names
-                  </Text>
+                  <Text style={switchLabelMuted}>Match Page Aka Names</Text>
                   <Switch
                     value={filter.includeAka}
                     onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
                     disabled
+                    {...switchProps}
                   />
                 </View>
-                <Text style={styles.switchDisabledReason}>
+                <Text style={[styles.switchDisabledReason, { color: noteText }]}>
                   {akaDisabledReason}
                 </Text>
               </View>
@@ -185,26 +204,20 @@ export function SearchFilterOptions({
           ) : (
             <>
               {regionsDisabledByOrder ? (
-                <View style={styles.switchBlockDisabled}>
+                <View style={disabledBandStyle}>
                   <View style={styles.switchBlockDisabledInner}>
                     <View style={styles.switchRow}>
-                      <Text
-                        style={[
-                          styles.switchLabel,
-                          styles.switchLabelMuted,
-                        ]}
-                      >
-                        Include Region Results
-                      </Text>
+                      <Text style={switchLabelMuted}>Include Region Results</Text>
                       <Switch
                         value={filter.includeRegions}
                         onValueChange={(v) =>
                           patch((s) => s.setIncludeRegions(v))
                         }
                         disabled
+                        {...switchProps}
                       />
                     </View>
-                    <Text style={styles.switchDisabledReason}>
+                    <Text style={[styles.switchDisabledReason, { color: noteText }]}>
                       No region results when order is &quot;Distance&quot;
                     </Text>
                   </View>
@@ -213,42 +226,38 @@ export function SearchFilterOptions({
                 <View
                   style={[styles.switchRow, styles.includeSwitchSpacingBelow]}
                 >
-                  <Text style={styles.switchLabel}>Include Region Results</Text>
+                  <Text style={switchLabel}>Include Region Results</Text>
                   <Switch
                     value={filter.includeRegions}
                     onValueChange={(v) => patch((s) => s.setIncludeRegions(v))}
+                    {...switchProps}
                   />
                 </View>
               )}
               {akaDisabled ? (
-                <View style={styles.switchBlockDisabled}>
+                <View style={disabledBandStyle}>
                   <View style={styles.switchBlockDisabledInner}>
                     <View style={styles.switchRow}>
-                      <Text
-                        style={[
-                          styles.switchLabel,
-                          akaDisabled && styles.switchLabelMuted,
-                        ]}
-                      >
-                        Match Page Aka Names
-                      </Text>
+                      <Text style={switchLabelMuted}>Match Page Aka Names</Text>
                       <Switch
                         value={filter.includeAka}
                         onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
                         disabled={akaDisabled}
+                        {...switchProps}
                       />
                     </View>
-                    <Text style={styles.switchDisabledReason}>
+                    <Text style={[styles.switchDisabledReason, { color: noteText }]}>
                       {akaDisabledReason}
                     </Text>
                   </View>
                 </View>
               ) : (
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Match Page Aka Names</Text>
+                  <Text style={switchLabel}>Match Page Aka Names</Text>
                   <Switch
                     value={filter.includeAka}
                     onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
+                    {...switchProps}
                   />
                 </View>
               )}
@@ -260,7 +269,7 @@ export function SearchFilterOptions({
       <View style={styles.groupSpacer} />
 
       <View>
-        <Text style={styles.sectionLabel}>Name Similarity</Text>
+        <Text style={[styles.sectionLabel, sectionLabel]}>Name Similarity</Text>
         <View style={styles.sliderBlock}>
           <Slider
             style={styles.slider}
@@ -269,11 +278,11 @@ export function SearchFilterOptions({
             step={0.1}
             value={filter.similarityThreshold}
             onValueChange={onSimilarityChange}
-            minimumTrackTintColor="#3b82f6"
-            maximumTrackTintColor="#e5e7eb"
-            thumbTintColor="#2563eb"
+            minimumTrackTintColor={slider.filledBar}
+            maximumTrackTintColor={slider.unfilledBar}
+            thumbTintColor={slider.thumb}
           />
-          <Text style={styles.sliderValue}>
+          <Text style={[styles.sliderValue, { color: text.secondary }]}>
             {filter.similarityThreshold.toFixed(1)}
           </Text>
         </View>
@@ -295,20 +304,16 @@ const styles = StyleSheet.create({
     height: 32,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
     marginTop: 0,
     marginBottom: 8,
   },
   sectionLabelFirst: {
     marginTop: 12,
   },
-  hint: { fontSize: 13, color: "#6b7280", marginBottom: 0, marginTop: 4 },
+  hint: { marginBottom: 0, marginTop: 4 },
   includeGroupWarning: {
     fontSize: 12,
     lineHeight: 16,
-    color: "#dc2626",
     fontWeight: "500",
     marginBottom: 10,
   },
@@ -342,13 +347,9 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#9ca3af",
     marginRight: 8,
     justifyContent: "center",
     alignItems: "center",
-  },
-  radioOuterSelected: {
-    borderColor: "#3b82f6",
   },
   radioOuterDisabled: {
     opacity: 0.4,
@@ -357,18 +358,11 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#3b82f6",
   },
   radioLabel: {
-    fontSize: 15,
-    color: "#111827",
     flexShrink: 1,
   },
-  radioLabelDisabled: {
-    color: "#9ca3af",
-  },
   switchBlockDisabled: {
-    backgroundColor: "#e5e7eb",
     marginHorizontal: -FILTER_SHEET_HORIZONTAL_INSET,
     paddingVertical: 12,
   },
@@ -383,13 +377,8 @@ const styles = StyleSheet.create({
   switchDisabledReason: {
     fontSize: 11,
     lineHeight: 15,
-    color: "#dc2626",
     marginTop: 10,
     textAlign: "right",
-  },
-  switchLabel: { fontSize: 15, color: "#111827", flex: 1, marginRight: 12 },
-  switchLabelMuted: {
-    color: "#6b7280",
   },
   sliderBlock: {
     flexDirection: "row",
@@ -400,7 +389,6 @@ const styles = StyleSheet.create({
   sliderValue: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#374151",
     minWidth: 36,
     textAlign: "right",
   },

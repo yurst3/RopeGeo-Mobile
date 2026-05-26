@@ -9,21 +9,19 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import type { ToastStyle } from "@/constants/colors/types";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
-  DOWNLOAD_TOAST_BG,
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
   TOAST_HORIZONTAL_INSET,
   TOAST_STACK_REPOSITION_MS,
-} from "@/constants/toast";
+} from "@/constants/toasts";
 
 export type ActionToastProps = {
+  style: ToastStyle;
   message: string;
   icon: ImageSourcePropType;
-  /** Text and icon tint. */
-  color: string;
-  /** Panel background; defaults to warning-style yellow panel. */
-  backgroundColor?: string;
   top: number;
   horizontalInset?: number;
   zIndex?: number;
@@ -39,10 +37,9 @@ export type ActionToastProps = {
  * Pressable pill toast (fade in/out matches {@link Toast}).
  */
 export function ActionToast({
+  style,
   message,
   icon,
-  color,
-  backgroundColor = DOWNLOAD_TOAST_BG,
   top,
   horizontalInset = TOAST_HORIZONTAL_INSET,
   zIndex = 3650,
@@ -53,6 +50,7 @@ export function ActionToast({
   onPress,
   wrapStyle,
 }: ActionToastProps) {
+  const { background, text, icon: iconColor } = useColorTheme().toast[style];
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -136,13 +134,13 @@ export function ActionToast({
           onPress={() => onPressRef.current()}
           style={({ pressed }) => [
             styles.inner,
-            { backgroundColor, opacity: pressed ? 0.92 : 1 },
+            { backgroundColor: background, opacity: pressed ? 0.92 : 1 },
           ]}
         >
-          <Text style={[styles.message, { color }]} numberOfLines={2}>
+          <Text style={[styles.message, { color: text }]} numberOfLines={2}>
             {message}
           </Text>
-          <Image source={icon} style={[styles.icon, { tintColor: color }]} />
+          <Image source={icon} style={[styles.icon, { tintColor: iconColor }]} />
         </Pressable>
       </Animated.View>
     </Animated.View>

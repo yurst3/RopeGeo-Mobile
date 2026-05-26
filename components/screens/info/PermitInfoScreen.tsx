@@ -2,10 +2,11 @@ import { ClosedBadge } from "@/components/badges/permit/ClosedBadge";
 import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
 import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
 import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
+import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
 import { PermitStatus } from "ropegeo-common/models";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 
 const PERMIT_ORDER: PermitStatus[] = [
   PermitStatus.No,
@@ -13,8 +14,6 @@ const PERMIT_ORDER: PermitStatus[] = [
   PermitStatus.Restricted,
   PermitStatus.Closed,
 ];
-
-const BADGE_COLUMN_WIDTH = 80;
 
 const PERMIT_BADGES: Record<
   PermitStatus,
@@ -55,20 +54,10 @@ export type PermitInfoScreenProps = {
 export function PermitInfoScreen({
   highlightedPermit,
 }: PermitInfoScreenProps) {
-  const insets = useSafeAreaInsets();
+  const styles = useInfoScreenStyles();
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: 12,
-          paddingLeft: 16 + insets.left,
-          paddingRight: 16 + insets.right,
-        },
-      ]}
-    >
+    <InfoScreenLayout title="Permit status">
       <Text style={styles.subtitle}>
         Permit status indicates whether access to the canyon requires a permit or
         is restricted. Requirements can change; always confirm with the
@@ -93,41 +82,6 @@ export function PermitInfoScreen({
           </View>
         );
       })}
-    </ScrollView>
+    </InfoScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16 },
-  subtitle: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 16,
-  },
-  rowHighlighted: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  badgeWrap: {
-    width: BADGE_COLUMN_WIDTH,
-    flexShrink: 0,
-    alignItems: "center",
-  },
-  descriptionWrap: { flex: 1, minWidth: 0 },
-  body: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-});

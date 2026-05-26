@@ -1,4 +1,4 @@
-import { ExpandMiniMapButton } from "@/components/buttons/ExpandMiniMapButton";
+import { ExpandMiniMapButton } from "@/components/buttons/standard/ExpandMiniMapButton";
 import {
   MiniMapDirectionsButtons,
   minimapStyles,

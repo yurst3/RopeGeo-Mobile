@@ -1,7 +1,9 @@
+import { SearchBar, SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
+import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
-import { TOAST_KEY_NETWORK_OFFLINE } from "@/constants/toastArchetypes";
+import { TOAST_KEY_NETWORK_OFFLINE } from "@/constants/toasts/toastArchetypes";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useToast } from "@/context/ToastContext";
@@ -12,17 +14,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FontAwesome5 } from "@expo/vector-icons";
 import { SavedPagesFilter } from "ropegeo-common/models";
 
 const HEADER_BUTTON_SIZE = 44;
 const HEADER_BUTTON_GAP = 8;
 
 export function SavedScreen() {
+  const { background, text } = useColorTheme();
   const insets = useSafeAreaInsets();
   const { dismiss } = useToast();
   const { savedEntries } = useSavedPages();
@@ -53,7 +54,7 @@ export function SavedScreen() {
   );
 
   const searchBarTop = insets.top + 8;
-  const searchBarHeight = 48;
+  const searchBarHeight = SEARCH_BAR_HEIGHT;
 
   useFocusEffect(
     useCallback(() => {
@@ -70,7 +71,7 @@ export function SavedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: background }]}>
       <View
         style={[
           styles.headerRow,
@@ -85,19 +86,12 @@ export function SavedScreen() {
             { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
           ]}
         />
-        <View style={styles.searchBar}>
-          <FontAwesome5 name="search" size={16} color="#6b7280" />
-          <TextInput
-            style={styles.searchBarInput}
-            placeholder="Search saved"
-            placeholderTextColor="#9ca3af"
-            value={nameInput}
-            onChangeText={setNameInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-        </View>
+        <SearchBar
+          style={styles.searchBarFlex}
+          placeholder="Search saved"
+          value={nameInput}
+          onChangeText={setNameInput}
+        />
         <View
           style={[
             styles.headerButtonWrap,
@@ -116,7 +110,7 @@ export function SavedScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {filtered.length === 0 ? (
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: text.secondary }]}>
             {savedEntries.length === 0
               ? "No saved pages yet."
               : "No pages match your search."}
@@ -165,7 +159,6 @@ export function SavedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
   },
   headerRow: {
     position: "absolute",
@@ -180,27 +173,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  searchBar: {
+  searchBarFlex: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
-    minWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  searchBarInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 0,
     minWidth: 0,
   },
   scroll: {
@@ -212,7 +186,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#6b7280",
     textAlign: "center",
     marginTop: 24,
   },

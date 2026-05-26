@@ -1,3 +1,4 @@
+import { useFilterTheme } from "@/components/filters/useFilterTheme";
 import React, { type ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -105,6 +106,8 @@ export function AcaDiscreteRangeSlider<T extends string>({
   thumbTitles,
   formatTickLabel = (v: T) => String(v),
 }: AcaDiscreteRangeSliderProps<T>) {
+  const { filter, sectionLabel, text } = useFilterTheme();
+  const { badgeSlider } = filter;
   const n = orderedValues.length;
   const minIndex = Math.max(0, orderedValues.indexOf(min));
   const maxIndexRaw = orderedValues.indexOf(max);
@@ -261,10 +264,12 @@ export function AcaDiscreteRangeSlider<T extends string>({
 
   return (
     <View style={styles.block}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, sectionLabel]}>{label}</Text>
       <View style={styles.trackWrap} onLayout={onTrackLayout}>
         <View style={styles.trackInner}>
-          <View style={styles.trackBg} />
+          <View
+            style={[styles.trackBg, { backgroundColor: badgeSlider.unfilledBar }]}
+          />
           {trackW > 0 && n > 0 ? (
             <View
               style={[
@@ -272,6 +277,7 @@ export function AcaDiscreteRangeSlider<T extends string>({
                 {
                   left: fillLeft,
                   width: Math.max(fillWidth, TRACK_HEIGHT),
+                  backgroundColor: badgeSlider.filledBar,
                 },
               ]}
             />
@@ -287,6 +293,7 @@ export function AcaDiscreteRangeSlider<T extends string>({
                       styles.tick,
                       {
                         left: cx - TICK_RADIUS,
+                        backgroundColor: badgeSlider.tick,
                       },
                     ]}
                   />
@@ -351,7 +358,10 @@ export function AcaDiscreteRangeSlider<T extends string>({
                   ]}
                   pointerEvents="none"
                 >
-                  <Text style={styles.tickLabelText} numberOfLines={1}>
+                  <Text
+                    style={[styles.tickLabelText, { color: text.tertiary }]}
+                    numberOfLines={1}
+                  >
                     {formatTickLabel(v)}
                   </Text>
                 </View>
@@ -370,7 +380,10 @@ export function AcaDiscreteRangeSlider<T extends string>({
             ]}
             pointerEvents="none"
           >
-            <Text style={styles.thumbTitleText} numberOfLines={2}>
+            <Text
+              style={[styles.thumbTitleText, { color: text.secondary }]}
+              numberOfLines={2}
+            >
               {mergedTitle}
             </Text>
           </View>
@@ -386,7 +399,10 @@ export function AcaDiscreteRangeSlider<T extends string>({
             ]}
             pointerEvents="none"
           >
-            <Text style={styles.thumbTitleText} numberOfLines={2}>
+            <Text
+              style={[styles.thumbTitleText, { color: text.secondary }]}
+              numberOfLines={2}
+            >
               {lowTitle}
             </Text>
           </View>
@@ -402,7 +418,10 @@ export function AcaDiscreteRangeSlider<T extends string>({
             ]}
             pointerEvents="none"
           >
-            <Text style={styles.thumbTitleText} numberOfLines={2}>
+            <Text
+              style={[styles.thumbTitleText, { color: text.secondary }]}
+              numberOfLines={2}
+            >
               {highTitle}
             </Text>
           </View>
@@ -417,9 +436,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
     marginBottom: 6,
   },
   trackWrap: {
@@ -436,7 +452,6 @@ const styles = StyleSheet.create({
   trackBg: {
     height: TRACK_HEIGHT,
     borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: "#e5e7eb",
   },
   tickLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -449,15 +464,11 @@ const styles = StyleSheet.create({
     height: TICK_SIZE,
     borderRadius: TICK_RADIUS,
     top: (THUMB_HIT - TICK_SIZE) / 2,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1.5,
-    borderColor: "#64748b",
   },
   trackFill: {
     position: "absolute",
     height: TRACK_HEIGHT,
     borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: "#93c5fd",
     top: (THUMB_HIT - TRACK_HEIGHT) / 2,
   },
   thumbWrap: {
@@ -480,7 +491,6 @@ const styles = StyleSheet.create({
   tickLabelText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#6b7280",
     textAlign: "center",
   },
   thumbTitleCol: {
@@ -501,7 +511,6 @@ const styles = StyleSheet.create({
   thumbTitleText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#374151",
     textAlign: "center",
   },
 });

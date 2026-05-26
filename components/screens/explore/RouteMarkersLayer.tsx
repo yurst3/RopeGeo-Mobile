@@ -13,14 +13,17 @@ import {
   Images,
   ShapeSource,
   SymbolLayer,
-  type SymbolLayerStyle,
 } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import {
+  clusterRouteMarkerSymbolStyle,
+  unclusteredRouteMarkerSymbolStyle,
+} from "./mapMarkerLayerStyles";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
-  ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
   ROUTE_MARKER_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
@@ -94,6 +97,7 @@ function RouteMarkersLayerContent({
   focusedRouteId,
   accentRouteId,
 }: RouteMarkersLayerContentProps) {
+  const { map } = useColorTheme();
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
   const data = useMemo(
@@ -112,6 +116,21 @@ function RouteMarkersLayerContent({
   const unclusteredIconSize = useMemo(
     () => unclusteredRouteMarkerIconSize(focusedRouteId, accentRouteId),
     [focusedRouteId, accentRouteId],
+  );
+
+  const unclusteredStyle = useMemo(
+    () =>
+      unclusteredRouteMarkerSymbolStyle(
+        map.marker,
+        unclusteredIconImage,
+        unclusteredIconSize,
+      ),
+    [map.marker, unclusteredIconImage, unclusteredIconSize],
+  );
+
+  const clusterStyle = useMemo(
+    () => clusterRouteMarkerSymbolStyle(map.marker),
+    [map.marker],
   );
 
   useEffect(() => {
@@ -184,45 +203,6 @@ function RouteMarkersLayerContent({
   if (data == null || data.features.length === 0) {
     return null;
   }
-
-  const unclusteredStyle: SymbolLayerStyle = {
-    iconImage: unclusteredIconImage,
-    iconSize: unclusteredIconSize,
-    iconAllowOverlap: true,
-    iconIgnorePlacement: true,
-    iconAnchor: "bottom",
-    textField: ["get", "name"],
-    textSize: 12,
-    textColor: "#333333",
-    textHaloColor: "#ffffff",
-    textHaloWidth: 1.5,
-    textOffset: [0, 0.2],
-    textAnchor: "top",
-    textAllowOverlap: true,
-    textIgnorePlacement: true,
-  };
-
-  const clusterStyle: SymbolLayerStyle = {
-    iconImage: "route-marker-cluster",
-    iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
-    iconAllowOverlap: true,
-    iconIgnorePlacement: true,
-    iconAnchor: "bottom",
-    textField: [
-      "concat",
-      "(",
-      ["to-string", ["get", "point_count"]],
-      ")",
-    ],
-    textSize: 12,
-    textColor: "#333333",
-    textHaloColor: "#ffffff",
-    textHaloWidth: 1.5,
-    textOffset: [0, 0.2],
-    textAnchor: "top",
-    textAllowOverlap: true,
-    textIgnorePlacement: true,
-  };
 
   return (
     <ShapeSource

@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRouter } from "expo-router";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/models";
 import { useState } from "react";
@@ -13,6 +14,8 @@ import {
 const IMAGE_SIZE = 96;
 const REGION_MAX = 3;
 const REGION_ICON_SIZE = 28;
+const SOURCE_ICON_CIRCLE_SIZE = 32;
+const SOURCE_ICON_INNER_SIZE = 18;
 const NO_IMAGE_ICON_SIZE = 36;
 
 function sourceIcon(source: PageDataSource): number | null {
@@ -36,6 +39,11 @@ type Props = {
 };
 
 export function RegionPreview({ preview }: Props) {
+  const themeColors = useColorTheme();
+  const { text, image } = themeColors;
+  const { regionIconBackground, regionIcon, shadowColor, sourceIconBackground } =
+    themeColors.preview.region;
+  const { shadowColor: buttonShadowColor } = themeColors.button;
   const router = useRouter();
   const [imageLoading, setImageLoading] = useState(!!preview.imageUrl);
   const regionLine =
@@ -57,12 +65,17 @@ export function RegionPreview({ preview }: Props) {
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
-      <View style={styles.imageWrap}>
+      <View style={[styles.imageWrap, { backgroundColor: image.background }]}>
         {preview.imageUrl ? (
           <>
             {imageLoading && (
-              <View style={styles.imageLoadingOverlay}>
-                <ActivityIndicator size="small" color="#6b7280" />
+              <View
+                style={[
+                  styles.imageLoadingOverlay,
+                  { backgroundColor: image.background },
+                ]}
+              >
+                <ActivityIndicator size="small" color={themeColors.loadingIndicator} />
               </View>
             )}
             <Image
@@ -74,35 +87,61 @@ export function RegionPreview({ preview }: Props) {
             />
           </>
         ) : (
-          <View style={styles.noImageWrap}>
+          <View style={[styles.noImageWrap, { backgroundColor: image.background }]}>
             <Image
               source={require("@/assets/images/icons/noImage.png")}
-              style={[styles.noImageIcon, { width: NO_IMAGE_ICON_SIZE, height: NO_IMAGE_ICON_SIZE }]}
+              style={[
+                styles.noImageIcon,
+                {
+                  width: NO_IMAGE_ICON_SIZE,
+                  height: NO_IMAGE_ICON_SIZE,
+                  tintColor: image.missingIcon,
+                },
+              ]}
               contentFit="contain"
             />
           </View>
         )}
-        <View style={styles.regionIconOverlay}>
+        <View
+          style={[
+            styles.regionIconOverlay,
+            {
+              backgroundColor: regionIconBackground,
+              shadowColor,
+            },
+          ]}
+        >
           <Image
             source={require("@/assets/images/icons/region.png")}
-            style={styles.regionIcon}
+            style={[styles.regionIcon, { tintColor: regionIcon }]}
             contentFit="contain"
           />
         </View>
       </View>
       <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
           {preview.name}
         </Text>
         {regionLine ? (
-          <Text style={styles.meta} numberOfLines={2}>
+          <Text style={[styles.meta, { color: text.secondary }]} numberOfLines={2}>
             {regionLine}
           </Text>
         ) : null}
-        <Text style={styles.counts}>{countsText}</Text>
+        <Text style={[styles.counts, { color: text.secondary }]}>{countsText}</Text>
       </View>
       {icon != null ? (
-        <Image source={icon} style={styles.sourceIcon} contentFit="contain" />
+        <View
+          style={[
+            styles.sourceIconCircle,
+            {
+              backgroundColor: sourceIconBackground,
+              shadowColor: buttonShadowColor,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Image source={icon} style={styles.sourceIconInner} contentFit="contain" />
+        </View>
       ) : null}
     </Pressable>
   );
@@ -125,7 +164,6 @@ const styles = StyleSheet.create({
     height: IMAGE_SIZE,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: "#eee",
   },
   image: {
     width: "100%",
@@ -133,7 +171,6 @@ const styles = StyleSheet.create({
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
@@ -152,10 +189,8 @@ const styles = StyleSheet.create({
     width: REGION_ICON_SIZE,
     height: REGION_ICON_SIZE,
     borderRadius: REGION_ICON_SIZE / 2,
-    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
@@ -175,21 +210,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
     marginBottom: 2,
   },
   meta: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 2,
   },
   counts: {
     fontSize: 12,
-    color: "#6b7280",
   },
-  sourceIcon: {
-    width: 56,
-    height: 32,
+  sourceIconCircle: {
     marginLeft: 8,
+    width: SOURCE_ICON_CIRCLE_SIZE,
+    height: SOURCE_ICON_CIRCLE_SIZE,
+    borderRadius: SOURCE_ICON_CIRCLE_SIZE / 2,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  sourceIconInner: {
+    width: SOURCE_ICON_INNER_SIZE,
+    height: SOURCE_ICON_INNER_SIZE,
   },
 });

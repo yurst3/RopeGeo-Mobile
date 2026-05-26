@@ -1,5 +1,7 @@
-import { TRAIL_VECTOR_LINE_STYLE } from "@/components/minimap/shared/trailVectorLineStyle";
+import { trailVectorLineStyle } from "@/components/minimap/shared/trailVectorLineStyle";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { LineLayer, VectorSource, type LineLayerStyle } from "@rnmapbox/maps";
+import { useMemo } from "react";
 
 /**
  * Vector tile source for trails. Tiles at /trails/{z}/{x}/{y}.pbf.
@@ -15,20 +17,9 @@ const TRAILS_TILE_URL_TEMPLATES = [
 const TRAILS_SOURCE_LAYER_ID = "trails";
 const MATCH_NOTHING_FILTER = ["==", ["get", "id"], ""] as const;
 
-// Unfocused route appearance (non-selected trails).
-export const UNFOCUSED_ROUTE_LINE_COLOR = "#6b7280";
 export const UNFOCUSED_ROUTE_LINE_WIDTH = 2;
 export const UNFOCUSED_ROUTE_LINE_OPACITY = 0.65;
 const UNFOCUSED_ROUTE_LINE_DASHARRAY: number[] = [2, 2];
-
-const UNFOCUSED_TRAIL_LINE_STYLE: LineLayerStyle = {
-  lineColor: UNFOCUSED_ROUTE_LINE_COLOR,
-  lineWidth: UNFOCUSED_ROUTE_LINE_WIDTH,
-  lineOpacity: UNFOCUSED_ROUTE_LINE_OPACITY,
-  lineDasharray: UNFOCUSED_ROUTE_LINE_DASHARRAY,
-  lineCap: "round",
-  lineJoin: "round",
-};
 
 export type TrailsLayerProps = {
   /** When null, no trails are shown. When set, only trails whose id is in visibleTrailIds are shown. */
@@ -45,6 +36,22 @@ export function TrailsLayer({
   focusedRouteId,
   visibleTrailIds,
 }: TrailsLayerProps) {
+  const { map } = useColorTheme();
+  const unfocusedTrailLineStyle = useMemo(
+    (): LineLayerStyle => ({
+      lineColor: map.unfocusedLineSegment,
+      lineWidth: UNFOCUSED_ROUTE_LINE_WIDTH,
+      lineOpacity: UNFOCUSED_ROUTE_LINE_OPACITY,
+      lineDasharray: UNFOCUSED_ROUTE_LINE_DASHARRAY,
+      lineCap: "round",
+      lineJoin: "round",
+    }),
+    [map.unfocusedLineSegment],
+  );
+  const focusedTrailLineStyle = useMemo(
+    () => trailVectorLineStyle(map.focusedLineSegment),
+    [map.focusedLineSegment],
+  );
   const isFocused = focusedRouteId != null;
   const hasIdsToShow = visibleTrailIds.length > 0;
   const lineOnly: ["==", ["geometry-type"], "LineString"] = [
@@ -70,13 +77,13 @@ export function TrailsLayer({
         id="trails-line-layer-unfocused"
         sourceLayerID={TRAILS_SOURCE_LAYER_ID}
         filter={unfocusedFilter}
-        style={UNFOCUSED_TRAIL_LINE_STYLE}
+        style={unfocusedTrailLineStyle}
       />
       <LineLayer
         id="trails-line-layer-focused"
         sourceLayerID={TRAILS_SOURCE_LAYER_ID}
         filter={focusedFilter}
-        style={TRAIL_VECTOR_LINE_STYLE}
+        style={focusedTrailLineStyle}
       />
     </VectorSource>
   );

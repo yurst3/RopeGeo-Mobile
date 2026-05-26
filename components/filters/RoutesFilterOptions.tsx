@@ -6,6 +6,7 @@ import { CaveBadge } from "@/components/badges/routeType/CaveBadge";
 import { PoiBadge } from "@/components/badges/routeType/PoiBadge";
 import { RouteFilter, RouteType } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
+import { useFilterTheme } from "./useFilterTheme";
 
 const ROUTE_TYPE_ORDER: RouteType[] = [
   RouteType.Canyon,
@@ -39,6 +40,9 @@ export function RoutesFilterOptions({
   filter,
   onChange,
 }: RoutesFilterOptionsProps) {
+  const { filter: filterColors, sectionLabel, bodyText, text } = useFilterTheme();
+  const { checkbox } = filterColors;
+
   const patch = (fn: (r: RouteFilter) => void) => {
     const r = cloneFilter(filter);
     fn(r);
@@ -71,7 +75,7 @@ export function RoutesFilterOptions({
   return (
     <>
       <View>
-        <Text style={[styles.sectionLabel, styles.sectionLabelFirst]}>
+        <Text style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}>
           Route types
         </Text>
         <View style={styles.routeTypeGrid}>
@@ -90,15 +94,21 @@ export function RoutesFilterOptions({
                   <View
                     style={[
                       styles.checkboxBox,
-                      checked && styles.checkboxBoxChecked,
+                      { borderColor: checkbox.uncheckedOutline },
+                      checked && {
+                        borderColor: checkbox.checkedOutline,
+                        backgroundColor: checkbox.checkedFill,
+                      },
                     ]}
                   >
                     {checked ? (
-                      <Text style={styles.checkboxMark}>✓</Text>
+                      <Text style={[styles.checkboxMark, { color: text.link }]}>
+                        ✓
+                      </Text>
                     ) : null}
                   </View>
                   <View style={styles.routeTypeLabelRow}>
-                    <Text style={styles.checkboxLabel}>{t}</Text>
+                    <Text style={[styles.checkboxLabel, bodyText]}>{t}</Text>
                     <View style={styles.badgeThumbWrap}>
                       <Badge />
                     </View>
@@ -125,9 +135,6 @@ const styles = StyleSheet.create({
     height: 32,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
     marginTop: 0,
     marginBottom: 8,
   },
@@ -163,22 +170,13 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#9ca3af",
     marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  checkboxBoxChecked: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#dbeafe",
-  },
   checkboxMark: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1d4ed8",
   },
-  checkboxLabel: {
-    fontSize: 15,
-    color: "#111827",
-  },
+  checkboxLabel: {},
 });

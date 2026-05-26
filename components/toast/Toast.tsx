@@ -8,44 +8,29 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import type { ThemeColors, ToastStyle } from "@/constants/colors/types";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
-  DOWNLOAD_FAIL_BG,
-  DOWNLOAD_FAIL_TEXT,
-  DOWNLOAD_TOAST_BG,
-  DOWNLOAD_TOAST_TEXT,
-  SAVED_TOAST_BG,
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
-  SAVED_TOAST_TEXT,
   TOAST_HORIZONTAL_INSET,
   TOAST_STACK_REPOSITION_MS,
-} from "@/constants/toast";
+} from "@/constants/toasts";
 
-export type ToastVariant = "success" | "error" | "warning";
-
-const VARIANT_STYLES: Record<
-  ToastVariant,
-  { inner: ViewStyle; primary: TextStyle; secondary: TextStyle }
-> = {
-  success: {
-    inner: { backgroundColor: SAVED_TOAST_BG },
-    primary: { color: SAVED_TOAST_TEXT },
-    secondary: { color: SAVED_TOAST_TEXT },
-  },
-  error: {
-    inner: { backgroundColor: DOWNLOAD_FAIL_BG },
-    primary: { color: DOWNLOAD_FAIL_TEXT },
-    secondary: { color: DOWNLOAD_FAIL_TEXT },
-  },
-  warning: {
-    inner: { backgroundColor: DOWNLOAD_TOAST_BG },
-    primary: { color: DOWNLOAD_TOAST_TEXT },
-    secondary: { color: DOWNLOAD_TOAST_TEXT },
-  },
-};
+function paletteForStyle(
+  style: ToastStyle,
+  toast: ThemeColors["toast"],
+) {
+  const colors = toast[style];
+  return {
+    inner: { backgroundColor: colors.background } as ViewStyle,
+    primary: { color: colors.text } as TextStyle,
+    secondary: { color: colors.text } as TextStyle,
+  };
+}
 
 export type ToastProps = {
-  variant: ToastVariant;
+  style: ToastStyle;
   /** Primary line (e.g. title or single message). */
   message: string;
   /** Optional detail line (e.g. error body). */
@@ -67,7 +52,7 @@ export type ToastProps = {
  * Pill toast with RN Animated fade-in; fade-out while `exiting` before parent removes the row.
  */
 export function Toast({
-  variant,
+  style,
   message,
   subtitle,
   top,
@@ -79,6 +64,7 @@ export function Toast({
   onExitComplete,
   wrapStyle,
 }: ToastProps) {
+  const { toast } = useColorTheme();
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -140,7 +126,7 @@ export function Toast({
     };
   }, [topAnim]);
 
-  const v = VARIANT_STYLES[variant];
+  const palette = paletteForStyle(style, toast);
 
   return (
     <Animated.View
@@ -157,12 +143,12 @@ export function Toast({
       ]}
     >
       <Animated.View style={[styles.opacityShell, { opacity }]}>
-        <View style={[styles.inner, v.inner]}>
-          <Text style={[styles.message, v.primary]} numberOfLines={3}>
+        <View style={[styles.inner, palette.inner]}>
+          <Text style={[styles.message, palette.primary]} numberOfLines={3}>
             {message}
           </Text>
           {subtitle != null && subtitle !== "" ? (
-            <Text style={[styles.subtitle, v.secondary]} numberOfLines={4}>
+            <Text style={[styles.subtitle, palette.secondary]} numberOfLines={4}>
               {subtitle}
             </Text>
           ) : null}

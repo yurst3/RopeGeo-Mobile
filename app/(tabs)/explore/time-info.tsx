@@ -1,16 +1,16 @@
 import { TimeInfoScreen } from "@/components/screens/info/TimeInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { DifficultyTime } from "ropegeo-common/models";
+import { AcaTimeSubRating } from "ropegeo-common/models";
 
-const VALID_TIME: DifficultyTime[] = Object.values(DifficultyTime);
+const VALID_TIME: AcaTimeSubRating[] = Object.values(AcaTimeSubRating);
 
 export default function TimeInfoRoute() {
   const params = useLocalSearchParams<{ highlightedTime?: string }>();
   const raw = params.highlightedTime;
-  const highlightedTime: DifficultyTime | null =
-    typeof raw === "string" && VALID_TIME.includes(raw as DifficultyTime)
-      ? (raw as DifficultyTime)
+  const highlightedTime: AcaTimeSubRating | null =
+    typeof raw === "string" && VALID_TIME.includes(raw as AcaTimeSubRating)
+      ? (raw as AcaTimeSubRating)
       : null;
 
   return (

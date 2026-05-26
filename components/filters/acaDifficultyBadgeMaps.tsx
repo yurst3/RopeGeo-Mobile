@@ -23,93 +23,93 @@ import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
 import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
 import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
 import {
-  AcaRiskRating,
-  AcaTechnicalRating,
-  AcaTimeRating,
-  AcaWaterRating,
+  AcaRiskSubRating,
+  AcaTechnicalSubRating,
+  AcaTimeSubRating,
+  AcaWaterSubRating,
 } from "ropegeo-common/models";
 
 export type BadgeThumbProps = { showLabel?: boolean };
 
 export const ACA_TECHNICAL_BADGES: Record<
-  AcaTechnicalRating,
+  AcaTechnicalSubRating,
   ComponentType<BadgeThumbProps>
 > = {
-  [AcaTechnicalRating.One]: NotTechnicalBadge,
-  [AcaTechnicalRating.Two]: ScramblingBadge,
-  [AcaTechnicalRating.Three]: TechnicalBadge,
-  [AcaTechnicalRating.Four]: VeryTechnicalBadge,
+  [AcaTechnicalSubRating.One]: NotTechnicalBadge,
+  [AcaTechnicalSubRating.Two]: ScramblingBadge,
+  [AcaTechnicalSubRating.Three]: TechnicalBadge,
+  [AcaTechnicalSubRating.Four]: VeryTechnicalBadge,
 };
 
 /** Matches {@link NotTechnicalBadge} / badge `showLabel` copy for filter slider titles. */
-export const ACA_TECHNICAL_THUMB_TITLES: Record<AcaTechnicalRating, string> = {
-  [AcaTechnicalRating.One]: "Not Technical",
-  [AcaTechnicalRating.Two]: "Scrambling",
-  [AcaTechnicalRating.Three]: "Technical",
-  [AcaTechnicalRating.Four]: "Very Technical",
+export const ACA_TECHNICAL_THUMB_TITLES: Record<AcaTechnicalSubRating, string> = {
+  [AcaTechnicalSubRating.One]: "Not Technical",
+  [AcaTechnicalSubRating.Two]: "Scrambling",
+  [AcaTechnicalSubRating.Three]: "Technical",
+  [AcaTechnicalSubRating.Four]: "Very Technical",
 };
 
 export const ACA_WATER_BADGES: Record<
-  AcaWaterRating,
+  AcaWaterSubRating,
   ComponentType<BadgeThumbProps>
 > = {
-  [AcaWaterRating.A]: MinimalWaterBadge,
-  [AcaWaterRating.B]: SwimmingWaterBadge,
-  [AcaWaterRating.C]: FlowingWaterBadge,
-  [AcaWaterRating.C1]: FlowingC1WaterBadge,
-  [AcaWaterRating.C2]: FlowingC2WaterBadge,
-  [AcaWaterRating.C3]: FlowingC3WaterBadge,
-  [AcaWaterRating.C4]: FlowingC4WaterBadge,
+  [AcaWaterSubRating.A]: MinimalWaterBadge,
+  [AcaWaterSubRating.B]: SwimmingWaterBadge,
+  [AcaWaterSubRating.C]: FlowingWaterBadge,
+  [AcaWaterSubRating.C1]: FlowingC1WaterBadge,
+  [AcaWaterSubRating.C2]: FlowingC2WaterBadge,
+  [AcaWaterSubRating.C3]: FlowingC3WaterBadge,
+  [AcaWaterSubRating.C4]: FlowingC4WaterBadge,
 };
 
-export const ACA_WATER_THUMB_TITLES: Record<AcaWaterRating, string> = {
-  [AcaWaterRating.A]: "Minimal Water",
-  [AcaWaterRating.B]: "Swimming Water",
-  [AcaWaterRating.C]: "Flowing Water",
-  [AcaWaterRating.C1]: "Moderate Current",
-  [AcaWaterRating.C2]: "High Current",
-  [AcaWaterRating.C3]: "Very High Current",
-  [AcaWaterRating.C4]: "Extreme Current",
+export const ACA_WATER_THUMB_TITLES: Record<AcaWaterSubRating, string> = {
+  [AcaWaterSubRating.A]: "Minimal Water",
+  [AcaWaterSubRating.B]: "Swimming Water",
+  [AcaWaterSubRating.C]: "Flowing Water",
+  [AcaWaterSubRating.C1]: "Moderate Current",
+  [AcaWaterSubRating.C2]: "High Current",
+  [AcaWaterSubRating.C3]: "Very High Current",
+  [AcaWaterSubRating.C4]: "Extreme Current",
 };
 
 export const ACA_TIME_BADGES: Record<
-  AcaTimeRating,
+  AcaTimeSubRating,
   ComponentType<BadgeThumbProps>
 > = {
-  [AcaTimeRating.I]: ShortBadge,
-  [AcaTimeRating.II]: HalfDayBadge,
-  [AcaTimeRating.III]: FullDayBadge,
-  [AcaTimeRating.IV]: LongDayBadge,
-  [AcaTimeRating.V]: OvernightBadge,
-  [AcaTimeRating.VI]: MultipleDaysBadge,
+  [AcaTimeSubRating.I]: ShortBadge,
+  [AcaTimeSubRating.II]: HalfDayBadge,
+  [AcaTimeSubRating.III]: FullDayBadge,
+  [AcaTimeSubRating.IV]: LongDayBadge,
+  [AcaTimeSubRating.V]: OvernightBadge,
+  [AcaTimeSubRating.VI]: MultipleDaysBadge,
 };
 
-export const ACA_TIME_THUMB_TITLES: Record<AcaTimeRating, string> = {
-  [AcaTimeRating.I]: "Short",
-  [AcaTimeRating.II]: "Half Day",
-  [AcaTimeRating.III]: "Full Day",
-  [AcaTimeRating.IV]: "Long Day",
-  [AcaTimeRating.V]: "Overnight",
-  [AcaTimeRating.VI]: "Multiple Days",
+export const ACA_TIME_THUMB_TITLES: Record<AcaTimeSubRating, string> = {
+  [AcaTimeSubRating.I]: "Short",
+  [AcaTimeSubRating.II]: "Half Day",
+  [AcaTimeSubRating.III]: "Full Day",
+  [AcaTimeSubRating.IV]: "Long Day",
+  [AcaTimeSubRating.V]: "Overnight",
+  [AcaTimeSubRating.VI]: "Multiple Days",
 };
 
 export const ACA_RISK_BADGES: Record<
-  AcaRiskRating,
+  AcaRiskSubRating,
   ComponentType<BadgeThumbProps>
 > = {
-  [AcaRiskRating.G]: MinimalRiskBadge,
-  [AcaRiskRating.PG]: SomeRiskBadge,
-  [AcaRiskRating.PG13]: ModerateRiskBadge,
-  [AcaRiskRating.R]: HighRiskBadge,
-  [AcaRiskRating.X]: VeryHighRiskBadge,
-  [AcaRiskRating.XX]: ExtremeRiskBadge,
+  [AcaRiskSubRating.G]: MinimalRiskBadge,
+  [AcaRiskSubRating.PG]: SomeRiskBadge,
+  [AcaRiskSubRating.PG13]: ModerateRiskBadge,
+  [AcaRiskSubRating.R]: HighRiskBadge,
+  [AcaRiskSubRating.X]: VeryHighRiskBadge,
+  [AcaRiskSubRating.XX]: ExtremeRiskBadge,
 };
 
-export const ACA_RISK_THUMB_TITLES: Record<AcaRiskRating, string> = {
-  [AcaRiskRating.G]: "Minimal Risk",
-  [AcaRiskRating.PG]: "Some Risk",
-  [AcaRiskRating.PG13]: "Moderate Risk",
-  [AcaRiskRating.R]: "High Risk",
-  [AcaRiskRating.X]: "Very High Risk",
-  [AcaRiskRating.XX]: "Extreme Risk",
+export const ACA_RISK_THUMB_TITLES: Record<AcaRiskSubRating, string> = {
+  [AcaRiskSubRating.G]: "Minimal Risk",
+  [AcaRiskSubRating.PG]: "Some Risk",
+  [AcaRiskSubRating.PG13]: "Moderate Risk",
+  [AcaRiskSubRating.R]: "High Risk",
+  [AcaRiskSubRating.X]: "Very High Risk",
+  [AcaRiskSubRating.XX]: "Extreme Risk",
 };

@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
+import { useFilterTheme } from "./useFilterTheme";
 
 const SOURCE_DISPLAY: Record<PageDataSource, string> = {
   [PageDataSource.Ropewiki]: "Ropewiki",
@@ -24,7 +25,8 @@ export function DataSourceFilterCheckboxes({
   onChange,
   title = "Data sources",
 }: DataSourceFilterCheckboxesProps) {
-  const singleSourceLock = ALL_SOURCES.length <= 1;
+  const { filter, sectionLabel, bodyText, text } = useFilterTheme();
+  const { checkbox } = filter;
 
   const selection = (): Set<PageDataSource> => {
     if (value === null) {
@@ -32,6 +34,8 @@ export function DataSourceFilterCheckboxes({
     }
     return new Set(value);
   };
+
+  const singleSourceLock = ALL_SOURCES.length <= 1;
 
   const toggle = (d: PageDataSource) => {
     if (singleSourceLock) {
@@ -52,7 +56,7 @@ export function DataSourceFilterCheckboxes({
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>{title}</Text>
+      <Text style={[styles.sectionLabel, sectionLabel]}>{title}</Text>
       {ALL_SOURCES.map((source) => {
         const checked = singleSourceLock || selection().has(source);
         return (
@@ -67,13 +71,23 @@ export function DataSourceFilterCheckboxes({
             <View
               style={[
                 styles.checkboxBox,
-                checked && styles.checkboxBoxChecked,
+                { borderColor: checkbox.uncheckedOutline },
+                checked && {
+                  borderColor: checkbox.checkedOutline,
+                  backgroundColor: checkbox.checkedFill,
+                },
               ]}
             >
-              {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
+              {checked ? (
+                <Text style={[styles.checkboxMark, { color: text.link }]}>
+                  ✓
+                </Text>
+              ) : null}
             </View>
             <View style={styles.checkboxLabelRow}>
-              <Text style={styles.checkboxLabel}>{SOURCE_DISPLAY[source]}</Text>
+              <Text style={[styles.checkboxLabel, bodyText]}>
+                {SOURCE_DISPLAY[source]}
+              </Text>
               <Image
                 source={SOURCE_ICONS[source]}
                 style={styles.sourceIcon}
@@ -89,9 +103,6 @@ export function DataSourceFilterCheckboxes({
 
 const styles = StyleSheet.create({
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
     marginTop: 0,
     marginBottom: 8,
   },
@@ -105,19 +116,13 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#9ca3af",
     marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  checkboxBoxChecked: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#dbeafe",
-  },
   checkboxMark: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1d4ed8",
   },
   checkboxLabelRow: {
     flex: 1,
@@ -125,10 +130,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  checkboxLabel: {
-    fontSize: 15,
-    color: "#111827",
-  },
+  checkboxLabel: {},
   sourceIcon: {
     width: 30,
     height: 30,

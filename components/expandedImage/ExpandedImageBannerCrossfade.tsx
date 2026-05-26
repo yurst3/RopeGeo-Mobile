@@ -7,6 +7,7 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import type { ExpandedImageGalleryPage } from "./types";
 
 const BANNER_BLUR_RADIUS = 28;
@@ -23,12 +24,21 @@ type ExpandedImageBannerCrossfadeProps = {
 function BannerFill({
   bannerUrl,
   blurRadius,
+  fallbackBackgroundColor,
 }: {
   bannerUrl: string | null;
   blurRadius: number;
+  fallbackBackgroundColor: string;
 }) {
   if (bannerUrl == null) {
-    return <View style={[StyleSheet.absoluteFill, styles.fallbackBg]} />;
+    return (
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: fallbackBackgroundColor },
+        ]}
+      />
+    );
   }
   return (
     <Image
@@ -49,12 +59,14 @@ function ScrollLinkedBannerLayer({
   slideStride,
   page,
   blurRadius,
+  fallbackBackgroundColor,
 }: {
   index: number;
   scrollX: SharedValue<number>;
   slideStride: number;
   page: ExpandedImageGalleryPage;
   blurRadius: number;
+  fallbackBackgroundColor: string;
 }) {
   const style = useAnimatedStyle(() => {
     const w = slideStride;
@@ -74,7 +86,11 @@ function ScrollLinkedBannerLayer({
       style={[StyleSheet.absoluteFill, style]}
       pointerEvents="none"
     >
-      <BannerFill bannerUrl={page.bannerUrl} blurRadius={blurRadius} />
+      <BannerFill
+        bannerUrl={page.bannerUrl}
+        blurRadius={blurRadius}
+        fallbackBackgroundColor={fallbackBackgroundColor}
+      />
     </Animated.View>
   );
 }
@@ -89,6 +105,7 @@ export function ExpandedImageBannerCrossfade({
   pages,
   overlayShowsFullImage,
 }: ExpandedImageBannerCrossfadeProps) {
+  const themeColors = useColorTheme();
   const blurRadius = overlayShowsFullImage ? BANNER_BLUR_RADIUS : 0;
 
   if (pages.length === 0) {
@@ -108,14 +125,9 @@ export function ExpandedImageBannerCrossfade({
           slideStride={slideStride}
           page={page}
           blurRadius={blurRadius}
+          fallbackBackgroundColor={themeColors.background}
         />
       ))}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  fallbackBg: {
-    backgroundColor: "#111",
-  },
-});

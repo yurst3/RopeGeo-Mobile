@@ -1,5 +1,6 @@
-import { NetworkStateDebugToasts } from "@/components/debug/NetworkStateDebugToasts";
+import { NetworkStateDebugToasts } from "@/components/toast/NetworkStateDebugToasts";
 import { ToastStackAnchor } from "@/components/navigation/ToastStackAnchor";
+import { ColorThemeProvider } from "@/context/ColorThemeContext";
 import { NetworkStatusProvider, SHOW_NETWORK_STATE } from "@/context/NetworkStatusContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
@@ -13,34 +14,36 @@ import { StyleSheet } from "react-native";
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <NetworkStatusProvider>
-        <ToastProvider>
-          <ToastStackAnchor />
-          {SHOW_NETWORK_STATE ? <NetworkStateDebugToasts /> : null}
-          <ShareSheetDimmerProvider>
-            <SavedPagesProvider>
-              <SavedFiltersProvider>
-                <DownloadQueueProvider>
-                  <Stack>
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="index"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  </Stack>
-                </DownloadQueueProvider>
-              </SavedFiltersProvider>
-            </SavedPagesProvider>
-          </ShareSheetDimmerProvider>
-        </ToastProvider>
-      </NetworkStatusProvider>
+      <ColorThemeProvider>
+        <NetworkStatusProvider>
+          <ToastProvider>
+            <ToastStackAnchor />
+            {SHOW_NETWORK_STATE ? <NetworkStateDebugToasts /> : null}
+            <ShareSheetDimmerProvider>
+              <SavedPagesProvider>
+                <SavedFiltersProvider>
+                  <DownloadQueueProvider>
+                    <Stack>
+                      <Stack.Screen
+                        name="(tabs)"
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="index"
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                    </Stack>
+                  </DownloadQueueProvider>
+                </SavedFiltersProvider>
+              </SavedPagesProvider>
+            </ShareSheetDimmerProvider>
+          </ToastProvider>
+        </NetworkStatusProvider>
+      </ColorThemeProvider>
     </GestureHandlerRootView>
   );
 }

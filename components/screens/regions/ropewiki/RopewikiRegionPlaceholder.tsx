@@ -1,5 +1,6 @@
-import { BackButton } from "@/components/buttons/BackButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect } from "react";
@@ -50,6 +51,8 @@ export function RopewikiRegionPlaceholder({
   errorMessage,
   onBackPress,
 }: RopewikiRegionPlaceholderProps) {
+  const { background, placeholder, image, text, button, loadingIndicator } =
+    useColorTheme();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const handleBack = useCallback(() => {
@@ -72,26 +75,38 @@ export function RopewikiRegionPlaceholder({
     paddingTop - CARD_BORDER_RADIUS - SEAM_FLOAT_OFFSET;
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.banner, { height: HALF_HEIGHT }]}>
+    <View style={[styles.container, { backgroundColor: background }]}>
+      <View
+        style={[
+          styles.banner,
+          { height: HALF_HEIGHT, backgroundColor: image.background },
+        ]}
+      >
         {isError ? (
           <>
             <Image
               source={require("@/assets/images/icons/missingImage.png")}
-              style={styles.missingImage}
+              style={[styles.missingImage, { tintColor: image.missingIcon }]}
               contentFit="contain"
             />
-            <Text style={styles.errorTitle}>{errorMessage}</Text>
+            <Text style={[styles.errorTitle, { color: text.error }]}>
+              {errorMessage}
+            </Text>
           </>
         ) : (
-          <ActivityIndicator size="large" color="#666" />
+          <ActivityIndicator size="large" color={loadingIndicator} />
         )}
       </View>
 
-      <View style={[styles.card, { marginTop: -CARD_BORDER_RADIUS }]}>
-        <View style={styles.titleBar} />
-        <View style={[styles.line, { width: "55%" }]} />
-        <View style={[styles.line, { width: "40%" }]} />
+      <View
+        style={[
+          styles.card,
+          { marginTop: -CARD_BORDER_RADIUS, backgroundColor: background },
+        ]}
+      >
+        <View style={[styles.titleBar, { backgroundColor: placeholder }]} />
+        <View style={[styles.line, { width: "55%", backgroundColor: placeholder }]} />
+        <View style={[styles.line, { width: "40%", backgroundColor: placeholder }]} />
         <View style={styles.miniMapWrap}>
           <PlaceholderMiniMap
             errorMessage={
@@ -106,7 +121,15 @@ export function RopewikiRegionPlaceholder({
         style={[styles.seamLinkWrap, { top: seamTop }]}
         accessibilityElementsHidden
       >
-        <View style={styles.seamLinkCircle}>
+        <View
+          style={[
+            styles.seamLinkCircle,
+            {
+              backgroundColor: background,
+              shadowColor: button.shadowColor,
+            },
+          ]}
+        >
           <Image
             source={iconForSource(source)}
             style={styles.seamLinkIcon}
@@ -123,11 +146,9 @@ export function RopewikiRegionPlaceholder({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
   },
   banner: {
     width: SCREEN_WIDTH,
-    backgroundColor: "#d1d5db",
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
@@ -139,13 +160,11 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#dc2626",
     textAlign: "center",
     paddingHorizontal: 24,
   },
   card: {
     flex: 1,
-    backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     paddingHorizontal: 20,
@@ -156,12 +175,10 @@ const styles = StyleSheet.create({
     height: 22,
     width: "72%",
     borderRadius: 6,
-    backgroundColor: "#e5e7eb",
   },
   line: {
     height: 12,
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
   },
   miniMapWrap: {
     marginTop: 16,
@@ -177,10 +194,8 @@ const styles = StyleSheet.create({
     width: EXTERNAL_LINK_SIZE,
     height: EXTERNAL_LINK_SIZE,
     borderRadius: EXTERNAL_LINK_SIZE / 2,
-    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,

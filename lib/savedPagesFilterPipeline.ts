@@ -1,5 +1,6 @@
 import {
-  AcaDifficulty,
+  AcaDifficultyParams,
+  AcaDifficultyRating,
   AcaDifficultyFilterOptions,
   type DifficultyFilterOptions,
   type PagePreview,
@@ -14,9 +15,10 @@ function previewMatchesDifficulty(
   if (opts == null) return true;
   if (!(opts instanceof AcaDifficultyFilterOptions)) return true;
   const params = opts.toDifficultyParams();
-  if (!params.isActive()) return true;
-  const d = preview.difficulty;
-  if (!(d instanceof AcaDifficulty)) return false;
+  if (params == null || !params.isActive()) return true;
+  if (!(params instanceof AcaDifficultyParams)) return true;
+  const d = preview.difficultyRating;
+  if (!(d instanceof AcaDifficultyRating)) return false;
   if (params.technical.length > 0) {
     if (d.technical == null || !params.technical.includes(d.technical)) {
       return false;

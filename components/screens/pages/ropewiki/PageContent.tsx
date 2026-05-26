@@ -1,4 +1,5 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
 import {
   isCenteredRegionMiniMapType,
@@ -27,7 +28,7 @@ import {
 } from "react-native";
 import Animated from "react-native-reanimated";
 import {
-  AcaDifficulty,
+  AcaDifficultyRating,
   type OfflineRopewikiPageView,
   PageDataSource,
   type OnlineRopewikiPageView,
@@ -98,6 +99,7 @@ export function PageContent({
   onMapExpandedChange,
   expandAnchorRef,
 }: PageContentProps) {
+  const { background, text } = useColorTheme();
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
   const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
@@ -193,7 +195,7 @@ export function PageContent({
   const rating = data.quality ?? 0;
   const ratingCount = data.userVotes ?? 0;
   const technicalRating =
-    data.difficulty instanceof AcaDifficulty ? data.difficulty.technical : null;
+    data.difficultyRating instanceof AcaDifficultyRating ? data.difficultyRating.technical : null;
   const rappelCount = data.rappelCount ?? null;
   const longestRappel = data.rappelLongest ?? null;
   const jumps = data.jumps ?? null;
@@ -221,7 +223,11 @@ export function PageContent({
         onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
       >
         <View
-          style={[styles.cardWrap, mapExpanded && styles.cardWrapMapExpanded]}
+          style={[
+            styles.cardWrap,
+            { backgroundColor: background },
+            mapExpanded && styles.cardWrapMapExpanded,
+          ]}
           collapsable={false}
         >
           <View
@@ -233,9 +239,9 @@ export function PageContent({
               },
             ]}
           >
-            <Text style={styles.title}>{data.name}</Text>
+            <Text style={[styles.title, { color: text.primary }]}>{data.name}</Text>
             {data.aka != null && data.aka.length > 0 ? (
-              <Text style={styles.aka}>
+              <Text style={[styles.aka, { color: text.secondary }]}>
                 <Text style={styles.akaLabel}>AKA: </Text>
                 {data.aka.join(", ")}
               </Text>
@@ -251,6 +257,7 @@ export function PageContent({
               rating={rating}
               count={ratingCount}
               style={styles.starRatingRow}
+              textStyle={styles.starRatingText}
             />
             <RappelInfoRow
               rappelCount={rappelCount}
@@ -321,7 +328,7 @@ export function PageContent({
                 />
               ))}
             {data.latestRevisionDate != null ? (
-              <Text style={styles.lastUpdated}>
+              <Text style={[styles.lastUpdated, { color: text.secondary }]}>
                 {formatLastUpdated(data.latestRevisionDate)}
               </Text>
             ) : null}
@@ -351,7 +358,6 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     position: "relative",
-    backgroundColor: "#fff",
     borderTopLeftRadius: CARD_BORDER_RADIUS,
     borderTopRightRadius: CARD_BORDER_RADIUS,
     overflow: "hidden",
@@ -366,12 +372,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#000",
     marginBottom: 6,
   },
   aka: {
     fontSize: 14,
-    color: "#6b7280",
     marginBottom: 4,
     marginLeft: 8,
   },
@@ -383,6 +387,10 @@ const styles = StyleSheet.create({
   },
   starRatingRow: {
     alignSelf: "center",
+  },
+  starRatingText: {
+    marginLeft: 6,
+    fontSize: 12,
   },
   miniMapWrap: {
     marginTop: 16,
@@ -400,7 +408,6 @@ const styles = StyleSheet.create({
   lastUpdated: {
     marginTop: 24,
     fontSize: 12,
-    color: "#6b7280",
     textAlign: "right",
   },
 });

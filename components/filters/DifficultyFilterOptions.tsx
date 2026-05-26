@@ -14,11 +14,11 @@ import {
   ACA_TIME_ORDER,
   ACA_WATER_ORDER,
   AcaDifficultyFilterOptions,
-  AcaRiskRating,
-  AcaTechnicalRating,
-  AcaTimeRating,
-  AcaWaterRating,
-  DifficultyType,
+  AcaRiskSubRating,
+  AcaTechnicalSubRating,
+  AcaTimeSubRating,
+  AcaWaterSubRating,
+  DifficultyRatingSystem,
   RiskMinMax,
   TechnicalMinMax,
   TimeMinMax,
@@ -37,6 +37,7 @@ import {
   ACA_WATER_BADGES,
   ACA_WATER_THUMB_TITLES,
 } from "./acaDifficultyBadgeMaps";
+import { useFilterTheme } from "./useFilterTheme";
 
 function orderedEnum<T extends string>(
   values: readonly T[],
@@ -46,33 +47,32 @@ function orderedEnum<T extends string>(
 }
 
 const ORDERED_TECHNICAL = orderedEnum(
-  Object.values(AcaTechnicalRating),
+  Object.values(AcaTechnicalSubRating),
   ACA_TECHNICAL_ORDER,
 );
 const ORDERED_WATER = orderedEnum(
-  Object.values(AcaWaterRating),
+  Object.values(AcaWaterSubRating),
   ACA_WATER_ORDER,
 );
 const ORDERED_TIME = orderedEnum(
-  Object.values(AcaTimeRating),
+  Object.values(AcaTimeSubRating),
   ACA_TIME_ORDER,
 );
 const ORDERED_RISK = orderedEnum(
-  Object.values(AcaRiskRating),
+  Object.values(AcaRiskSubRating),
   ACA_RISK_ORDER,
 );
 
-const DIFFICULTY_TYPES = Object.values(DifficultyType) as DifficultyType[];
+const DIFFICULTY_TYPES = Object.values(DifficultyRatingSystem) as DifficultyRatingSystem[];
 
-/** Same pixel size as {@link SearchFilterOptions} `sourceIcon` (Ropewiki). */
 const DIFFICULTY_TYPE_ICON_SIZE = 48;
 
 const ACA_ICON = require("@/assets/images/icons/ACA.png");
 
 const DIFFICULTY_ACA_LABEL = "American Canyoneering Association";
 
-function difficultyTypeLabel(t: DifficultyType): string {
-  if (t === DifficultyType.ACA) {
+function difficultyTypeLabel(t: DifficultyRatingSystem): string {
+  if (t === DifficultyRatingSystem.ACA) {
     return DIFFICULTY_ACA_LABEL;
   }
   return t;
@@ -88,8 +88,16 @@ export function DifficultyFilterOptions({
   onChange,
 }: DifficultyFilterOptionsProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const {
+    background,
+    filter,
+    sectionLabel,
+    bodyText,
+    hintText,
+  } = useFilterTheme();
+  const { dropdown, noteText } = filter;
 
-  const selectedType: DifficultyType | null = useMemo(() => {
+  const selectedType: DifficultyRatingSystem | null = useMemo(() => {
     if (options == null) return null;
     return options.difficultyType;
   }, [options]);
@@ -103,13 +111,13 @@ export function DifficultyFilterOptions({
     selectedType == null ? "All" : difficultyTypeLabel(selectedType);
 
   const selectType = useCallback(
-    (next: DifficultyType | null) => {
+    (next: DifficultyRatingSystem | null) => {
       setPickerOpen(false);
       if (next == null) {
         onChange(null);
         return;
       }
-      if (next === DifficultyType.ACA) {
+      if (next === DifficultyRatingSystem.ACA) {
         if (acaOptions != null) {
           onChange(acaOptions);
         } else {
@@ -129,21 +137,29 @@ export function DifficultyFilterOptions({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Difficulty Rating System</Text>
+      <Text style={[styles.sectionLabel, sectionLabel]}>
+        Difficulty Rating System
+      </Text>
       <Pressable
-        style={styles.dropdownTrigger}
+        style={[
+          styles.dropdownTrigger,
+          {
+            borderColor: dropdown.outline,
+            backgroundColor: background,
+          },
+        ]}
         onPress={() => setPickerOpen(true)}
         accessibilityRole="button"
         accessibilityLabel="Difficulty rating system"
       >
         <View style={styles.dropdownTriggerMain}>
           <Text
-            style={styles.dropdownTriggerText}
+            style={[styles.dropdownTriggerText, bodyText]}
             numberOfLines={2}
           >
             {dropdownSummary}
           </Text>
-          {selectedType === DifficultyType.ACA ? (
+          {selectedType === DifficultyRatingSystem.ACA ? (
             <Image
               source={ACA_ICON}
               style={styles.difficultyTypeIcon}
@@ -151,7 +167,7 @@ export function DifficultyFilterOptions({
             />
           ) : null}
         </View>
-        <Text style={styles.dropdownChevron}>▼</Text>
+        <Text style={[styles.dropdownChevron, hintText]}>▼</Text>
       </Pressable>
 
       <Modal
@@ -165,14 +181,21 @@ export function DifficultyFilterOptions({
             style={StyleSheet.absoluteFill}
             onPress={() => setPickerOpen(false)}
           />
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Difficulty Rating System</Text>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: dropdown.modalBackground },
+            ]}
+          >
+            <Text style={[styles.modalTitle, bodyText]}>
+              Difficulty Rating System
+            </Text>
             <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
               <Pressable
                 style={styles.modalRow}
                 onPress={() => selectType(null)}
               >
-                <Text style={styles.modalRowText}>All</Text>
+                <Text style={[styles.modalRowText, bodyText]}>All</Text>
               </Pressable>
               {DIFFICULTY_TYPES.map((t) => (
                 <Pressable
@@ -180,10 +203,10 @@ export function DifficultyFilterOptions({
                   style={styles.modalRow}
                   onPress={() => selectType(t)}
                 >
-                  <Text style={styles.modalRowText}>
+                  <Text style={[styles.modalRowText, bodyText]}>
                     {difficultyTypeLabel(t)}
                   </Text>
-                  {t === DifficultyType.ACA ? (
+                  {t === DifficultyRatingSystem.ACA ? (
                     <Image
                       source={ACA_ICON}
                       style={styles.difficultyTypeIcon}
@@ -197,7 +220,7 @@ export function DifficultyFilterOptions({
         </View>
       </Modal>
 
-      {selectedType === DifficultyType.ACA && acaOptions != null ? (
+      {selectedType === DifficultyRatingSystem.ACA && acaOptions != null ? (
         <View style={styles.acaBlock}>
           <AcaDiscreteRangeSlider
             label="Technical Rating"
@@ -272,7 +295,7 @@ export function DifficultyFilterOptions({
                 )
               }
             />
-            <Text style={styles.effectiveRiskNote}>
+            <Text style={[styles.effectiveRiskNote, { color: noteText }]}>
               The ACA rating system uses &quot;additional risk&quot; to denote elevated risk factors above the norm.
               &quot;Effective risk&quot; takes into account the technical rating
               and additional risk rating to reflect the true expected risk of a route.
@@ -289,9 +312,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
     marginBottom: 8,
   },
   dropdownTrigger: {
@@ -300,11 +320,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#d1d5db",
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: "#fff",
   },
   dropdownTriggerMain: {
     flex: 1,
@@ -320,11 +338,9 @@ const styles = StyleSheet.create({
   dropdownTriggerText: {
     flex: 1,
     fontSize: 16,
-    color: "#111827",
   },
   dropdownChevron: {
     fontSize: 12,
-    color: "#6b7280",
   },
   modalBackdrop: {
     flex: 1,
@@ -335,7 +351,6 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     zIndex: 1,
-    backgroundColor: "#fff",
     borderRadius: 14,
     maxHeight: "70%",
     paddingVertical: 12,
@@ -343,7 +358,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
@@ -360,7 +374,6 @@ const styles = StyleSheet.create({
   modalRowText: {
     flex: 1,
     fontSize: 16,
-    color: "#111827",
   },
   acaBlock: {
     marginTop: 20,
@@ -369,6 +382,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     lineHeight: 16,
-    color: "#dc2626",
   },
 });

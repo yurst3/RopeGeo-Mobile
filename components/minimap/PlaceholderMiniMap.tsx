@@ -1,3 +1,4 @@
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { minimapStyles } from "./shared/minimapShared";
@@ -12,21 +13,28 @@ export type PlaceholderMiniMapProps = {
  * used by {@link PageMiniMapView} and region scroll content — grey fill with spinner or error UI.
  */
 export function PlaceholderMiniMap({ errorMessage }: PlaceholderMiniMapProps) {
+  const { image, text, loadingIndicator } = useColorTheme();
   const isError = errorMessage != null && errorMessage !== "";
 
   return (
-    <View style={[minimapStyles.wrapper, styles.center]}>
+    <View
+      style={[
+        minimapStyles.wrapper,
+        styles.center,
+        { backgroundColor: image.background },
+      ]}
+    >
       {isError ? (
         <>
           <Image
             source={require("@/assets/images/icons/missingImage.png")}
-            style={styles.missingImage}
+            style={[styles.missingImage, { tintColor: image.missingIcon }]}
             contentFit="contain"
           />
-          <Text style={styles.errorText}>{errorMessage}</Text>
+          <Text style={[styles.errorText, { color: text.error }]}>{errorMessage}</Text>
         </>
       ) : (
-        <ActivityIndicator size="small" color="#666" />
+        <ActivityIndicator size="small" color={loadingIndicator} />
       )}
     </View>
   );
@@ -45,7 +53,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#dc2626",
     textAlign: "center",
     paddingHorizontal: 12,
   },

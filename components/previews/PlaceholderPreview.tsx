@@ -1,4 +1,5 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
@@ -19,35 +20,45 @@ export type PlaceholderPreviewProps = {
  * column), without ratings or badge rows — rectangles only plus one {@link PlaceholderBadge}.
  */
 export function PlaceholderPreview({ error = false }: PlaceholderPreviewProps) {
+  const { image, placeholder, text, loadingIndicator } = useColorTheme();
+
   return (
     <View style={styles.card}>
-      <View style={styles.imageWrap}>
+      <View style={[styles.imageWrap, { backgroundColor: image.background }]}>
         {error ? (
-          <View style={styles.imageCenter}>
+          <View style={[styles.imageCenter, { backgroundColor: image.background }]}>
             <Image
               source={MISSING_IMAGE}
-              style={styles.missingImage}
+              style={[
+                styles.missingImage,
+                { tintColor: image.missingIcon },
+              ]}
               contentFit="contain"
               accessibilityLabel="Missing preview"
             />
           </View>
         ) : (
-          <View style={styles.imageLoadingOverlay}>
-            <ActivityIndicator size="small" color="#6b7280" />
+          <View
+            style={[
+              styles.imageLoadingOverlay,
+              { backgroundColor: image.background },
+            ]}
+          >
+            <ActivityIndicator size="small" color={loadingIndicator} />
           </View>
         )}
       </View>
       <View style={styles.body}>
-        <View style={styles.titlePlaceholder} />
+        <View style={[styles.titlePlaceholder, { backgroundColor: placeholder }]} />
         <View style={styles.regionPlaceholderRow}>
-          <View style={[styles.regionBar, { width: "40%" }]} />
-          <Text style={styles.regionDot}> • </Text>
-          <View style={[styles.regionBar, { width: "40%" }]} />
+          <View style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]} />
+          <Text style={[styles.regionDot, { color: text.tertiary }]}> • </Text>
+          <View style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]} />
         </View>
         <View style={styles.regionPlaceholderRow}>
-          <View style={[styles.regionBar, { width: "30%" }]} />
+          <View style={[styles.regionBar, { width: "30%", backgroundColor: placeholder }]} />
         </View>
-        <View style={styles.infoPlaceholder} />
+        <View style={[styles.infoPlaceholder, { backgroundColor: placeholder }]} />
       </View>
       <View style={styles.sourceColumn}>
         <PlaceholderBadge size={28} />
@@ -71,11 +82,9 @@ const styles = StyleSheet.create({
     height: IMAGE_SIZE,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: "#eee",
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#eee",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
@@ -84,7 +93,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#eee",
   },
   missingImage: {
     width: MISSING_IMAGE_SIZE,
@@ -101,7 +109,6 @@ const styles = StyleSheet.create({
     width: "66%",
     alignSelf: "flex-start",
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
     marginBottom: 8,
   },
   regionPlaceholderRow: {
@@ -112,18 +119,15 @@ const styles = StyleSheet.create({
   regionBar: {
     height: 10,
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
   },
   regionDot: {
     fontSize: 10,
-    color: "#ccc",
   },
   infoPlaceholder: {
     height: 10,
     width: "55%",
     alignSelf: "flex-start",
     borderRadius: 4,
-    backgroundColor: "#e5e7eb",
     marginTop: 2,
   },
   sourceColumn: {

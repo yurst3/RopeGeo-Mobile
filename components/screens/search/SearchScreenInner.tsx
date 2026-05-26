@@ -1,18 +1,19 @@
-import { BackButton } from "@/components/buttons/BackButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
 import { FilterBottomSheet, type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
+import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import {
   TOAST_KEY_SEARCH_ERROR,
   TOAST_KEY_SEARCH_NO_RESULTS,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/toastArchetypes";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMoreBlockedFooter";
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { SearchBar, SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
@@ -75,13 +76,14 @@ export function SearchScreenInner({
   timeoutCountdown,
   onRetryRequest,
 }: SearchScreenInnerProps) {
+  const themeColors = useColorTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isFocused = useIsFocused();
   const { upsertPill, dismiss } = useToast();
   const searchInputRef = useRef<TextInput>(null);
   const searchBarTop = insets.top + 8;
-  const searchBarHeight = 48;
+  const searchBarHeight = SEARCH_BAR_HEIGHT;
   const scrollYRef = useRef(0);
   const layoutHRef = useRef(0);
   const contentHRef = useRef(0);
@@ -181,7 +183,6 @@ export function SearchScreenInner({
     const message = isNoNetworkSoft ? NO_NETWORK_MESSAGE : (errors?.message ?? "Error");
     upsertPill({
       key: TOAST_KEY_SEARCH_ERROR,
-      variant: "error",
       message,
       durationMs: null,
       horizontalInset: TOAST_HORIZONTAL_INSET,
@@ -195,7 +196,6 @@ export function SearchScreenInner({
     }
     upsertPill({
       key: TOAST_KEY_SEARCH_NO_RESULTS,
-      variant: "warning",
       message: "No results. Try another term or change filters.",
       durationMs: null,
       horizontalInset: TOAST_HORIZONTAL_INSET,
@@ -203,7 +203,7 @@ export function SearchScreenInner({
   }, [showNoResultsOnly, dismiss, upsertPill]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={[styles.headerRow, { top: searchBarTop }]}>
         <View
           style={[
@@ -213,20 +213,13 @@ export function SearchScreenInner({
         >
           <BackButton onPress={() => router.back()} />
         </View>
-        <View style={styles.searchBar}>
-          <FontAwesome5 name="search" size={16} color="#6b7280" />
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchBarInput}
-            placeholder="Search"
-            placeholderTextColor="#9ca3af"
-            value={query}
-            onChangeText={onChangeQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-        </View>
+        <SearchBar
+          ref={searchInputRef}
+          style={styles.searchBarFlex}
+          placeholder="Search"
+          value={query}
+          onChangeText={onChangeQuery}
+        />
         <View
           style={[
             styles.headerButtonWrap,
@@ -247,8 +240,13 @@ export function SearchScreenInner({
               { paddingTop: searchBarTop + searchBarHeight + 12 },
             ]}
           >
-            <ActivityIndicator size="large" />
-            <Text style={styles.locationWaitText}>Getting your location…</Text>
+            <ActivityIndicator
+              size="large"
+              color={themeColors.loadingIndicator}
+            />
+            <Text style={[styles.locationWaitText, { color: themeColors.text.secondary }]}>
+              Getting your location…
+            </Text>
           </View>
         ) : (
           <>
@@ -326,7 +324,6 @@ export function SearchScreenInner({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
   },
   headerRow: {
     position: "absolute",
@@ -341,27 +338,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  searchBar: {
+  searchBarFlex: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
-    minWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  searchBarInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 0,
     minWidth: 0,
   },
   content: {
@@ -386,7 +364,6 @@ const styles = StyleSheet.create({
   locationWaitText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#6b7280",
     textAlign: "center",
   },
 });

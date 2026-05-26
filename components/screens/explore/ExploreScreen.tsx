@@ -1,18 +1,19 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
-import { ResetCameraOrientationButton } from "@/components/buttons/ResetCameraOrientationButton";
-import { ResetCameraToPositionButton } from "@/components/buttons/ResetCameraToPositionButton";
+import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
+import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import {
   HEADER_BUTTON_GAP,
   HEADER_SIDE_SLOT_WIDTH,
   MAP_BUTTON_SIZE,
 } from "@/components/minimap/shared/fullScreenMapLayout";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/FilterButton";
+import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
-import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toastArchetypes";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toasts/toastArchetypes";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { RouteMarkersLayer, type RoutesState } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
@@ -23,15 +24,15 @@ import {
   type OfflinePagePreview,
   type RoutesParams,
 } from "ropegeo-common/models";
+import { SearchBar } from "@/components/SearchBar";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
-import { FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Default map center when location is unavailable (Moab, UT). [lng, lat]. */
@@ -66,6 +67,7 @@ function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
 }
 
 export function ExploreScreen() {
+  const { map } = useColorTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -259,18 +261,15 @@ export function ExploreScreen() {
           pointerEvents="box-none"
         >
           <View style={styles.searchBarSpacer} />
-          <Pressable
-            style={styles.searchBar}
+          <SearchBar
+            style={styles.searchBarFlex}
+            placeholder="Search"
             onPress={() => router.push("/explore/search")}
-            accessibilityRole="button"
             accessibilityLabel="Search"
-          >
-            <FontAwesome5 name="search" size={16} color="#6b7280" />
-            <Text style={styles.searchBarPlaceholder}>Search</Text>
-          </Pressable>
+          />
         </View>
         <MapView
-              styleURL="mapbox://styles/mapbox/outdoors-v12"
+              styleURL={map.styleUrl}
               style={styles.map}
               projection="globe"
               scaleBarEnabled={false}
@@ -429,25 +428,9 @@ const styles = StyleSheet.create({
   searchBarSpacer: {
     width: SEARCH_BAR_SIDE_WIDTH,
   },
-  searchBar: {
+  searchBarFlex: {
     flex: 1,
     minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  searchBarPlaceholder: {
-    fontSize: 16,
-    color: "#9ca3af",
   },
   map: {
     flex: 1,

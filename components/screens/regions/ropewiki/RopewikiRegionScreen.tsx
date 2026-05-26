@@ -1,4 +1,4 @@
-import { BackButton } from "@/components/buttons/BackButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/components/expandedImage/types";
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
@@ -25,11 +25,12 @@ import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanima
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toast";
+import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import {
   TOAST_KEY_REGION_ERROR,
   TOAST_KEY_ROUTES_ERROR,
-} from "@/constants/toastArchetypes";
+} from "@/constants/toasts/toastArchetypes";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import { isPageIdKeyInSavedPagesStorage } from "@/lib/savedPages/isPageIdKeyInSavedPagesStorage";
@@ -60,6 +61,7 @@ function RegionScreenBody({
   onBackPress: () => void;
   onRetryRequest: () => void;
 }) {
+  const { background } = useColorTheme();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const scrollY = useSharedValue(0);
@@ -196,7 +198,11 @@ function RegionScreenBody({
   ).current;
 
   return (
-    <View ref={expandAnchorRef} style={styles.container} collapsable={false}>
+    <View
+      ref={expandAnchorRef}
+      style={[styles.container, { backgroundColor: background }]}
+      collapsable={false}
+    >
       <RegionBanner
         ref={bannerRef}
         regionId={regionId}
@@ -398,7 +404,6 @@ export function RopewikiRegionScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
   },
   heroSwipeLayer: {
     position: "absolute",

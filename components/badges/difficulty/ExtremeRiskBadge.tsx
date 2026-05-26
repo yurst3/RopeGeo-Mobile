@@ -1,12 +1,17 @@
-import { Badge, BadgeBackgroundColor } from "@/components/badges/Badge";
+import { AcaRiskSubRating, DifficultyRatingSystem } from "ropegeo-common/models";
+import { Badge } from "@/components/badges/Badge";
+import { useColorTheme } from "@/context/ColorThemeContext";
 
 export function ExtremeRiskBadge({ showLabel }: { showLabel?: boolean } = {}) {
+  const themeColors = useColorTheme();
+  const { background, icon } = themeColors.badge.difficultyRating[DifficultyRatingSystem.ACA][AcaRiskSubRating.XX];
+
   return (
     <Badge
       icon={require("@/assets/images/icons/badges/difficulty/risk/extremeRisk.png")}
-      backgroundColor={BadgeBackgroundColor.Black}
+      backgroundColor={background}
       subIcon={require("@/assets/images/icons/badges/difficulty/risk/xx.png")}
-      iconColor="#ef4444"
+      iconColor={icon}
       label={showLabel ? "Extreme Risk" : undefined}
     />
   );

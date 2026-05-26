@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { BackButton } from "@/components/buttons/BackButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import {
   HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
@@ -17,13 +19,33 @@ export function MiniMapHeader({
   rightSlot?: ReactNode;
   top: number;
 }) {
+  const themeColors = useColorTheme();
+  const { minimap } = themeColors.map;
+  const { text } = themeColors;
+
+  const titleBarStyle = useMemo(
+    () => [
+      styles.titleBar,
+      {
+        backgroundColor: minimap.title.background,
+        shadowColor: minimap.title.shadow,
+      },
+    ],
+    [minimap.title.background, minimap.title.shadow],
+  );
+
+  const titleTextStyle = useMemo(
+    () => [styles.titleText, { color: text.primary }],
+    [text.primary],
+  );
+
   return (
     <View style={[styles.headerRow, { top }]} pointerEvents="box-none">
       <View style={[styles.headerButtonWrap, { width: HEADER_SIDE_SLOT_WIDTH }]}>
         <BackButton onPress={onBack} />
       </View>
-      <View style={styles.titleBar}>
-        <Text style={styles.titleText} numberOfLines={1}>
+      <View style={titleBarStyle}>
+        <Text style={titleTextStyle} numberOfLines={1}>
           {title}
         </Text>
       </View>
@@ -50,12 +72,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     marginHorizontal: 4,
-    backgroundColor: "#fff",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
     justifyContent: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -64,7 +84,6 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
     textAlign: "center",
   },
 });

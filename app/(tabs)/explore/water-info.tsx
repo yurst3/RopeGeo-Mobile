@@ -1,16 +1,16 @@
 import { WaterInfoScreen } from "@/components/screens/info/WaterInfoScreen";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { DifficultyWater } from "ropegeo-common/models";
+import { AcaWaterSubRating } from "ropegeo-common/models";
 
-const VALID_WATER: DifficultyWater[] = Object.values(DifficultyWater);
+const VALID_WATER: AcaWaterSubRating[] = Object.values(AcaWaterSubRating);
 
 export default function WaterInfoRoute() {
   const params = useLocalSearchParams<{ highlightedWater?: string }>();
   const raw = params.highlightedWater;
-  const highlightedWater: DifficultyWater | null =
-    typeof raw === "string" && VALID_WATER.includes(raw as DifficultyWater)
-      ? (raw as DifficultyWater)
+  const highlightedWater: AcaWaterSubRating | null =
+    typeof raw === "string" && VALID_WATER.includes(raw as AcaWaterSubRating)
+      ? (raw as AcaWaterSubRating)
       : null;
 
   return (
