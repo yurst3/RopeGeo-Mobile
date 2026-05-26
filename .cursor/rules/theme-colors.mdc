@@ -48,6 +48,48 @@ export function Example() {
 }
 ```
 
+## Prefer existing theme tokens
+
+When building a new screen or component, **reuse existing semantic colors** (`text`, `card`, `separator`, `button`, `preview`, etc.) before adding a new key to `ThemeColors`.
+
+- Add a **component-specific** theme subtree (e.g. `themeColors.pageScreen.text`) only when the color is **shared across multiple instances** of that prototype family, or when it encodes **semantics that do not fit** any existing token.
+- One-off layout colors for a single screen should still use shared tokens, not a new named slot.
+
+### ✅ GOOD (new page screen uses shared `text` tokens)
+
+```tsx
+import { useColorTheme } from "@/context/ColorThemeContext";
+import { Text, View } from "react-native";
+
+export function NewPageScreen() {
+  const { text, card } = useColorTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: card.background }}>
+      <Text style={{ color: text.primary }}>Title</Text>
+      <Text style={{ color: text.secondary }}>Subtitle</Text>
+      <Text style={{ color: text.error }}>Error message</Text>
+    </View>
+  );
+}
+```
+
+### ❌ BAD (new page screen adds a dedicated theme subtree)
+
+```tsx
+// types.ts — avoid unless this color is reused by a prototype family
+// pageScreen: { title: string; subtitle: string; error: string }
+
+export function NewPageScreen() {
+  const { pageScreen } = useColorTheme();
+  return (
+    <View>
+      <Text style={{ color: pageScreen.title }}>Title</Text>
+      <Text style={{ color: pageScreen.subtitle }}>Subtitle</Text>
+    </View>
+  );
+}
+```
+
 ## Mapped component colors: use key constants
 
 For families of similar components with a shared prototype (e.g. **Buttons**, **Badges**), define **key constants** that are used to map a key to its theme colors:
@@ -90,6 +132,7 @@ export function ExampleButton() {
 
 ## Defining new theme colors
 
-- Add/extend types in `Mobile/constants/colors/types.ts` first (or alongside) so the shape is explicit.
+- **First** check whether an existing token already matches (especially `text`, `card`, `separator`, `image`, `button`).
+- Add/extend types in `Mobile/constants/colors/types.ts` only when a new semantic or prototype-mapped slot is justified.
 - Add the new color values to **every** theme folder under `Mobile/constants/colors/*Theme/` and ensure they satisfy the types.
 - Prefer repeating literals over importing between theme modules to avoid cycles.
