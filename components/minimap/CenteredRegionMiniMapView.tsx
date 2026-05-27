@@ -2,6 +2,7 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
+import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   CLUSTER_RADIUS,
@@ -31,7 +32,6 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
-import { boundsFromFeatureCollection } from "./shared/geoJsonBounds";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
@@ -70,6 +70,7 @@ import {
 /** Default map center when `mapDirections` is null (Moab, UT). [lng, lat]. */
 const DEFAULT_MAP_CENTER: [number, number] = [-109.5508, 38.5733];
 const DEFAULT_ZOOM = 13;
+const USER_LOCATION_ZOOM = 14;
 const COLLAPSED_CAMERA_ANIMATION_MS = 250;
 const FOCUSED_ROUTE_ZOOM = 13;
 
@@ -228,7 +229,6 @@ export function CenteredRegionMiniMapView({
 
   const {
     cameraRef,
-    fitToBounds,
     resetPitchAndHeading,
     onCameraChanged,
     compassVisible,
@@ -249,6 +249,12 @@ export function CenteredRegionMiniMapView({
   }>({ applied: false, appliedCenterKey: "" });
 
   const displayGeojson = isOffline ? offlineShape : routesState.data;
+
+  const routesGeoSettled = useMemo(() => {
+    if (isOffline) return offlineShape != null || offlineLoadError != null;
+    return routesState.data != null || routesState.errors != null;
+  }, [isOffline, offlineShape, offlineLoadError, routesState.data, routesState.errors]);
+
   const centeredRouteCoordinate = useMemo((): [number, number] | null => {
     if (displayGeojson == null || displayGeojson.features.length === 0) return null;
     const f = displayGeojson.features.find((feat) => feat.properties?.id === centeredRouteId);
@@ -257,18 +263,17 @@ export function CenteredRegionMiniMapView({
     return g.coordinates as [number, number];
   }, [displayGeojson, centeredRouteId]);
 
-  const routesFitBounds = useMemo(
-    () => boundsFromFeatureCollection(displayGeojson ?? null),
-    [displayGeojson],
+  const collapsedCameraCenter = useMemo(
+    (): [number, number] => centeredRouteCoordinate ?? defaultCenter,
+    [centeredRouteCoordinate, defaultCenter],
   );
 
   const applyCollapsedCamera = useCallback(() => {
     if (!shell.mountNativeMap || shell.expanded) return;
-    const collapseCenter = centeredRouteCoordinate ?? defaultCenter;
-    const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
+    const centerKey = `${collapsedCameraCenter[0]},${collapsedCameraCenter[1]}`;
     resetPitchAndHeading(COLLAPSED_CAMERA_ANIMATION_MS);
     cameraRef.current?.setCamera({
-      centerCoordinate: collapseCenter,
+      centerCoordinate: collapsedCameraCenter,
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: COLLAPSED_CAMERA_ANIMATION_MS,
     });
@@ -278,8 +283,7 @@ export function CenteredRegionMiniMapView({
       appliedCenterKey: centerKey,
     };
   }, [
-    centeredRouteCoordinate,
-    defaultCenter,
+    collapsedCameraCenter,
     resetPitchAndHeading,
     shell.expanded,
     shell.mountNativeMap,
@@ -343,55 +347,59 @@ export function CenteredRegionMiniMapView({
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: "" };
       return;
     }
-    if (!shell.layoutReady) return;
-
-    const collapseCenter = centeredRouteCoordinate ?? defaultCenter;
-    const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
-
     if (shell.expanded) {
+      const centerKey = `${collapsedCameraCenter[0]},${collapsedCameraCenter[1]}`;
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: centerKey };
+      return;
     }
+    if (!routesGeoSettled) return;
+    markPendingCollapsedCamera();
   }, [
-    shell.layoutReady,
+    collapsedCameraCenter,
+    centeredRouteCoordinate,
+    markPendingCollapsedCamera,
+    routesGeoSettled,
     shell.expanded,
     shell.mountNativeMap,
-    defaultCenter,
-    centeredRouteCoordinate,
   ]);
 
-  const resetPosition = useCallback(() => {
+  /** Same center + zoom as collapsed minimap home camera. */
+  const resetToCenteredRouteHome = useCallback(() => {
     userFocusedNonCenteredRouteRef.current = false;
     setFocusedRouteId(null);
     setCurrentPreview(null);
-    markCameraMovedFromBounds();
-    const resetCenter = centeredRouteCoordinate ?? defaultCenter;
     cameraRef.current?.setCamera({
-      centerCoordinate: resetCenter,
+      centerCoordinate: collapsedCameraCenter,
       zoomLevel: DEFAULT_ZOOM,
+      animationDuration: MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+    });
+    markCameraFittedToBoundsAfter(MINIMAP_FIT_BOUNDS_ANIMATION_MS + 80);
+  }, [collapsedCameraCenter, markCameraFittedToBoundsAfter]);
+
+  const boundsSlotVisible = boundsResetButtonVisible;
+
+  const userLocationCoord = useForegroundUserLocation(
+    shell.expanded && shell.mapBodyVisible,
+  );
+
+  const resetCameraToUserPosition = useCallback(() => {
+    if (userLocationCoord == null) return;
+    markCameraMovedFromBounds();
+    cameraRef.current?.setCamera({
+      centerCoordinate: userLocationCoord,
+      zoomLevel: USER_LOCATION_ZOOM,
       animationDuration: 300,
     });
-  }, [markCameraMovedFromBounds, centeredRouteCoordinate, defaultCenter]);
+  }, [markCameraMovedFromBounds, userLocationCoord]);
 
-  const resetToRoutesBounds = useCallback(() => {
-    if (routesFitBounds == null) return;
-    userFocusedNonCenteredRouteRef.current = false;
-    setFocusedRouteId(null);
-    setCurrentPreview(null);
-    fitToBounds(routesFitBounds, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
-      markFitted: true,
-    });
-  }, [routesFitBounds, fitToBounds, shell.expandedPadding]);
-
-  const boundsSlotVisible = routesFitBounds != null && boundsResetButtonVisible;
-
-  const centeredRoutePositionButtonVisible =
+  const userPositionButtonVisible =
     shell.expanded &&
-    centeredRouteCoordinate != null &&
+    userLocationCoord != null &&
     mapLiveCenter != null &&
     mapLiveZoom != null &&
-    (Math.abs(mapLiveCenter[0] - centeredRouteCoordinate[0]) > 1e-4 ||
-      Math.abs(mapLiveCenter[1] - centeredRouteCoordinate[1]) > 1e-4 ||
-      Math.abs(mapLiveZoom - FOCUSED_ROUTE_ZOOM) > 0.05);
+    (Math.abs(mapLiveCenter[0] - userLocationCoord[0]) > 1e-4 ||
+      Math.abs(mapLiveCenter[1] - userLocationCoord[1]) > 1e-4 ||
+      Math.abs(mapLiveZoom - USER_LOCATION_ZOOM) > 0.05);
 
   const handleOfflineMarkerPress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
@@ -531,7 +539,7 @@ export function CenteredRegionMiniMapView({
           <Camera
             ref={cameraRef}
             defaultSettings={{
-              centerCoordinate: defaultCenter,
+              centerCoordinate: collapsedCameraCenter,
               zoomLevel: DEFAULT_ZOOM,
             }}
           />
@@ -603,7 +611,7 @@ export function CenteredRegionMiniMapView({
                 <MiniMapHeaderSideSlot>
                   <ResetCameraToBoundsButton
                     stacked
-                    onPress={resetToRoutesBounds}
+                    onPress={resetToCenteredRouteHome}
                     visible
                   />
                 </MiniMapHeaderSideSlot>
@@ -647,15 +655,15 @@ export function CenteredRegionMiniMapView({
               <ResetCameraOrientationButton
                 stacked
                 iconRotation={-cameraHeadingDeg}
-                onPress={resetPitchAndHeading}
+                onPress={() => resetPitchAndHeading()}
                 visible={compassVisible}
               />
             </ButtonStack.Slot>
-            <ButtonStack.Slot id="position" visible={centeredRoutePositionButtonVisible}>
+            <ButtonStack.Slot id="user-position" visible={userPositionButtonVisible}>
               <ResetCameraToPositionButton
                 stacked
-                onPress={resetPosition}
-                visible={centeredRoutePositionButtonVisible}
+                onPress={resetCameraToUserPosition}
+                visible={userPositionButtonVisible}
               />
             </ButtonStack.Slot>
           </ButtonStack>

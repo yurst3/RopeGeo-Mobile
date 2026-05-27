@@ -745,7 +745,7 @@ export function PageMiniMapView({
               <ResetCameraOrientationButton
                 stacked
                 iconRotation={-cameraHeadingDeg}
-                onPress={resetPitchAndHeading}
+                onPress={() => resetPitchAndHeading()}
                 visible={compassVisible}
               />
             </ButtonStack.Slot>

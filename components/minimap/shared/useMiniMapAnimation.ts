@@ -155,12 +155,9 @@ export function useMiniMapAnimation({
         1,
         Math.round(interpolate(p, [0, 1], [heightSv.value, endHeightSv.value])),
       ),
-      borderRadius:
-        expanded || p > 0.001
-          ? interpolate(p, [0, 1], [MINI_MAP_BORDER_RADIUS, 0])
-          : MINI_MAP_BORDER_RADIUS,
+      borderRadius: interpolate(p, [0, 1], [MINI_MAP_BORDER_RADIUS, 0]),
     };
-  }, [expanded]);
+  });
 
   const expandedChromeStyle = useAnimatedStyle(() => ({
     opacity: progressSv.value,

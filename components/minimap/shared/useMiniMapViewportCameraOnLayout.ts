@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Dimensions, type LayoutChangeEvent } from "react-native";
 
 /** Collapsed minimap should be square within this tolerance (px). */
@@ -23,6 +23,7 @@ export function useMiniMapViewportCameraOnLayout({
   onExpandedLayoutStable?: () => void;
 }) {
   const pendingCollapsedRef = useRef(false);
+  const [collapsedApplyTick, setCollapsedApplyTick] = useState(0);
   const pendingExpandedRef = useRef(false);
   const lastCollapsedLayoutKeyRef = useRef<string | null>(null);
   const lastExpandedLayoutKeyRef = useRef<string | null>(null);
@@ -61,6 +62,7 @@ export function useMiniMapViewportCameraOnLayout({
   const markPendingCollapsedCamera = useCallback(() => {
     pendingCollapsedRef.current = true;
     lastCollapsedLayoutKeyRef.current = null;
+    setCollapsedApplyTick((t) => t + 1);
   }, []);
 
   const markPendingExpandedCamera = useCallback(() => {
@@ -91,7 +93,7 @@ export function useMiniMapViewportCameraOnLayout({
     return () => {
       cancelled = true;
     };
-  }, [expanded, tryApplyCollapsedFromLayout]);
+  }, [expanded, collapsedApplyTick, tryApplyCollapsedFromLayout]);
 
   const onMapLayout = useCallback(
     (event: LayoutChangeEvent) => {

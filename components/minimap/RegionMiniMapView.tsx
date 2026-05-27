@@ -3,8 +3,6 @@ import { ResetCameraOrientationButton } from "@/components/buttons/standard/Rese
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
-import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
   RouteMarkersLayer,
@@ -12,15 +10,11 @@ import {
 } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
-  expandedMiniMapButtonStackTop,
+  MAP_HEADER_ROW_TOP_INSET,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import {
-  MiniMapHeader,
-  MiniMapHeaderSideSlot,
-  MiniMapHeaderSideSlots,
-} from "./shared/MiniMapHeader";
+import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
 import {
   CAMERA_PADDING,
@@ -116,37 +110,25 @@ export function RegionMiniMapView({
   const [currentPreview, setCurrentPreview] = useState<
     OnlinePagePreview | OfflinePagePreview | null
   >(null);
-  const [regionRouteFilter, setRegionRouteFilter] = useState<RouteFilter>(
-    () => new RouteFilter([source]),
-  );
-  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
   const [mapLiveCenter, setMapLiveCenter] = useState<[number, number] | undefined>(undefined);
   const [mapLiveZoom, setMapLiveZoom] = useState<number | undefined>(undefined);
 
-  useEffect(() => {
-    setRegionRouteFilter(new RouteFilter([source]));
-  }, [source, regionId]);
-
   const regionRoutesParams = useMemo((): RoutesParams => {
-    const base = regionRouteFilter.toRoutesParams();
+    const base = new RouteFilter([source]).toRoutesParams();
     const server = regionMiniMap.routesParams;
     const reg = server.region;
     if (reg == null) {
       throw new Error("OnlineRegionMiniMap.routesParams.region is required");
     }
-    const catalogue =
-      regionRouteFilter.sources != null && regionRouteFilter.sources.length > 0
-        ? regionRouteFilter.sources[0]
-        : source;
     return new RoutesParams({
-      region: { id: reg.id, source: catalogue },
+      region: { id: reg.id, source },
       sources: null,
       routeTypes: base.routeTypes ?? server.routeTypes,
       difficulty: base.difficulty ?? server.difficulty,
       limit: server.limit,
       page: server.page,
     });
-  }, [regionRouteFilter, regionMiniMap.routesParams, source]);
+  }, [regionMiniMap.routesParams, source]);
 
   const {
     cameraRef,
@@ -211,10 +193,14 @@ export function RegionMiniMapView({
   }, [shell.registerCollapseCleanup, collapseCleanup]);
 
   useEffect(() => {
-    if (!regionFitBounds || shell.expanded) return;
-    fitToBounds(regionFitBounds, CAMERA_PADDING, 0);
-    requestAnimationFrame(() => fitToBounds(regionFitBounds, CAMERA_PADDING, 0));
-  }, [regionFitBounds, fitToBounds, shell.expanded]);
+    if (!shell.mountNativeMap || !regionFitBounds || shell.expanded) return;
+    markPendingCollapsedCamera();
+  }, [
+    markPendingCollapsedCamera,
+    regionFitBounds,
+    shell.expanded,
+    shell.mountNativeMap,
+  ]);
 
   useEffect(() => {
     if (!shell.mountNativeMap || !shell.expanded) return;
@@ -305,6 +291,7 @@ export function RegionMiniMapView({
   ]);
 
   const { insets } = shell;
+  const headerTop = insets.top + MAP_HEADER_ROW_TOP_INSET;
 
   return (
     <>
@@ -332,7 +319,20 @@ export function RegionMiniMapView({
           onCameraChanged={onCameraChangedWrapped}
         >
           <LocationPuck />
-          <Camera ref={cameraRef} />
+          <Camera
+            ref={cameraRef}
+            defaultSettings={
+              regionFitBounds != null
+                ? {
+                    bounds: {
+                      ne: [regionFitBounds.east, regionFitBounds.north],
+                      sw: [regionFitBounds.west, regionFitBounds.south],
+                      ...CAMERA_PADDING,
+                    },
+                  }
+                : undefined
+            }
+          />
           <RouteMarkersLayer
             routesParams={regionRoutesParams}
             onStateChange={handleRoutesStateChange}
@@ -366,26 +366,7 @@ export function RegionMiniMapView({
           <MiniMapHeader
             title={regionMiniMap.title}
             onBack={shell.requestCollapse}
-            top={insets.top + 8}
-            rightSlot={
-              <MiniMapHeaderSideSlots>
-                {boundsResetButtonVisible ? (
-                  <MiniMapHeaderSideSlot>
-                    <ResetCameraToBoundsButton
-                      stacked
-                      onPress={resetPosition}
-                      visible
-                    />
-                  </MiniMapHeaderSideSlot>
-                ) : null}
-                <MiniMapHeaderSideSlot>
-                  <FilterButton
-                    persisted={false}
-                    onPress={() => setRegionFilterOpen(true)}
-                  />
-                </MiniMapHeaderSideSlot>
-              </MiniMapHeaderSideSlots>
-            }
+            top={headerTop}
           />
           <RoutePreview
             routeId={focusedRouteId}
@@ -417,16 +398,19 @@ export function RegionMiniMapView({
               }
             }}
           />
-          <ButtonStack
-            top={expandedMiniMapButtonStackTop(insets.top, boundsResetButtonVisible, {
-              otherHeaderRowActionVisible: true,
-            })}
-          >
+          <ButtonStack top={headerTop}>
+            <ButtonStack.Slot id="bounds" visible={boundsResetButtonVisible}>
+              <ResetCameraToBoundsButton
+                stacked
+                onPress={resetPosition}
+                visible={boundsResetButtonVisible}
+              />
+            </ButtonStack.Slot>
             <ButtonStack.Slot id="orientation" visible={compassVisible}>
               <ResetCameraOrientationButton
                 stacked
                 iconRotation={-cameraHeadingDeg}
-                onPress={resetPitchAndHeading}
+                onPress={() => resetPitchAndHeading()}
                 visible={compassVisible}
               />
             </ButtonStack.Slot>
@@ -440,20 +424,6 @@ export function RegionMiniMapView({
           </ButtonStack>
         </Animated.View>
       ) : null}
-      <FilterBottomSheet
-        visible={regionFilterOpen}
-        onClose={() => setRegionFilterOpen(false)}
-        mode={
-          regionFilterOpen
-            ? {
-                kind: "region-route",
-                draft: regionRouteFilter,
-                onDraftChange: setRegionRouteFilter,
-                onReset: () => setRegionRouteFilter(new RouteFilter([source])),
-              }
-            : null
-        }
-      />
     </>
   );
 }

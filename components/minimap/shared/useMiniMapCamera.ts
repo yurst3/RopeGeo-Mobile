@@ -94,10 +94,14 @@ export function useMiniMapCamera({ expanded }: { expanded: boolean }) {
   );
 
   const resetPitchAndHeading = useCallback((animationDuration = MINIMAP_FIT_BOUNDS_ANIMATION_MS) => {
+    const duration =
+      typeof animationDuration === "number"
+        ? animationDuration
+        : MINIMAP_FIT_BOUNDS_ANIMATION_MS;
     cameraRef.current?.setCamera({
       pitch: 0,
       heading: 0,
-      animationDuration,
+      animationDuration: duration,
     });
   }, []);
 

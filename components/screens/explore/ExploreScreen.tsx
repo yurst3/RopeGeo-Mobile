@@ -375,7 +375,7 @@ export function ExploreScreen() {
             <ResetCameraOrientationButton
               stacked
               iconRotation={-heading}
-              onPress={resetPitchAndHeading}
+              onPress={() => resetPitchAndHeading()}
               visible={isCompassVisible}
             />
           </ButtonStack.Slot>
