@@ -37,7 +37,9 @@ export default function TabsLayout() {
                 const currentTab = state.routes[state.index];
                 if (currentTab?.name === "explore") {
                   e.preventDefault();
-                  router.replace(EXPLORE_TAB_HREF);
+                  if (router.canDismiss()) {
+                    router.dismissTo(EXPLORE_TAB_HREF);
+                  }
                 }
               },
             })}

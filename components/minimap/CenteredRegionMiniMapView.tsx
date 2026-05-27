@@ -21,11 +21,11 @@ import {
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import {
-  MAP_BUTTON_TOP_OFFSET,
+  expandedMiniMapButtonStackTop,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { MiniMapHeader } from "./shared/MiniMapHeader";
+import { MiniMapHeader, MiniMapHeaderSideSlot } from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
 import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
@@ -34,6 +34,7 @@ import {
 import { boundsFromFeatureCollection } from "./shared/geoJsonBounds";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
@@ -46,6 +47,7 @@ import {
   type ComponentRef,
 } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import {
   Camera,
   Images,
@@ -68,6 +70,7 @@ import {
 /** Default map center when `mapDirections` is null (Moab, UT). [lng, lat]. */
 const DEFAULT_MAP_CENTER: [number, number] = [-109.5508, 38.5733];
 const DEFAULT_ZOOM = 13;
+const COLLAPSED_CAMERA_ANIMATION_MS = 250;
 const FOCUSED_ROUTE_ZOOM = 13;
 
 function mergeCenteredRoutesParams(
@@ -102,14 +105,12 @@ export type CenteredRegionMiniMapViewProps = {
    * Apple/Google directions on the collapsed minimap (mirrors the tile page minimap).
    */
   mapDirections?: { lat: number; lon: number } | null;
-  onCollapse: () => void;
   reloadRegisterRef?: MiniMapReloadRegisterRef;
 };
 
 export function CenteredRegionMiniMapView({
   miniMap,
   mapDirections = null,
-  onCollapse,
   reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
   const { map } = useColorTheme();
@@ -227,13 +228,18 @@ export function CenteredRegionMiniMapView({
 
   const {
     cameraRef,
+    fitToBounds,
     resetPitchAndHeading,
-    captureHome,
     onCameraChanged,
     compassVisible,
-    positionButtonVisible,
+    boundsResetButtonVisible,
     cameraHeadingDeg,
-  } = useMiniMapCamera({ expanded: shell.expanded, initialHomeCenter: defaultCenter });
+    markCameraMovedFromBounds,
+    markCameraFittedToBoundsAfter,
+  } = useMiniMapCamera({ expanded: shell.expanded });
+
+  const [mapLiveCenter, setMapLiveCenter] = useState<[number, number] | undefined>(undefined);
+  const [mapLiveZoom, setMapLiveZoom] = useState<number | undefined>(undefined);
 
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
@@ -241,18 +247,6 @@ export function CenteredRegionMiniMapView({
     applied: boolean;
     appliedCenterKey: string;
   }>({ applied: false, appliedCenterKey: "" });
-
-  const collapseCleanup = useCallback(() => {
-    setFocusedRouteId(null);
-    setCurrentPreview(null);
-    userFocusedNonCenteredRouteRef.current = false;
-    resetPitchAndHeading();
-  }, [resetPitchAndHeading]);
-
-  useEffect(() => {
-    shell.registerCollapseCleanup(collapseCleanup);
-    return () => shell.registerCollapseCleanup(null);
-  }, [shell.registerCollapseCleanup, collapseCleanup]);
 
   const displayGeojson = isOffline ? offlineShape : routesState.data;
   const centeredRouteCoordinate = useMemo((): [number, number] | null => {
@@ -268,31 +262,81 @@ export function CenteredRegionMiniMapView({
     [displayGeojson],
   );
 
+  const applyCollapsedCamera = useCallback(() => {
+    if (!shell.mountNativeMap || shell.expanded) return;
+    const collapseCenter = centeredRouteCoordinate ?? defaultCenter;
+    const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
+    resetPitchAndHeading(COLLAPSED_CAMERA_ANIMATION_MS);
+    cameraRef.current?.setCamera({
+      centerCoordinate: collapseCenter,
+      zoomLevel: DEFAULT_ZOOM,
+      animationDuration: COLLAPSED_CAMERA_ANIMATION_MS,
+    });
+    shell.settleCollapsedLayout();
+    collapsedHomeCameraRef.current = {
+      applied: true,
+      appliedCenterKey: centerKey,
+    };
+  }, [
+    centeredRouteCoordinate,
+    defaultCenter,
+    resetPitchAndHeading,
+    shell.expanded,
+    shell.mountNativeMap,
+    shell.settleCollapsedLayout,
+  ]);
+
+  const { markPendingCollapsedCamera, onMapLayout } = useMiniMapViewportCameraOnLayout({
+    expanded: shell.expanded,
+    onCollapsedLayoutStable: applyCollapsedCamera,
+  });
+
+  const collapseCleanup = useCallback(() => {
+    setFocusedRouteId(null);
+    setCurrentPreview(null);
+    userFocusedNonCenteredRouteRef.current = false;
+    markPendingCollapsedCamera();
+  }, [markPendingCollapsedCamera]);
+
+  useEffect(() => {
+    shell.registerCollapseCleanup(collapseCleanup);
+    return () => shell.registerCollapseCleanup(null);
+  }, [shell.registerCollapseCleanup, collapseCleanup]);
+
   useEffect(() => {
     if (centeredRouteCoordinate == null) return;
+    if (!shell.expanded) return;
     if (
-      shell.expanded &&
       focusedRouteId != null &&
       focusedRouteId !== centeredRouteId
     ) {
       return;
     }
-    if (
-      shell.expanded &&
-      focusedRouteId == null &&
-      userFocusedNonCenteredRouteRef.current
-    ) {
+    if (focusedRouteId == null && userFocusedNonCenteredRouteRef.current) {
       return;
     }
+    let cancelMarkFitted: (() => void) | undefined;
     const t = setTimeout(() => {
       cameraRef.current?.setCamera({
         centerCoordinate: centeredRouteCoordinate,
         zoomLevel: FOCUSED_ROUTE_ZOOM,
         animationDuration: 300,
       });
+      if (shell.expanded) {
+        cancelMarkFitted = markCameraFittedToBoundsAfter(300 + 80);
+      }
     }, 120);
-    return () => clearTimeout(t);
-  }, [centeredRouteCoordinate, shell.expanded, focusedRouteId]);
+    return () => {
+      clearTimeout(t);
+      cancelMarkFitted?.();
+    };
+  }, [
+    centeredRouteCoordinate,
+    shell.expanded,
+    focusedRouteId,
+    centeredRouteId,
+    markCameraFittedToBoundsAfter,
+  ]);
 
   useEffect(() => {
     if (!shell.mountNativeMap) {
@@ -305,61 +349,49 @@ export function CenteredRegionMiniMapView({
     const centerKey = `${collapseCenter[0]},${collapseCenter[1]}`;
 
     if (shell.expanded) {
-      captureHome();
       collapsedHomeCameraRef.current = { applied: false, appliedCenterKey: centerKey };
-      return;
     }
-
-    const prev = collapsedHomeCameraRef.current;
-    const needApply = !prev.applied || prev.appliedCenterKey !== centerKey;
-    if (!needApply) return;
-
-    const timer = setTimeout(() => {
-      cameraRef.current?.setCamera({
-        centerCoordinate: collapseCenter,
-        zoomLevel: DEFAULT_ZOOM,
-        animationDuration: 260,
-      });
-      collapsedHomeCameraRef.current = {
-        applied: true,
-        appliedCenterKey: centerKey,
-      };
-    }, 260);
-    return () => clearTimeout(timer);
-  }, [shell.layoutReady, captureHome, shell.expanded, shell.mountNativeMap, defaultCenter, centeredRouteCoordinate]);
+  }, [
+    shell.layoutReady,
+    shell.expanded,
+    shell.mountNativeMap,
+    defaultCenter,
+    centeredRouteCoordinate,
+  ]);
 
   const resetPosition = useCallback(() => {
     userFocusedNonCenteredRouteRef.current = false;
     setFocusedRouteId(null);
     setCurrentPreview(null);
-    captureHome();
+    markCameraMovedFromBounds();
     const resetCenter = centeredRouteCoordinate ?? defaultCenter;
     cameraRef.current?.setCamera({
       centerCoordinate: resetCenter,
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: 300,
     });
-  }, [captureHome, centeredRouteCoordinate, defaultCenter]);
+  }, [markCameraMovedFromBounds, centeredRouteCoordinate, defaultCenter]);
 
   const resetToRoutesBounds = useCallback(() => {
     if (routesFitBounds == null) return;
     userFocusedNonCenteredRouteRef.current = false;
     setFocusedRouteId(null);
     setCurrentPreview(null);
-    captureHome();
-    cameraRef.current?.setCamera({
-      type: "CameraStop",
-      bounds: {
-        ne: [routesFitBounds.east, routesFitBounds.north],
-        sw: [routesFitBounds.west, routesFitBounds.south],
-        ...shell.expandedPadding,
-      },
-      animationDuration: MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+    fitToBounds(routesFitBounds, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
+      markFitted: true,
     });
-  }, [routesFitBounds, captureHome, shell.expandedPadding]);
+  }, [routesFitBounds, fitToBounds, shell.expandedPadding]);
 
-  const boundsSlotVisible =
-    routesFitBounds != null && positionButtonVisible;
+  const boundsSlotVisible = routesFitBounds != null && boundsResetButtonVisible;
+
+  const centeredRoutePositionButtonVisible =
+    shell.expanded &&
+    centeredRouteCoordinate != null &&
+    mapLiveCenter != null &&
+    mapLiveZoom != null &&
+    (Math.abs(mapLiveCenter[0] - centeredRouteCoordinate[0]) > 1e-4 ||
+      Math.abs(mapLiveCenter[1] - centeredRouteCoordinate[1]) > 1e-4 ||
+      Math.abs(mapLiveZoom - FOCUSED_ROUTE_ZOOM) > 0.05);
 
   const handleOfflineMarkerPress = async (event: { features?: GeoJSON.Feature[] }) => {
     const features = event.features;
@@ -380,6 +412,7 @@ export function CenteredRegionMiniMapView({
     const isCluster = props?.point_count != null;
 
     if (isCluster && shapeSourceRef.current) {
+      markCameraMovedFromBounds();
       try {
         const zoom = await shapeSourceRef.current.getClusterExpansionZoom(
           feature as GeoJSON.Feature<GeoJSON.Point>,
@@ -404,6 +437,7 @@ export function CenteredRegionMiniMapView({
       }
       setFocusedRouteId(routeId);
       setCurrentPreview(null);
+      markCameraMovedFromBounds();
       cameraRef.current.setCamera({
         centerCoordinate: coords,
         zoomLevel: ROUTE_MARKER_CAMERA_ZOOM,
@@ -469,6 +503,7 @@ export function CenteredRegionMiniMapView({
           styleURL={map.styleUrl}
           style={minimapStyles.map}
           projection="globe"
+          onLayout={onMapLayout}
           pointerEvents={shell.expanded ? "auto" : "none"}
           scrollEnabled={shell.expanded}
           zoomEnabled={shell.expanded}
@@ -484,7 +519,13 @@ export function CenteredRegionMiniMapView({
             setFocusedRouteId(null);
             setCurrentPreview(null);
           }}
-          onCameraChanged={onCameraChanged}
+          onCameraChanged={(state) => {
+            onCameraChanged(state);
+            if (shell.expanded) {
+              setMapLiveCenter(state.properties.center as [number, number]);
+              setMapLiveZoom(state.properties.zoom);
+            }
+          }}
         >
           <LocationPuck />
           <Camera
@@ -510,6 +551,7 @@ export function CenteredRegionMiniMapView({
                 }
                 setFocusedRouteId(routeId);
                 setCurrentPreview(null);
+                markCameraMovedFromBounds();
               }}
               onRouteClusterPress={() => {
                 if (!shell.expanded) return;
@@ -548,8 +590,26 @@ export function CenteredRegionMiniMapView({
         </MapView>
       ) : null}
       {shell.expanded ? (
-        <View style={expandedChromeStyles.layer} pointerEvents="box-none">
-          <MiniMapHeader title={miniMap.title} onBack={onCollapse} top={insets.top + 8} />
+        <Animated.View
+          style={[expandedChromeStyles.layer, shell.expandedChromeStyle]}
+          pointerEvents="box-none"
+        >
+          <MiniMapHeader
+            title={miniMap.title}
+            onBack={shell.requestCollapse}
+            top={insets.top + 8}
+            rightSlot={
+              boundsSlotVisible ? (
+                <MiniMapHeaderSideSlot>
+                  <ResetCameraToBoundsButton
+                    stacked
+                    onPress={resetToRoutesBounds}
+                    visible
+                  />
+                </MiniMapHeaderSideSlot>
+              ) : undefined
+            }
+          />
           <RoutePreview
             routeId={focusedRouteId}
             containerStyle={[
@@ -580,14 +640,9 @@ export function CenteredRegionMiniMapView({
               }
             }}
           />
-          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
-            <ButtonStack.Slot id="bounds" visible={boundsSlotVisible}>
-              <ResetCameraToBoundsButton
-                stacked
-                onPress={resetToRoutesBounds}
-                visible={boundsSlotVisible}
-              />
-            </ButtonStack.Slot>
+          <ButtonStack
+            top={expandedMiniMapButtonStackTop(insets.top, boundsSlotVisible)}
+          >
             <ButtonStack.Slot id="orientation" visible={compassVisible}>
               <ResetCameraOrientationButton
                 stacked
@@ -596,15 +651,15 @@ export function CenteredRegionMiniMapView({
                 visible={compassVisible}
               />
             </ButtonStack.Slot>
-            <ButtonStack.Slot id="position" visible={positionButtonVisible}>
+            <ButtonStack.Slot id="position" visible={centeredRoutePositionButtonVisible}>
               <ResetCameraToPositionButton
                 stacked
                 onPress={resetPosition}
-                visible={positionButtonVisible}
+                visible={centeredRoutePositionButtonVisible}
               />
             </ButtonStack.Slot>
           </ButtonStack>
-        </View>
+        </Animated.View>
       ) : null}
     </>
   );

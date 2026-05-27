@@ -7,6 +7,7 @@ import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
 import { SavedPagesProvider } from "@/context/SavedPagesContext";
 import { SavedFiltersProvider } from "@/context/SavedFiltersContext";
 import { DownloadQueueProvider } from "@/context/DownloadQueueContext";
+import { stackScreenOptions } from "@/lib/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native";
@@ -23,7 +24,7 @@ export default function RootLayout() {
               <SavedPagesProvider>
                 <SavedFiltersProvider>
                   <DownloadQueueProvider>
-                    <Stack>
+                    <Stack screenOptions={stackScreenOptions}>
                       <Stack.Screen
                         name="(tabs)"
                         options={{

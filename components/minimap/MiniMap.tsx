@@ -95,7 +95,6 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
             regionId={p.regionId}
             source={p.source}
             onRoutesStateChange={p.onRoutesStateChange}
-            onCollapse={onCollapse}
             reloadRegisterRef={reloadRegisterRef}
           />
         </MiniMapAnimatedCard>
@@ -110,7 +109,6 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
         <MiniMapAnimatedCard {...cardProps} mapDirections={p.mapDirections}>
           <CenteredRegionMiniMapView
             miniMap={p.miniMap}
-            onCollapse={onCollapse}
             reloadRegisterRef={reloadRegisterRef}
           />
         </MiniMapAnimatedCard>
@@ -122,7 +120,6 @@ export const MiniMap = forwardRef<MiniMapHandle, MiniMapProps>(function MiniMap(
         <MiniMapAnimatedCard {...cardProps} mapDirections={p.mapDirections}>
           <PageMiniMapView
             miniMap={p.miniMap}
-            onCollapse={onCollapse}
             reloadRegisterRef={reloadRegisterRef}
           />
         </MiniMapAnimatedCard>

@@ -22,7 +22,6 @@ import {
 } from "@/components/minimap/shared/minimapShared";
 import {
   ActivityIndicator,
-  BackHandler,
   Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -174,15 +173,6 @@ export function RegionContent({
       }
     });
   }, [hasMiniMap, insets.bottom, insets.top]);
-
-  useEffect(() => {
-    if (!mapExpanded) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      setMapModeAndNotify("collapsed");
-      return true;
-    });
-    return () => sub.remove();
-  }, [mapExpanded, setMapModeAndNotify]);
 
   const queryParams = useMemo(
     () => new RopewikiRegionPreviewsParams(PREVIEWS_PAGE_LIMIT),

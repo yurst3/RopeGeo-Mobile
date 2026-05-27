@@ -21,16 +21,21 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { BackHandler, Dimensions, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import type { EdgeInsets } from "react-native-safe-area-context";
 
 export type MiniMapShellApi = {
   mountNativeMap: boolean;
   expanded: boolean;
+  /** Starts collapse animation. */
+  requestCollapse: () => void;
+  /** Clears measured expand/collapse layout after collapsed camera is applied. */
+  settleCollapsedLayout: () => void;
   layoutReady: boolean;
   /** True when native map is on and no blocking error (interior may render MapView). */
   mapBodyVisible: boolean;
+  expandedChromeStyle: ReturnType<typeof useMiniMapAnimation>["expandedChromeStyle"];
   expandedPadding: ReturnType<typeof useMiniMapAnimation>["expandedPadding"];
   insets: EdgeInsets;
   setBlockingErrorMessage: (message: string | null) => void;
@@ -75,6 +80,7 @@ type MiniMapAnimatedCardProps = {
   expandAnchorRef: RefObject<View | null>;
   collapsedMeasureRef: RefObject<View | null>;
   onExpand: () => void;
+  onCollapse: () => void;
   mapDirections?: { lat: number; lon: number } | null;
   children: ReactNode;
 };
@@ -126,6 +132,7 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
       expandAnchorRef,
       collapsedMeasureRef,
       onExpand,
+      onCollapse,
       mapDirections,
       children,
     },
@@ -135,17 +142,21 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
     const [loadingOverlayVisible, setLoadingOverlayVisible] = useState(false);
     const [layoutReady, setLayoutReady] = useState(false);
     const [expandLayout, setExpandLayout] = useState<MiniMapExpandLayout | null>(null);
+    const [collapseGeneration, setCollapseGeneration] = useState(0);
     const collapseCleanupRef = useRef<(() => void) | null>(null);
-    const cardRef = useRef<View>(null);
     const pendingExpandRef = useRef(false);
+    const collapseInFlightRef = useRef(false);
 
     const registerCollapseCleanup = useCallback((fn: (() => void) | null) => {
       collapseCleanupRef.current = fn;
     }, []);
 
-    const onCollapseTransition = useCallback(() => {
+    const finishCollapse = useCallback(() => {
+      if (!collapseInFlightRef.current) return;
+      collapseInFlightRef.current = false;
+      onCollapse();
       collapseCleanupRef.current?.();
-    }, []);
+    }, [onCollapse]);
 
     const remeasureLayout = useCallback(() => {
       void measureExpandLayout(expandAnchorRef, collapsedMeasureRef).then((layout) => {
@@ -157,20 +168,42 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
 
     useImperativeHandle(ref, () => ({ remeasureLayout }), [remeasureLayout]);
 
-    useEffect(() => {
-      if (expanded) return;
-      const t = setTimeout(() => setExpandLayout(null), 230);
-      return () => clearTimeout(t);
-    }, [expanded]);
+    const settleCollapsedLayout = useCallback(() => {
+      setExpandLayout(null);
+    }, []);
 
-    const { cardStyle, expandedPadding, insets } = useMiniMapAnimation({
+    const requestCollapse = useCallback(() => {
+      if (!expanded || collapseInFlightRef.current) return;
+      collapseInFlightRef.current = true;
+      void measureExpandLayout(expandAnchorRef, collapsedMeasureRef).then((layout) => {
+        if (layout == null) {
+          finishCollapse();
+          return;
+        }
+        setExpandLayout(layout);
+        setCollapseGeneration((g) => g + 1);
+      });
+    }, [
+      collapsedMeasureRef,
+      expandAnchorRef,
+      expanded,
+      finishCollapse,
+    ]);
+
+    const { cardStyle, expandedChromeStyle, expandedPadding, insets } = useMiniMapAnimation({
       expandLayout,
       expanded,
-      onCollapseTransition,
+      collapseGeneration,
+      onCollapseAnimationComplete: finishCollapse,
     });
 
     const mapBodyVisible = mountNativeMap && blockingErrorMessage == null;
     const showPlaceholder = !mapBodyVisible;
+
+    useEffect(() => {
+      if (!expanded) return;
+      collapseInFlightRef.current = false;
+    }, [expanded]);
 
     useEffect(() => {
       if (!mountNativeMap) {
@@ -181,12 +214,9 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
 
     useEffect(() => {
       if (!expanded) {
-        remeasureLayout();
         pendingExpandRef.current = false;
-        return;
       }
-      remeasureLayout();
-    }, [expanded, remeasureLayout]);
+    }, [expanded]);
 
     useEffect(() => {
       if (!pendingExpandRef.current || expandLayout == null) return;
@@ -208,12 +238,24 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
       });
     }, [collapsedMeasureRef, expandAnchorRef]);
 
+    useEffect(() => {
+      if (!expanded) return;
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+        requestCollapse();
+        return true;
+      });
+      return () => sub.remove();
+    }, [expanded, requestCollapse]);
+
     const shellApi = useMemo(
       (): MiniMapShellApi => ({
         mountNativeMap,
         expanded,
+        requestCollapse,
+        settleCollapsedLayout,
         layoutReady,
         mapBodyVisible,
+        expandedChromeStyle,
         expandedPadding,
         insets,
         setBlockingErrorMessage,
@@ -223,8 +265,11 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
       [
         mountNativeMap,
         expanded,
+        requestCollapse,
+        settleCollapsedLayout,
         layoutReady,
         mapBodyVisible,
+        expandedChromeStyle,
         expandedPadding,
         insets,
         registerCollapseCleanup,
@@ -234,7 +279,6 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
     return (
       <MiniMapShellContext.Provider value={shellApi}>
         <Animated.View
-          ref={cardRef}
           style={[styles.mapCard, cardStyle, expanded && styles.expandedCard]}
           pointerEvents={expanded ? "auto" : "box-none"}
           collapsable={false}
@@ -274,10 +318,12 @@ export const MiniMapAnimatedCard = forwardRef<MiniMapAnimatedCardHandle, MiniMap
               </View>
             ) : null}
           </View>
-          {!expanded && mapDirections != null ? (
+          {!expanded && layoutReady && mapDirections != null ? (
             <MiniMapDirectionsButtons lat={mapDirections.lat} lon={mapDirections.lon} />
           ) : null}
-          {!expanded && <ExpandMiniMapButton onPress={handleExpandPress} />}
+          {!expanded && layoutReady ? (
+            <ExpandMiniMapButton onPress={handleExpandPress} />
+          ) : null}
         </Animated.View>
       </MiniMapShellContext.Provider>
     );

@@ -16,7 +16,6 @@ import { PageBadges } from "./PageBadges";
 import { TimeEstimates } from "./TimeEstimates";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BackHandler,
   Dimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -164,15 +163,6 @@ export function PageContent({
     const t = setTimeout(() => checkMiniMapInView(), 0);
     return () => clearTimeout(t);
   }, [hasMiniMap, checkMiniMapInView]);
-
-  useEffect(() => {
-    if (!mapExpanded) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      setMapModeAndNotify("collapsed");
-      return true;
-    });
-    return () => sub.remove();
-  }, [mapExpanded, setMapModeAndNotify]);
 
   const handleScrollEndDrag = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {

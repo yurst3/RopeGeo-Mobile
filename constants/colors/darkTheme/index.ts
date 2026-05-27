@@ -8,7 +8,7 @@ export const darkTheme: ThemeColors = {
   cardHighlight: "#333333",
   placeholder: "#262626",
   separator: "#404040",
-  starRating: "#ffffff",
+  starRating: "#dc732b",
   loadingIndicator: "#ffffff",
   button: darkThemeButtons,
   badge: darkThemeBadges,
@@ -33,7 +33,7 @@ export const darkTheme: ThemeColors = {
     },
     region: {
       regionIconBackground: "#000000",
-      regionIcon: "#ffffff",
+      regionIcon: "#dc732b",
       shadowColor: "#ffffff",
       sourceIconBackground: "#ffffff",
     },

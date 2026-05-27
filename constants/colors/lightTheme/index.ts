@@ -8,7 +8,7 @@ export const lightTheme: ThemeColors = {
   cardHighlight: "#d1d5db",
   placeholder: "#d1d5db",
   separator: "#e5e7eb",
-  starRating: "#000000",
+  starRating: "#dc732b",
   loadingIndicator: "#000000",
   button: lightThemeButtons,
   badge: lightThemeBadges,
@@ -33,7 +33,7 @@ export const lightTheme: ThemeColors = {
     },
     region: {
       regionIconBackground: "#ffffff",
-      regionIcon: "#000000",
+      regionIcon: "#dc732b",
       shadowColor: "#000000",
       sourceIconBackground: "#ffffff",
     },

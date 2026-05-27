@@ -4,9 +4,24 @@ import { StyleSheet, Text, View } from "react-native";
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import {
+  HEADER_BUTTON_GAP,
   HEADER_BUTTON_SIZE,
   HEADER_SIDE_SLOT_WIDTH,
 } from "./fullScreenMapLayout";
+
+/** Wraps one control in the expanded minimap header row (mirrors the back-button slot). */
+export function MiniMapHeaderSideSlot({ children }: { children: ReactNode }) {
+  return (
+    <View style={[styles.headerButtonWrap, styles.headerSideSlot, { width: HEADER_SIDE_SLOT_WIDTH }]}>
+      {children}
+    </View>
+  );
+}
+
+/** Groups multiple header-side controls (e.g. fit-bounds + filter). */
+export function MiniMapHeaderSideSlots({ children }: { children: ReactNode }) {
+  return <View style={styles.headerSideSlotsRow}>{children}</View>;
+}
 
 export function MiniMapHeader({
   title,
@@ -67,6 +82,14 @@ const styles = StyleSheet.create({
     height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  headerSideSlot: {
+    alignItems: "flex-end",
+  },
+  headerSideSlotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: HEADER_BUTTON_GAP,
   },
   titleBar: {
     flex: 1,

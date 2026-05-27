@@ -1,8 +1,9 @@
+import { stackScreenOptions } from "@/lib/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 
 export default function ExploreLayout() {
   return (
-    <Stack>
+    <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="index"
         options={{

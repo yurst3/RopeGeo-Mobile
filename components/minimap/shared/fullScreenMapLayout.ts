@@ -8,9 +8,31 @@ export const HEADER_BUTTON_GAP = 8;
 /** Left/right header chrome width (explore: search side / filter slot). */
 export const HEADER_SIDE_SLOT_WIDTH = HEADER_BUTTON_SIZE + HEADER_BUTTON_GAP;
 
-export const MAP_BUTTON_TOP_OFFSET = 8 + HEADER_BUTTON_SIZE + 8;
+/** Distance from safe-area top to the expanded minimap header row (back / title / header actions). */
+export const MAP_HEADER_ROW_TOP_INSET = 8;
+
+/** Top offset for the first stacked map control when a header-row action sits above the stack. */
+export const MAP_BUTTON_TOP_OFFSET = MAP_HEADER_ROW_TOP_INSET + HEADER_BUTTON_SIZE + 8;
 export const MAP_BUTTON_SIZE = 48;
 export const MAP_BUTTON_GAP = 8;
+
+/**
+ * Expanded minimap stack top. When the bounds-reset control is in the header, the stack sits
+ * below the header row; when it is hidden, the stack moves up to the header row unless another
+ * header-row action (e.g. region filter) stays on the right.
+ */
+export function expandedMiniMapButtonStackTop(
+  safeTop: number,
+  boundsResetButtonVisible: boolean,
+  options?: { otherHeaderRowActionVisible?: boolean },
+): number {
+  const shiftUpWhenBoundsHidden =
+    !boundsResetButtonVisible && !options?.otherHeaderRowActionVisible;
+  return (
+    safeTop +
+    (shiftUpWhenBoundsHidden ? MAP_HEADER_ROW_TOP_INSET : MAP_BUTTON_TOP_OFFSET)
+  );
+}
 
 /**
  * Distance from safe-area top to the first global stacked toast anchor on full-screen map UIs

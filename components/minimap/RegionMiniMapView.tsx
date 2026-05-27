@@ -12,23 +12,31 @@ import {
 } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import {
-  HEADER_BUTTON_SIZE,
-  HEADER_SIDE_SLOT_WIDTH,
-  MAP_BUTTON_TOP_OFFSET,
+  expandedMiniMapButtonStackTop,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { MiniMapHeader } from "./shared/MiniMapHeader";
+import {
+  MiniMapHeader,
+  MiniMapHeaderSideSlot,
+  MiniMapHeaderSideSlots,
+} from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
-import { CAMERA_PADDING, minimapStyles } from "./shared/minimapShared";
+import {
+  CAMERA_PADDING,
+  MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+  minimapStyles,
+} from "./shared/minimapShared";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import {
   type OfflinePagePreview,
   type OnlinePagePreview,
@@ -39,6 +47,7 @@ import {
 } from "ropegeo-common/models";
 
 const USER_LOCATION_ZOOM = 14;
+const COLLAPSED_CAMERA_ANIMATION_MS = 250;
 
 type RegionFitBounds = {
   north: number;
@@ -61,7 +70,6 @@ export type RegionMiniMapViewProps = {
   regionMiniMap: OnlineRegionMiniMap;
   regionId: string;
   source: PageDataSource;
-  onCollapse: () => void;
   onRoutesStateChange?: (state: RoutesState) => void;
   /** Filled by parent `MiniMap` for imperative `reload`. */
   reloadRegisterRef?: MiniMapReloadRegisterRef;
@@ -75,7 +83,6 @@ export function RegionMiniMapView({
   regionMiniMap,
   regionId,
   source,
-  onCollapse,
   onRoutesStateChange,
   reloadRegisterRef,
 }: RegionMiniMapViewProps) {
@@ -145,18 +152,58 @@ export function RegionMiniMapView({
     cameraRef,
     fitToBounds,
     resetPitchAndHeading,
-    captureHome,
     onCameraChanged,
     compassVisible,
-    positionButtonVisible,
+    boundsResetButtonVisible,
     cameraHeadingDeg,
+    markCameraMovedFromBounds,
+    markCameraFittedToBounds,
   } = useMiniMapCamera({ expanded: shell.expanded });
+
+  const applyCollapsedCamera = useCallback(() => {
+    if (!shell.mountNativeMap || shell.expanded || regionFitBounds == null) return;
+    resetPitchAndHeading(COLLAPSED_CAMERA_ANIMATION_MS);
+    fitToBounds(regionFitBounds, CAMERA_PADDING, COLLAPSED_CAMERA_ANIMATION_MS);
+    shell.settleCollapsedLayout();
+  }, [
+    fitToBounds,
+    regionFitBounds,
+    resetPitchAndHeading,
+    shell.expanded,
+    shell.mountNativeMap,
+    shell.settleCollapsedLayout,
+  ]);
+
+  const applyExpandedCamera = useCallback(() => {
+    if (!shell.mountNativeMap || !shell.expanded) return;
+    if (regionFitBounds) {
+      fitToBounds(regionFitBounds, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
+        markFitted: true,
+      });
+    } else {
+      markCameraFittedToBounds();
+    }
+  }, [
+    fitToBounds,
+    markCameraFittedToBounds,
+    regionFitBounds,
+    shell.expanded,
+    shell.expandedPadding,
+    shell.mountNativeMap,
+  ]);
+
+  const { markPendingCollapsedCamera, markPendingExpandedCamera, onMapLayout } =
+    useMiniMapViewportCameraOnLayout({
+      expanded: shell.expanded,
+      onCollapsedLayoutStable: applyCollapsedCamera,
+      onExpandedLayoutStable: applyExpandedCamera,
+    });
 
   const collapseCleanup = useCallback(() => {
     setFocusedRouteId(null);
     setCurrentPreview(null);
-    resetPitchAndHeading();
-  }, [resetPitchAndHeading]);
+    markPendingCollapsedCamera();
+  }, [markPendingCollapsedCamera]);
 
   useEffect(() => {
     shell.registerCollapseCleanup(collapseCleanup);
@@ -164,44 +211,25 @@ export function RegionMiniMapView({
   }, [shell.registerCollapseCleanup, collapseCleanup]);
 
   useEffect(() => {
-    if (!regionFitBounds) return;
+    if (!regionFitBounds || shell.expanded) return;
     fitToBounds(regionFitBounds, CAMERA_PADDING, 0);
     requestAnimationFrame(() => fitToBounds(regionFitBounds, CAMERA_PADDING, 0));
-  }, [regionFitBounds, fitToBounds]);
+  }, [regionFitBounds, fitToBounds, shell.expanded]);
 
   useEffect(() => {
-    if (!shell.mountNativeMap || !shell.layoutReady) return;
-    if (shell.expanded) {
-      captureHome();
-      return;
-    }
-    if (regionFitBounds) {
-      const timer = setTimeout(() => fitToBounds(regionFitBounds, CAMERA_PADDING), 260);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    shell.layoutReady,
-    shell.mountNativeMap,
-    shell.expanded,
-    captureHome,
-    fitToBounds,
-    regionFitBounds,
-  ]);
+    if (!shell.mountNativeMap || !shell.expanded) return;
+    markPendingExpandedCamera();
+  }, [shell.expanded, shell.mountNativeMap, markPendingExpandedCamera]);
 
   const resetPosition = useCallback(() => {
     setFocusedRouteId(null);
     setCurrentPreview(null);
     if (regionFitBounds) {
-      captureHome();
-      fitToBounds(regionFitBounds, shell.expandedPadding);
-      requestAnimationFrame(() => fitToBounds(regionFitBounds, shell.expandedPadding));
+      fitToBounds(regionFitBounds, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
+        markFitted: true,
+      });
     }
-  }, [
-    captureHome,
-    fitToBounds,
-    regionFitBounds,
-    shell.expandedPadding,
-  ]);
+  }, [fitToBounds, regionFitBounds, shell.expandedPadding]);
 
   const userLocationCoord = useForegroundUserLocation(
     shell.expanded && shell.mapBodyVisible,
@@ -285,6 +313,7 @@ export function RegionMiniMapView({
           styleURL={map.styleUrl}
           style={minimapStyles.map}
           projection="globe"
+          onLayout={onMapLayout}
           pointerEvents={shell.expanded ? "auto" : "none"}
           scrollEnabled={shell.expanded}
           zoomEnabled={shell.expanded}
@@ -311,6 +340,7 @@ export function RegionMiniMapView({
             focusedRouteId={shell.expanded ? focusedRouteId : null}
             onRoutePress={(routeId) => {
               if (!shell.expanded) return;
+              markCameraMovedFromBounds();
               setFocusedRouteId(routeId);
               setCurrentPreview(null);
             }}
@@ -329,15 +359,32 @@ export function RegionMiniMapView({
         </MapView>
       ) : null}
       {shell.expanded ? (
-        <View style={expandedChromeStyles.layer} pointerEvents="box-none">
+        <Animated.View
+          style={[expandedChromeStyles.layer, shell.expandedChromeStyle]}
+          pointerEvents="box-none"
+        >
           <MiniMapHeader
             title={regionMiniMap.title}
-            onBack={onCollapse}
+            onBack={shell.requestCollapse}
             top={insets.top + 8}
             rightSlot={
-              <View style={[localStyles.filterButtonWrap, { width: HEADER_SIDE_SLOT_WIDTH }]}>
-                <FilterButton persisted={false} onPress={() => setRegionFilterOpen(true)} />
-              </View>
+              <MiniMapHeaderSideSlots>
+                {boundsResetButtonVisible ? (
+                  <MiniMapHeaderSideSlot>
+                    <ResetCameraToBoundsButton
+                      stacked
+                      onPress={resetPosition}
+                      visible
+                    />
+                  </MiniMapHeaderSideSlot>
+                ) : null}
+                <MiniMapHeaderSideSlot>
+                  <FilterButton
+                    persisted={false}
+                    onPress={() => setRegionFilterOpen(true)}
+                  />
+                </MiniMapHeaderSideSlot>
+              </MiniMapHeaderSideSlots>
             }
           />
           <RoutePreview
@@ -370,14 +417,11 @@ export function RegionMiniMapView({
               }
             }}
           />
-          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
-            <ButtonStack.Slot id="bounds" visible={positionButtonVisible}>
-              <ResetCameraToBoundsButton
-                stacked
-                onPress={resetPosition}
-                visible={positionButtonVisible}
-              />
-            </ButtonStack.Slot>
+          <ButtonStack
+            top={expandedMiniMapButtonStackTop(insets.top, boundsResetButtonVisible, {
+              otherHeaderRowActionVisible: true,
+            })}
+          >
             <ButtonStack.Slot id="orientation" visible={compassVisible}>
               <ResetCameraOrientationButton
                 stacked
@@ -394,7 +438,7 @@ export function RegionMiniMapView({
               />
             </ButtonStack.Slot>
           </ButtonStack>
-        </View>
+        </Animated.View>
       ) : null}
       <FilterBottomSheet
         visible={regionFilterOpen}
@@ -413,14 +457,6 @@ export function RegionMiniMapView({
     </>
   );
 }
-
-const localStyles = StyleSheet.create({
-  filterButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});
 
 const expandedChromeStyles = StyleSheet.create({
   layer: {

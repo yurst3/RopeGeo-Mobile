@@ -2,7 +2,7 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { MAP_BUTTON_TOP_OFFSET } from "./shared/fullScreenMapLayout";
+import { MAP_HEADER_ROW_TOP_INSET } from "./shared/fullScreenMapLayout";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { PageMiniMapLegend } from "./shared/PageMiniMapLegend";
@@ -26,6 +26,7 @@ import { useColorTheme } from "@/context/ColorThemeContext";
 import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
 import { pagePointLabelSymbolStyle } from "@/components/screens/explore/mapMarkerLayerStyles";
 import {
@@ -45,6 +46,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import Animated from "react-native-reanimated";
 import {
   Bounds,
   type OfflinePageMiniMap,
@@ -65,6 +67,7 @@ const PAGE_POINT_MARKER_IMAGES = {
 } as const;
 
 const USER_LOCATION_ZOOM = 14;
+const COLLAPSED_CAMERA_ANIMATION_MS = 250;
 
 const LINE_ONLY_FILTER: ["==", ["geometry-type"], "LineString"] = [
   "==",
@@ -133,13 +136,11 @@ export type PageMiniMapTileProps = OnlinePageMiniMap | OfflinePageMiniMap;
 
 export type PageMiniMapViewProps = {
   miniMap: PageMiniMapTileProps;
-  onCollapse: () => void;
   reloadRegisterRef?: MiniMapReloadRegisterRef;
 };
 
 export function PageMiniMapView({
   miniMap,
-  onCollapse,
   reloadRegisterRef,
 }: PageMiniMapViewProps) {
   const themeColors = useColorTheme();
@@ -165,14 +166,13 @@ export function PageMiniMapView({
     cameraRef,
     fitToBounds,
     resetPitchAndHeading,
-    captureHome,
     onCameraChanged,
     compassVisible,
-    positionButtonVisible,
+    boundsResetButtonVisible,
     cameraHeadingDeg,
+    markCameraMovedFromBounds,
   } = useMiniMapCamera({
     expanded: shell.expanded,
-    initialHomeCenter: [b.west, b.south],
   });
 
   const mapRef = useRef<ComponentRef<typeof MapView>>(null);
@@ -203,15 +203,47 @@ export function PageMiniMapView({
     selectedPointLngLatRef.current = null;
   }, []);
 
+  const applyCollapsedCamera = useCallback(() => {
+    if (!shell.mountNativeMap || shell.expanded) return;
+    resetPitchAndHeading(COLLAPSED_CAMERA_ANIMATION_MS);
+    fitToBounds(b, CAMERA_PADDING, COLLAPSED_CAMERA_ANIMATION_MS);
+    shell.settleCollapsedLayout();
+  }, [
+    b,
+    fitToBounds,
+    resetPitchAndHeading,
+    shell.expanded,
+    shell.mountNativeMap,
+    shell.settleCollapsedLayout,
+  ]);
+
+  const applyExpandedCamera = useCallback(() => {
+    if (!shell.mountNativeMap || !shell.expanded) return;
+    fitToBounds(b, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
+      markFitted: true,
+    });
+  }, [b, fitToBounds, shell.expanded, shell.expandedPadding, shell.mountNativeMap]);
+
+  const { markPendingCollapsedCamera, markPendingExpandedCamera, onMapLayout } =
+    useMiniMapViewportCameraOnLayout({
+      expanded: shell.expanded,
+      onCollapsedLayoutStable: applyCollapsedCamera,
+      onExpandedLayoutStable: applyExpandedCamera,
+    });
+
   useEffect(() => {
     const cleanup = () => {
-      resetPitchAndHeading();
       clearMapSelections();
       setLegendExpanded(false);
+      markPendingCollapsedCamera();
     };
     shell.registerCollapseCleanup(cleanup);
     return () => shell.registerCollapseCleanup(null);
-  }, [shell.registerCollapseCleanup, resetPitchAndHeading, clearMapSelections]);
+  }, [
+    shell.registerCollapseCleanup,
+    clearMapSelections,
+    markPendingCollapsedCamera,
+  ]);
 
   useEffect(() => {
     if (!shell.expanded) {
@@ -221,27 +253,20 @@ export function PageMiniMapView({
   }, [shell.expanded, clearMapSelections]);
 
   useEffect(() => {
-    if (!shell.mountNativeMap) return;
-    if (shell.expanded) {
-      captureHome();
-      return;
-    }
-    const timer = setTimeout(() => fitToBounds(b, CAMERA_PADDING), 260);
-    return () => clearTimeout(timer);
-  }, [
-    b,
-    captureHome,
-    fitToBounds,
-    shell.layoutReady,
-    shell.expanded,
-    shell.mountNativeMap,
-  ]);
+    if (!shell.mountNativeMap || !shell.expanded) return;
+    markPendingExpandedCamera();
+  }, [shell.expanded, shell.mountNativeMap, markPendingExpandedCamera]);
 
   const resetPosition = useCallback(() => {
-    captureHome();
-    fitToBounds(b, shell.expandedPadding);
-    requestAnimationFrame(() => fitToBounds(b, shell.expandedPadding));
-  }, [captureHome, fitToBounds, b, shell.expandedPadding]);
+    clearMapSelections();
+    setLegendExpanded(false);
+    setSelectedLineHighlight(null);
+    setSelectedLineStyle(null);
+    lineHighlightWaitForCameraRef.current = false;
+    fitToBounds(b, shell.expandedPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS, {
+      markFitted: true,
+    });
+  }, [clearMapSelections, fitToBounds, b, shell.expandedPadding]);
 
   const userLocationCoord = useForegroundUserLocation(
     shell.expanded && shell.mapBodyVisible,
@@ -443,6 +468,7 @@ export function PageMiniMapView({
         ) as GeoJSON.Feature<GeoJSON.LineString> | undefined;
 
         if (pointHit?.geometry?.type === "Point") {
+          markCameraMovedFromBounds();
           const props = pointHit.properties as Record<string, unknown> | null;
           const key = String(props?.legendId ?? "").trim();
           if (!key) return;
@@ -467,6 +493,7 @@ export function PageMiniMapView({
         }
 
         if (lineHit?.geometry?.type === "LineString") {
+          markCameraMovedFromBounds();
           const lineName = String(
             (lineHit.properties as Record<string, unknown> | null)?.name ?? "",
           ).trim();
@@ -507,6 +534,7 @@ export function PageMiniMapView({
       miniMap.legend,
       fitToBounds,
       shell.expandedPadding,
+      markCameraMovedFromBounds,
     ],
   );
 
@@ -525,6 +553,7 @@ export function PageMiniMapView({
 
   const handleLegendSelectSegment = useCallback(
     (key: string) => {
+      markCameraMovedFromBounds();
       setPointTooltip(null);
       selectedPointLngLatRef.current = null;
       setSelectedSegmentKey(key);
@@ -538,7 +567,7 @@ export function PageMiniMapView({
         fitToBounds(bounds, shell.expandedPadding);
       }
     },
-    [miniMap.legend, fitToBounds, shell.expandedPadding],
+    [miniMap.legend, fitToBounds, shell.expandedPadding, markCameraMovedFromBounds],
   );
 
   useEffect(() => {
@@ -546,6 +575,8 @@ export function PageMiniMapView({
   }, [pointTooltip?.fullName, refreshTooltipScreenPosition]);
 
   const { insets } = shell;
+  const headerTop = insets.top + MAP_HEADER_ROW_TOP_INSET;
+
   const legendMaxH = windowHeight / 3;
   const legendMaxW = windowWidth / 2;
   /** Tab bar + home indicator + gap so the legend sits above the tab bar (same as docked RoutePreview). */
@@ -588,6 +619,7 @@ export function PageMiniMapView({
             styleURL={map.styleUrl}
             style={StyleSheet.absoluteFill}
             projection="globe"
+            onLayout={onMapLayout}
             pointerEvents={shell.expanded ? "auto" : "none"}
             scrollEnabled={shell.expanded}
             zoomEnabled={shell.expanded}
@@ -682,8 +714,11 @@ export function PageMiniMapView({
         </View>
       ) : null}
       {shell.expanded ? (
-        <View style={expandedChromeStyles.layer} pointerEvents="box-none">
-          <MiniMapHeader title={miniMap.title} onBack={onCollapse} top={insets.top + 8} />
+        <Animated.View
+          style={[expandedChromeStyles.layer, shell.expandedChromeStyle]}
+          pointerEvents="box-none"
+        >
+          <MiniMapHeader title={miniMap.title} onBack={shell.requestCollapse} top={headerTop} />
           {hasPageLegend && miniMap.legend != null ? (
             <PageMiniMapLegend
               legend={miniMap.legend}
@@ -698,12 +733,12 @@ export function PageMiniMapView({
               onSelectLegendId={handleLegendSelectSegment}
             />
           ) : null}
-          <ButtonStack top={insets.top + MAP_BUTTON_TOP_OFFSET}>
-            <ButtonStack.Slot id="bounds" visible={positionButtonVisible}>
+          <ButtonStack top={headerTop}>
+            <ButtonStack.Slot id="bounds" visible={boundsResetButtonVisible}>
               <ResetCameraToBoundsButton
                 stacked
                 onPress={resetPosition}
-                visible={positionButtonVisible}
+                visible={boundsResetButtonVisible}
               />
             </ButtonStack.Slot>
             <ButtonStack.Slot id="orientation" visible={compassVisible}>
@@ -722,7 +757,7 @@ export function PageMiniMapView({
               />
             </ButtonStack.Slot>
           </ButtonStack>
-        </View>
+        </Animated.View>
       ) : null}
     </>
   );
