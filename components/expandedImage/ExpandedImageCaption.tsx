@@ -6,6 +6,7 @@ import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
 
@@ -33,21 +34,21 @@ export type ExpandedImageCaptionProps = {
   caption: string;
   /** Width of the expanded image stage (full-bleed area behind the caption). */
   stageWidth: number;
-  /** Bottom edge of the contained full image (stage coordinates). Caption region starts here. */
-  imageBottomY: number;
   /** Padding from the bottom of the stage (e.g. safe area). */
   bottomInset: number;
+  /** Max height for the caption region; content scrolls when exceeded. */
+  maxHeight: number;
 };
 
 /**
  * Expanded image caption: themed HTML on a semi-transparent pill.
- * Vertically centered in the band between the image bottom and the stage bottom.
+ * Anchored a fixed distance from the bottom of the stage (may overlap the image).
  */
 export function ExpandedImageCaption({
   caption,
   stageWidth,
-  imageBottomY,
   bottomInset,
+  maxHeight,
 }: ExpandedImageCaptionProps) {
   const themeColors = useColorTheme();
   const captionTagsStyles = useMemo(
@@ -70,10 +71,10 @@ export function ExpandedImageCaption({
       style={[
         styles.region,
         {
-          top: imageBottomY,
           left: HORIZONTAL_INSET,
           right: HORIZONTAL_INSET,
           bottom: bottomInset,
+          maxHeight,
         },
       ]}
       pointerEvents="box-none"
@@ -101,6 +102,7 @@ export function ExpandedImageCaption({
               color: themeColors.image.text,
             }}
             tagsStyles={captionTagsStyles}
+            customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
           />
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: "flex-end",
     alignItems: "center",
     paddingVertical: 4,
   },

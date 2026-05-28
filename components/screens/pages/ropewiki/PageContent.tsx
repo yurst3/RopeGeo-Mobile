@@ -13,6 +13,11 @@ import { StarRating } from "@/components/StarRating";
 import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
 import { PageBadges } from "./PageBadges";
+import {
+  PAGE_SEAM_FLOAT_HEIGHT,
+  PAGE_SEAM_FLOAT_OFFSET,
+  PageSeamButtons,
+} from "./PageSeamButtons";
 import { TimeEstimates } from "./TimeEstimates";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -80,6 +85,13 @@ export type PageContentProps = {
   onCardHeightLayout: (height: number) => void;
   onMapExpandedChange?: (expanded: boolean) => void;
   expandAnchorRef: React.RefObject<View | null>;
+  isDownloaded: boolean;
+  downloading: boolean;
+  downloadDisplayStep: number;
+  downloadDisplayTotal: number;
+  downloadPhaseProgress: number;
+  onDownloadPress: () => void;
+  onRemoveDownloadPress: () => void;
 };
 
 /**
@@ -97,6 +109,13 @@ export function PageContent({
   onCardHeightLayout,
   onMapExpandedChange,
   expandAnchorRef,
+  isDownloaded,
+  downloading,
+  downloadDisplayStep,
+  downloadDisplayTotal,
+  downloadPhaseProgress,
+  onDownloadPress,
+  onRemoveDownloadPress,
 }: PageContentProps) {
   const { background, text } = useColorTheme();
   const miniMapGateRef = useRef<View>(null);
@@ -212,6 +231,21 @@ export function PageContent({
         style={[styles.cardWrapper, { marginTop: -CARD_BORDER_RADIUS }]}
         onLayout={(e) => onCardHeightLayout(e.nativeEvent.layout.height)}
       >
+        {!mapExpanded ? (
+          <View pointerEvents="box-none" style={styles.seamHost}>
+            <PageSeamButtons
+              url={data.url}
+              mapExpanded={mapExpanded}
+              isDownloaded={isDownloaded}
+              downloading={downloading}
+              downloadDisplayStep={downloadDisplayStep}
+              downloadDisplayTotal={downloadDisplayTotal}
+              downloadPhaseProgress={downloadPhaseProgress}
+              onDownloadPress={onDownloadPress}
+              onRemoveDownloadPress={onRemoveDownloadPress}
+            />
+          </View>
+        ) : null}
         <View
           style={[
             styles.cardWrap,
@@ -345,6 +379,15 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     position: "relative",
+    overflow: "visible",
+  },
+  /** In-flow seam slot so ScrollView does not clip negative absolute offsets. */
+  seamHost: {
+    height: PAGE_SEAM_FLOAT_HEIGHT,
+    marginTop: -PAGE_SEAM_FLOAT_OFFSET,
+    marginBottom: PAGE_SEAM_FLOAT_OFFSET - PAGE_SEAM_FLOAT_HEIGHT,
+    zIndex: 2001,
+    elevation: 2001,
   },
   cardWrap: {
     position: "relative",

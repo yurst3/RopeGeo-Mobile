@@ -23,6 +23,7 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -30,7 +31,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ExpandedImageBannerCrossfade } from "./ExpandedImageBannerCrossfade";
-import { ExpandedImageCaption, containImageBottomY } from "./ExpandedImageCaption";
+import { ExpandedImageCaption } from "./ExpandedImageCaption";
 import { ExpandedImageGallerySlide } from "./ExpandedImageGallerySlide";
 import {
   ExpandedImageHeader,
@@ -38,7 +39,11 @@ import {
 } from "./ExpandedImageHeader";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "./types";
-import { useExpandedImageExpandAnimation } from "./useExpandedImageExpandAnimation";
+import {
+  anchorRectToExpandLayout,
+  type ExpandedImageExpandLayout,
+  useExpandedImageExpandAnimation,
+} from "./useExpandedImageExpandAnimation";
 
 const CHROME_FADE_MS = 220;
 
@@ -104,24 +109,25 @@ export function ExpandedImageModal({
   );
 
   const scrollX = useSharedValue(safeInitial * slideStride);
+  /** Opening index only — never updated when parent `initialPageIndex` changes mid-session. */
+  const initialScrollIndexRef = useRef(safeInitial);
+  /** Last index reported to `onPageChange` (scroll end only). */
+  const lastReportedPageIndexRef = useRef(safeInitial);
 
-  const galleryScrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      scrollX.value = e.contentOffset.x;
-    },
-  });
-
-  const [layoutExpanded, setLayoutExpanded] = useState(false);
-  const [expandedFullIntrinsic, setExpandedFullIntrinsic] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
-  const [expandedStageLayout, setExpandedStageLayout] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  const [expandLayout, setExpandLayout] = useState<ExpandedImageExpandLayout | null>(
+    () =>
+      anchorRect.width > 0 && anchorRect.height > 0
+        ? anchorRectToExpandLayout(anchorRect, windowWidth, windowHeight)
+        : null,
+  );
+  const [expanded, setExpanded] = useState(false);
+  const [collapseGeneration, setCollapseGeneration] = useState(0);
+  const collapseInFlightRef = useRef(false);
   const [overlayShowsFullImage, setOverlayShowsFullImage] = useState(true);
   const [showUi, setShowUi] = useState(true);
+  /** Header/caption — updates at scroll majority threshold. */
+  const [chromeIndex, setChromeIndex] = useState(safeInitial);
+  /** Slide focus (zoom/prefetch) — updates when scroll settles. */
   const [activeIndex, setActiveIndex] = useState(safeInitial);
   const [pagerScrollEnabled, setPagerScrollEnabled] = useState(true);
 
@@ -130,27 +136,59 @@ export function ExpandedImageModal({
   /** Ignore momentum events until initial `scrollToOffset` (if any) has been applied. */
   const galleryPositioningReadyRef = useRef(false);
 
-  const stageHeight =
-    expandedStageLayout?.height ?? Math.max(0, windowHeight - 0);
+  const pageIndexFromScrollOffset = useCallback(
+    (x: number) =>
+      Math.min(
+        pages.length - 1,
+        Math.max(0, Math.round(x / slideStride))
+      ),
+    [pages.length, slideStride]
+  );
+
+  const syncChromeIndexFromScrollOffset = useCallback(
+    (x: number) => {
+      if (!galleryPositioningReadyRef.current) {
+        return;
+      }
+      const next = pageIndexFromScrollOffset(x);
+      setChromeIndex((prev) => (prev === next ? prev : next));
+    },
+    [pageIndexFromScrollOffset]
+  );
+
+  const commitPageIndexFromScrollOffset = useCallback(
+    (x: number) => {
+      if (!galleryPositioningReadyRef.current) {
+        return;
+      }
+      const next = pageIndexFromScrollOffset(x);
+      setChromeIndex(next);
+      setActiveIndex(next);
+      if (lastReportedPageIndexRef.current !== next) {
+        lastReportedPageIndexRef.current = next;
+        const page = pages[next];
+        if (page != null) {
+          onPageChange?.(next, page.itemKey);
+        }
+      }
+    },
+    [onPageChange, pageIndexFromScrollOffset, pages]
+  );
+
+  const galleryScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollX.value = e.contentOffset.x;
+      runOnJS(syncChromeIndexFromScrollOffset)(e.contentOffset.x);
+    },
+  });
+
+  const stageWidth = windowWidth;
+  const stageHeight = expandLayout != null ? windowHeight : 0;
 
   const headerSectionImagePosition: ExpandedImageSectionImagePosition | null =
     headerSectionSubtitle != null && pages.length > 0
-      ? { current: activeIndex + 1, total: pages.length }
+      ? { current: chromeIndex + 1, total: pages.length }
       : null;
-
-  useEffect(() => {
-    chromeOpacity.value = withTiming(showUi ? 1 : 0, {
-      duration: CHROME_FADE_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [showUi, chromeOpacity]);
-
-  const chromeHeaderFadeStyle = useAnimatedStyle(() => ({
-    opacity: chromeOpacity.value,
-  }));
-  const chromeCaptionFadeStyle = useAnimatedStyle(() => ({
-    opacity: chromeOpacity.value,
-  }));
 
   const toggleShowUi = useCallback(() => {
     setShowUi((v) => !v);
@@ -160,45 +198,81 @@ export function ExpandedImageModal({
     setShowUi(false);
   }, []);
 
-  const collapseModal = useCallback(() => {
-    setOverlayShowsFullImage(false);
-    requestAnimationFrame(() => {
-      setLayoutExpanded(false);
-    });
-  }, []);
-
-  const onCollapseTransition = useCallback(() => {
-    setTimeout(() => {
-      setExpandedFullIntrinsic(null);
-      setExpandedStageLayout(null);
-      setOverlayShowsFullImage(true);
-      setShowUi(true);
-      setLayoutExpanded(false);
-      onDismissed();
-    }, 220);
+  const finishCollapse = useCallback(() => {
+    if (!collapseInFlightRef.current) return;
+    collapseInFlightRef.current = false;
+    galleryPositioningReadyRef.current = false;
+    setExpanded(false);
+    setExpandLayout(null);
+    setOverlayShowsFullImage(true);
+    setShowUi(true);
+    onDismissed();
   }, [onDismissed]);
 
-  const { cardStyle } = useExpandedImageExpandAnimation({
-    anchorRect,
-    expanded: layoutExpanded,
-    onCollapseTransition,
+  const requestCollapse = useCallback(() => {
+    if (!expanded || collapseInFlightRef.current) return;
+    if (anchorRect.width <= 0 || anchorRect.height <= 0) {
+      collapseInFlightRef.current = true;
+      finishCollapse();
+      return;
+    }
+    collapseInFlightRef.current = true;
+    setExpandLayout(anchorRectToExpandLayout(anchorRect, windowWidth, windowHeight));
+    setCollapseGeneration((g) => g + 1);
+  }, [anchorRect, expanded, finishCollapse, windowHeight, windowWidth]);
+
+  const collapseModal = useCallback(() => {
+    requestCollapse();
+  }, [requestCollapse]);
+
+  const { cardStyle, expandProgress } = useExpandedImageExpandAnimation({
+    expandLayout,
+    expanded,
+    collapseGeneration,
+    onCollapseAnimationComplete: finishCollapse,
   });
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setLayoutExpanded(true);
+    chromeOpacity.value = withTiming(showUi ? 1 : 0, {
+      duration: CHROME_FADE_MS,
+      easing: Easing.out(Easing.cubic),
     });
-    return () => cancelAnimationFrame(id);
-  }, []);
+  }, [showUi, chromeOpacity]);
+
+  const chromeHeaderFadeStyle = useAnimatedStyle(() => ({
+    opacity: expandProgress.value * chromeOpacity.value,
+  }));
+  const chromeCaptionFadeStyle = useAnimatedStyle(() => ({
+    opacity: expandProgress.value * chromeOpacity.value,
+  }));
 
   useEffect(() => {
-    if (!layoutExpanded) return;
+    if (expandLayout != null) return;
+    if (anchorRect.width <= 0 || anchorRect.height <= 0) return;
+    setExpandLayout(anchorRectToExpandLayout(anchorRect, windowWidth, windowHeight));
+  }, [anchorRect, expandLayout, windowHeight, windowWidth]);
+
+  useEffect(() => {
+    if (!expandLayout) return;
+    const id = requestAnimationFrame(() => {
+      setExpanded(true);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [expandLayout]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    collapseInFlightRef.current = false;
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       collapseModal();
       return true;
     });
     return () => sub.remove();
-  }, [layoutExpanded, collapseModal]);
+  }, [expanded, collapseModal]);
 
   /** Preload neighbors (and current) full-resolution images. */
   useEffect(() => {
@@ -223,37 +297,30 @@ export function ExpandedImageModal({
     setPagerScrollEnabled(!zoomed);
   }, []);
 
-  const handleActiveImageGeometry = useCallback(
-    (dims: { width: number; height: number }) => {
-      setExpandedFullIntrinsic(dims);
-    },
-    []
-  );
-
-  const onGalleryScrollEnd = useCallback(
+  const onGalleryScrollSettled = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!galleryPositioningReadyRef.current) {
         return;
       }
       const x = e.nativeEvent.contentOffset.x;
-      const next = Math.min(
-        pages.length - 1,
-        Math.max(0, Math.round(x / slideStride))
-      );
-      if (next === activeIndex) {
-        return;
-      }
       scrollX.value = x;
-      setActiveIndex(next);
-      setExpandedFullIntrinsic(null);
+      commitPageIndexFromScrollOffset(x);
       setShowUi(true);
       setPagerScrollEnabled(true);
-      const page = pages[next];
-      if (page != null) {
-        onPageChange?.(next, page.itemKey);
-      }
     },
-    [activeIndex, onPageChange, pages, scrollX, slideStride]
+    [commitPageIndexFromScrollOffset, scrollX]
+  );
+
+  /** Slow drags with no momentum — `onMomentumScrollEnd` does not run. */
+  const onGalleryScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const vx = e.nativeEvent.velocity?.x ?? 0;
+      if (Math.abs(vx) > 0.1) {
+        return;
+      }
+      onGalleryScrollSettled(e);
+    },
+    [onGalleryScrollSettled]
   );
 
   const getItemLayout = useCallback(
@@ -289,7 +356,6 @@ export function ExpandedImageModal({
           onToggleUi={toggleShowUi}
           onZoomPanHideUi={hideChrome}
           onZoomedChange={pages.length > 1 ? handleZoomedChange : undefined}
-          onActiveImageGeometry={handleActiveImageGeometry}
         />
         <View
           style={{
@@ -302,7 +368,6 @@ export function ExpandedImageModal({
     ),
     [
       activeIndex,
-      handleActiveImageGeometry,
       handleZoomedChange,
       hideChrome,
       overlayShowsFullImage,
@@ -314,39 +379,22 @@ export function ExpandedImageModal({
     ]
   );
 
-  const activeCaptionHtml =
-    pages[activeIndex]?.captionHtml ?? null;
-
-  const expandedImageBottomY = useMemo(() => {
-    if (expandedStageLayout == null || expandedFullIntrinsic == null) {
-      return null;
-    }
-    return containImageBottomY(
-      expandedStageLayout.width,
-      expandedStageLayout.height,
-      expandedFullIntrinsic.width,
-      expandedFullIntrinsic.height,
-    );
-  }, [expandedFullIntrinsic, expandedStageLayout]);
+  const activeCaptionHtml = pages[chromeIndex]?.captionHtml ?? null;
 
   const captionBottomInset = Math.max(insets.bottom, 12);
-  const expandedCaptionBandHeight =
-    expandedStageLayout != null && expandedImageBottomY != null
-      ? expandedStageLayout.height - expandedImageBottomY - captionBottomInset
-      : 0;
-  const expandedCaptionFits =
-    expandedImageBottomY != null && expandedCaptionBandHeight > 20;
+  const captionMaxHeight = windowHeight * 0.45;
 
   useEffect(() => {
-    if (!layoutExpanded || pages.length === 0) return;
+    if (!expanded || pages.length === 0) return;
     galleryPositioningReadyRef.current = false;
     let cancelled = false;
     const id1 = requestAnimationFrame(() => {
       const id2 = requestAnimationFrame(() => {
         if (cancelled) return;
-        const offset = safeInitial * slideStride;
+        const initial = initialScrollIndexRef.current;
+        const offset = initial * slideStride;
         scrollX.value = offset;
-        if (safeInitial > 0) {
+        if (initial > 0) {
           galleryRef.current?.scrollToOffset({
             offset,
             animated: false,
@@ -360,7 +408,7 @@ export function ExpandedImageModal({
       cancelled = true;
       cancelAnimationFrame(id1);
     };
-  }, [layoutExpanded, pages.length, safeInitial, scrollX, slideStride]);
+  }, [expanded, pages.length, scrollX, slideStride]);
 
   if (pages.length === 0) {
     return null;
@@ -377,13 +425,7 @@ export function ExpandedImageModal({
               cardStyle,
             ]}
           >
-            <View
-              style={styles.expandedImageStage}
-              onLayout={(e) => {
-                const { width, height } = e.nativeEvent.layout;
-                setExpandedStageLayout({ width, height });
-              }}
-            >
+            <View style={styles.expandedImageStage}>
               <ExpandedImageBannerCrossfade
                 scrollX={scrollX}
                 slideStride={slideStride}
@@ -426,7 +468,8 @@ export function ExpandedImageModal({
                     windowSize={5}
                     onScroll={galleryScrollHandler}
                     scrollEventThrottle={1}
-                    onMomentumScrollEnd={onGalleryScrollEnd}
+                    onMomentumScrollEnd={onGalleryScrollSettled}
+                    onScrollEndDrag={onGalleryScrollEndDrag}
                     onScrollToIndexFailed={({ index }) => {
                       const off = index * slideStride;
                       scrollX.value = off;
@@ -451,20 +494,16 @@ export function ExpandedImageModal({
                   </View>
                 )}
               </View>
-              {overlayShowsFullImage &&
-              activeCaptionHtml != null &&
-              expandedCaptionFits &&
-              expandedStageLayout != null &&
-              expandedImageBottomY != null ? (
+              {activeCaptionHtml != null && expandLayout != null ? (
                 <Animated.View
                   style={[styles.chromeCaptionLayer, chromeCaptionFadeStyle]}
                   pointerEvents={showUi ? "box-none" : "none"}
                 >
                   <ExpandedImageCaption
                     caption={activeCaptionHtml}
-                    stageWidth={expandedStageLayout.width}
-                    imageBottomY={expandedImageBottomY}
+                    stageWidth={stageWidth}
                     bottomInset={captionBottomInset}
+                    maxHeight={captionMaxHeight}
                   />
                 </Animated.View>
               ) : null}

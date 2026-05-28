@@ -23,6 +23,7 @@ import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
 import { BetaSectionImages } from "./BetaSectionImages";
@@ -91,6 +92,7 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
               color: themeColors.text.primary,
             }}
             tagsStyles={htmlTagsStyles}
+            customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
           />

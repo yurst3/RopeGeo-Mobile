@@ -1,6 +1,7 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
+import { PlaceholderPageBadges } from "@/components/screens/pages/ropewiki/PlaceholderPageBadges";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -95,11 +96,7 @@ export function RopewikiPagePlaceholder({
         <View style={[styles.titleBar, { backgroundColor: placeholder }]} />
         <View style={[styles.line, { width: "62%", backgroundColor: placeholder }]} />
         <View style={[styles.line, { width: "44%", backgroundColor: placeholder }]} />
-        <View style={styles.badgeRow}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <View key={i} style={[styles.badge, { backgroundColor: placeholder }]} />
-          ))}
-        </View>
+        <PlaceholderPageBadges />
         <View style={styles.miniMapWrap}>
           <PlaceholderMiniMap
             errorMessage={
@@ -163,17 +160,6 @@ const styles = StyleSheet.create({
   line: {
     height: 12,
     borderRadius: 4,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
-  badge: {
-    width: 40,
-    height: 24,
-    borderRadius: 8,
   },
   miniMapWrap: {
     marginTop: 12,

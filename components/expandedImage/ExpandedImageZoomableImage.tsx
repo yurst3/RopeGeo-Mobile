@@ -414,7 +414,6 @@ export function ExpandedImageZoomableImage({
   const animatedStyle = useAnimatedStyle(() => {
     const at1x = scale.value <= MIN_SCALE + 0.001;
     return {
-      opacity: imageOpacity,
       transform: [
         { translateX: at1x ? edgeSwipeX.value : translateX.value },
         { translateY: at1x ? 0 : translateY.value },
@@ -425,7 +424,13 @@ export function ExpandedImageZoomableImage({
 
   return (
     <GestureDetector gesture={composed}>
-      <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { opacity: imageOpacity },
+          animatedStyle,
+        ]}
+      >
         <Image
           source={source}
           style={StyleSheet.absoluteFill}

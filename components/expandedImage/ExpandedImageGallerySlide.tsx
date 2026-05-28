@@ -17,8 +17,6 @@ export type ExpandedImageGallerySlideProps = {
   onZoomPanHideUi?: () => void;
   /** Only invoked when `isActive` — drives outer pager `scrollEnabled`. */
   onZoomedChange?: (zoomed: boolean) => void;
-  /** When `isActive`, reports intrinsic size for caption layout. */
-  onActiveImageGeometry?: (dims: { width: number; height: number }) => void;
 };
 
 /**
@@ -35,7 +33,6 @@ export function ExpandedImageGallerySlide({
   onToggleUi,
   onZoomPanHideUi,
   onZoomedChange,
-  onActiveImageGeometry,
 }: ExpandedImageGallerySlideProps) {
   const { loadingIndicator, image } = useColorTheme();
   const [fullImageLoaded, setFullImageLoaded] = useState(false);
@@ -59,36 +56,16 @@ export function ExpandedImageGallerySlide({
     [isActive, onZoomedChange]
   );
 
-  const handleLoad = useCallback(
-    (ev: ImageLoadEventData) => {
-      const { width: iw, height: ih } = ev.source;
-      if (iw > 0 && ih > 0) {
-        setIntrinsic({ width: iw, height: ih });
-        if (isActive) {
-          onActiveImageGeometry?.({ width: iw, height: ih });
-        }
-      }
-    },
-    [isActive, onActiveImageGeometry]
-  );
+  const handleLoad = useCallback((ev: ImageLoadEventData) => {
+    const { width: iw, height: ih } = ev.source;
+    if (iw > 0 && ih > 0) {
+      setIntrinsic({ width: iw, height: ih });
+    }
+  }, []);
 
   const handleLoadEnd = useCallback(() => {
     setFullImageLoaded(true);
   }, []);
-
-  /** Re-report size when this page becomes active again (image may already be cached). */
-  useEffect(() => {
-    if (
-      isActive &&
-      intrinsic.width > 0 &&
-      intrinsic.height > 0
-    ) {
-      onActiveImageGeometry?.({
-        width: intrinsic.width,
-        height: intrinsic.height,
-      });
-    }
-  }, [intrinsic.height, intrinsic.width, isActive, onActiveImageGeometry]);
 
   return (
     <View

@@ -31,6 +31,7 @@ import { useColorTheme } from "@/context/ColorThemeContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
+  ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
 
@@ -38,7 +39,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
 const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
 const IMAGE_HEIGHT = 220;
-const IMAGE_INDICATOR_HEIGHT = 28;
+/** Distance from the bottom edge of the image to the indicator pill. */
+const IMAGE_INDICATOR_BOTTOM_INSET = 8;
+const CAPTION_FONT_SIZE = 13;
+const CAPTION_LINE_HEIGHT = 18;
+const CAPTION_MAX_LINES = 3;
+const CAPTION_MARGIN_TOP = 8;
+const CAPTION_AREA_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES;
+/** Fixed slide height so paging does not shift content below the gallery. */
+const SLIDE_HEIGHT = IMAGE_HEIGHT + CAPTION_MARGIN_TOP + CAPTION_AREA_HEIGHT;
 
 const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 
@@ -90,7 +99,7 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   }, [item, onOpenExpand]);
 
   return (
-    <View style={styles.imageSlide}>
+    <View style={[styles.imageSlide, { height: SLIDE_HEIGHT }]}>
       <Pressable
         disabled={!canExpand}
         onPress={onPress}
@@ -138,8 +147,8 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
           )}
         </View>
       </Pressable>
-      {captionSource != null ? (
-        <View style={styles.captionWrap}>
+      <View style={styles.captionWrap}>
+        {captionSource != null ? (
           <RenderHtml
             contentWidth={CONTENT_WIDTH}
             source={captionSource}
@@ -148,11 +157,16 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
               color: themeColors.text.secondary,
             }}
             tagsStyles={captionTagsStyles}
+            customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
+            defaultTextProps={{
+              numberOfLines: CAPTION_MAX_LINES,
+              ellipsizeMode: "clip",
+            }}
           />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 });
@@ -341,13 +355,14 @@ export function BetaSectionImages({
         onLayoutRef={handleLayoutRef}
       />
     ),
-    [handleOpenExpand, handleLayoutRef]
+    [handleLayoutRef, handleOpenExpand]
   );
 
   return (
     <View style={styles.imagesWrap}>
       <FlatList
         ref={flatListRef}
+        style={styles.flatList}
         data={sortedImages}
         keyExtractor={keyExtractor}
         getItemLayout={getItemLayout}
@@ -362,8 +377,8 @@ export function BetaSectionImages({
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
       />
-      {sortedImages.length > 1 && (
-        <View style={styles.imageIndicator}>
+      {sortedImages.length > 1 ? (
+        <View style={styles.imageIndicator} pointerEvents="none">
           <Text
             style={[
               styles.imageIndicatorText,
@@ -376,7 +391,7 @@ export function BetaSectionImages({
             {currentIndex + 1}/{sortedImages.length}
           </Text>
         </View>
-      )}
+      ) : null}
 
       {modalVisible &&
       anchorRect != null &&
@@ -401,8 +416,12 @@ export function BetaSectionImages({
 const styles = StyleSheet.create({
   imagesWrap: {
     position: "relative",
+    height: SLIDE_HEIGHT,
     marginLeft: -CARD_PADDING_HORIZONTAL,
     marginRight: -CARD_PADDING_HORIZONTAL,
+  },
+  flatList: {
+    height: SLIDE_HEIGHT,
   },
   imageSlide: {
     width: SCREEN_WIDTH,
@@ -438,21 +457,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   captionWrap: {
-    marginTop: 8,
+    marginTop: CAPTION_MARGIN_TOP,
+    height: CAPTION_AREA_HEIGHT,
+    overflow: "hidden",
   },
   caption: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: CAPTION_FONT_SIZE,
+    lineHeight: CAPTION_LINE_HEIGHT,
   },
   imageIndicator: {
     position: "absolute",
-    bottom: 44,
     left: 0,
     right: 0,
-    height: IMAGE_INDICATOR_HEIGHT,
-    justifyContent: "center",
+    top: IMAGE_HEIGHT - IMAGE_INDICATOR_BOTTOM_INSET,
+    transform: [{ translateY: "-100%" }],
     alignItems: "center",
-    pointerEvents: "none",
+    zIndex: 2,
   },
   imageIndicatorText: {
     fontSize: 13,

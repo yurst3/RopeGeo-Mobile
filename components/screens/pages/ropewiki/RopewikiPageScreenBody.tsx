@@ -10,7 +10,7 @@ import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModa
 import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
 import { PageContent as PageScrollContent } from "./PageContent";
-import { PageSeamButtons } from "./PageSeamButtons";
+import { PAGE_SEAM_FLOAT_OFFSET } from "./PageSeamButtons";
 import {
   TOAST_HORIZONTAL_INSET,
 } from "@/constants/toasts";
@@ -403,7 +403,7 @@ export function RopewikiPageScreenBody({
   const cardTopWindowY = paddingTop - CARD_BORDER_RADIUS - contentScrollY;
   const bannerTapHeight = Math.max(
     0,
-    Math.min(bannerHeightJs, cardTopWindowY)
+    Math.min(bannerHeightJs, cardTopWindowY - PAGE_SEAM_FLOAT_OFFSET),
   );
   const bannerHitActive =
     bannerTapHeight >= 12 && !bannerImageLoading && !mapExpanded;
@@ -483,13 +483,6 @@ export function RopewikiPageScreenBody({
         onCardHeightLayout={setCardHeight}
         onMapExpandedChange={setMapExpanded}
         expandAnchorRef={expandAnchorRef}
-      />
-
-      <PageSeamButtons
-        url={data.url}
-        scrollY={scrollY}
-        paddingTop={paddingTop}
-        mapExpanded={mapExpanded}
         isDownloaded={isDownloaded}
         downloading={downloading}
         downloadDisplayStep={
