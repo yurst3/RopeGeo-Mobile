@@ -379,7 +379,9 @@ export function ExpandedImageModal({
     ]
   );
 
-  const activeCaptionHtml = pages[chromeIndex]?.captionHtml ?? null;
+  const activePage = pages[chromeIndex];
+  const activeCaptionHtml = activePage?.captionHtml ?? null;
+  const activeExternalLinkUrl = activePage?.linkUrl ?? null;
 
   const captionBottomInset = Math.max(insets.bottom, 12);
   const captionMaxHeight = windowHeight * 0.45;
@@ -518,6 +520,7 @@ export function ExpandedImageModal({
               sectionSubtitle={headerSectionSubtitle}
               sectionImagePosition={headerSectionImagePosition ?? undefined}
               onBack={collapseModal}
+              externalLinkUrl={activeExternalLinkUrl}
               top={insets.top + 8}
             />
           </Animated.View>

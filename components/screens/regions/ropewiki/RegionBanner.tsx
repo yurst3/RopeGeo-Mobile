@@ -48,6 +48,7 @@ type RegionBannerSlide = {
   bannerUrl: string | null;
   fullUrl: string | null;
   pageName: string;
+  linkUrl: string;
   captionHtml: string | null;
 };
 
@@ -57,6 +58,7 @@ function toSlides(data: RopewikiRegionImageView[]): RegionBannerSlide[] {
     bannerUrl: item.bannerUrl ?? null,
     fullUrl: item.fullUrl ?? null,
     pageName: item.pageName,
+    linkUrl: item.externalLink,
     captionHtml: item.caption ?? null,
   }));
 }
@@ -88,6 +90,7 @@ export type RegionBannerCurrentSlide = {
   fullUrl: string;
   bannerUrl: string | null;
   pageName: string;
+  linkUrl: string;
   captionHtml: string | null;
 };
 
@@ -296,6 +299,7 @@ function RegionBannerCarousel({
           fullUrl: slide.fullUrl,
           bannerUrl: slide.bannerUrl,
           pageName: slide.pageName,
+          linkUrl: slide.linkUrl,
           captionHtml: slide.captionHtml,
         };
       },
@@ -307,6 +311,7 @@ function RegionBannerCarousel({
                 fullUrl: s.fullUrl,
                 bannerUrl: s.bannerUrl,
                 pageName: s.pageName,
+                linkUrl: s.linkUrl,
                 captionHtml: s.captionHtml,
               }]
             : [],

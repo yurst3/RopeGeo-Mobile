@@ -39,7 +39,6 @@ export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> =
   [EXTERNAL_LINK_BUTTON_KEY]: {
     background: "#ffffff",
     icon: defaultIcon,
-    border: "#000000",
   },
   [EXPAND_MINI_MAP_BUTTON_KEY]: defaultStandard,
   [APPLE_DIRECTIONS_BUTTON_KEY]: defaultStandard,

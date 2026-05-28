@@ -14,5 +14,7 @@ export type ExpandedImageGalleryPage = {
   itemKey: string;
   fullUrl: NonNullable<ImageProps["source"]>;
   bannerUrl: string | null;
+  /** Ropewiki file/page URL for this image (not the parent page URL). */
+  linkUrl?: string | null;
   captionHtml?: string | null;
 };

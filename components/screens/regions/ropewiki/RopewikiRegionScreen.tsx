@@ -125,6 +125,7 @@ function RegionScreenBody({
       itemKey: s.id,
       fullUrl: s.fullUrl,
       bannerUrl: s.bannerUrl,
+      linkUrl: s.linkUrl,
       captionHtml: s.captionHtml,
     }));
   }, [expandedModalVisible]);

@@ -277,6 +277,7 @@ export function BetaSectionImages({
         itemKey: img.linkUrl + img.order,
         fullUrl,
         bannerUrl,
+        linkUrl: img.linkUrl,
         captionHtml: img.caption ?? null,
       });
     }

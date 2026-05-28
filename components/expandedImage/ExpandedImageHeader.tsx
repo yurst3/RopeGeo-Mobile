@@ -1,8 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 import { BackButton } from "@/components/buttons/standard/BackButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { useColorTheme } from "@/context/ColorThemeContext";
 
-const BACK_SLOT_WIDTH = 52; /* 44px button + 8px breathing room, aligned with app headers */
+const SIDE_SLOT_WIDTH = 52; /* 44px button + 8px breathing room, aligned with app headers */
 
 export type ExpandedImageSectionImagePosition = {
   /** 1-based index for display, e.g. `1` in `(1/6)`. */
@@ -18,6 +19,8 @@ export type ExpandedImageHeaderProps = {
   /** When set with `sectionSubtitle`, appended as `Title (current/total)`. */
   sectionImagePosition?: ExpandedImageSectionImagePosition | null;
   onBack: () => void;
+  /** Ropewiki URL for the current image; omit to hide the external link control. */
+  externalLinkUrl?: string | null;
   /** Distance from the top of the screen (typically `insets.top + 8`). */
   top: number;
 };
@@ -30,11 +33,14 @@ export function ExpandedImageHeader({
   sectionSubtitle,
   sectionImagePosition,
   onBack,
+  externalLinkUrl,
   top,
 }: ExpandedImageHeaderProps) {
   const themeColors = useColorTheme();
   const trimmedSubtitle = sectionSubtitle?.trim() ?? "";
   const showSubtitle = trimmedSubtitle.length > 0;
+  const trimmedLink = externalLinkUrl?.trim() ?? "";
+  const showExternalLink = trimmedLink.length > 0;
   const sectionLine =
     showSubtitle && sectionImagePosition != null
       ? `${trimmedSubtitle} (${sectionImagePosition.current}/${sectionImagePosition.total})`
@@ -42,7 +48,7 @@ export function ExpandedImageHeader({
 
   return (
     <View style={[styles.row, { top }]} pointerEvents="box-none">
-      <View style={[styles.sideSlot, { width: BACK_SLOT_WIDTH }]}>
+      <View style={[styles.sideSlot, styles.sideSlotStart, { width: SIDE_SLOT_WIDTH }]}>
         <BackButton onPress={onBack} />
       </View>
       <View style={styles.titleSlot} pointerEvents="none">
@@ -68,7 +74,15 @@ export function ExpandedImageHeader({
           ) : null}
         </View>
       </View>
-      <View style={{ width: BACK_SLOT_WIDTH }} />
+      <View style={[styles.sideSlot, styles.sideSlotEnd, { width: SIDE_SLOT_WIDTH }]}>
+        {showExternalLink ? (
+          <ExternalLinkButton
+            icon={require("@/assets/images/icons/ropewiki.png")}
+            link={trimmedLink}
+            accessibilityLabel="Open on RopeWiki"
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -85,7 +99,12 @@ const styles = StyleSheet.create({
   sideSlot: {
     height: 44,
     justifyContent: "center",
+  },
+  sideSlotStart: {
     alignItems: "flex-start",
+  },
+  sideSlotEnd: {
+    alignItems: "flex-end",
   },
   titleSlot: {
     flex: 1,

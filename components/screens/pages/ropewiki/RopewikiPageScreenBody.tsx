@@ -523,6 +523,7 @@ export function RopewikiPageScreenBody({
               itemKey: "page-banner",
               fullUrl: bannerExpandSourceUrl,
               bannerUrl,
+              linkUrl: data.bannerImage?.linkUrl ?? null,
               captionHtml: data.bannerImage?.caption ?? null,
             },
           ]}
