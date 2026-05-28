@@ -3,9 +3,18 @@ import { useColorTheme } from "@/context/ColorThemeContext";
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
 import { LegendFeatureType, LineLegendItem, PolygonLegendItem } from "ropegeo-common/models";
+import { useBundledImageSource } from "@/lib/assets/useBundledImageSource";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -40,24 +49,50 @@ export type PageMiniMapLegendProps = {
   onSelectLegendId: (id: string) => void;
 };
 
+function PointMarkerSwatch({
+  tintColor,
+  imageSource,
+}: {
+  tintColor: string;
+  imageSource: ImageSourcePropType | undefined;
+}) {
+  return (
+    <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
+      {imageSource ? (
+        <Image
+          source={imageSource}
+          style={[styles.swatchPointMarker, { tintColor }]}
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <FontAwesome5
+          name="map-marker-alt"
+          size={18}
+          color={tintColor}
+          style={styles.swatchPointMarkerIcon}
+        />
+      )}
+    </View>
+  );
+}
+
 function LegendItemSwatch({
   item,
   pointMarkerTint,
+  pointMarkerImageSource,
   defaultLineStroke,
 }: {
   item: LegendItem;
   pointMarkerTint: string;
+  pointMarkerImageSource: ImageSourcePropType | undefined;
   defaultLineStroke: string;
 }) {
   if (item.featureType === LegendFeatureType.Point) {
     return (
-      <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
-        <Image
-          source={POINT_MARKER_IMAGE}
-          style={[styles.swatchPointMarker, { tintColor: pointMarkerTint }]}
-          accessibilityIgnoresInvertColors
-        />
-      </View>
+      <PointMarkerSwatch
+        tintColor={pointMarkerTint}
+        imageSource={pointMarkerImageSource}
+      />
     );
   }
   if (item.featureType === LegendFeatureType.Polygon) {
@@ -118,6 +153,7 @@ export function PageMiniMapLegend({
   const { minimap, focusedLineSegment } = themeColors.map;
   const { text, cardHighlight } = themeColors;
   const { bodyBackground, headerBackground, shadow } = minimap.legend;
+  const pointMarkerImageSource = useBundledImageSource(POINT_MARKER_IMAGE);
 
   const cardStyle = useMemo(
     () => [
@@ -270,6 +306,7 @@ export function PageMiniMapLegend({
                   <LegendItemSwatch
                     item={item}
                     pointMarkerTint={minimap.legend.markerIcon}
+                    pointMarkerImageSource={pointMarkerImageSource}
                     defaultLineStroke={focusedLineSegment}
                   />
                   <Text
@@ -339,6 +376,9 @@ const styles = StyleSheet.create({
     width: 18,
     height: 22,
     resizeMode: "contain",
+  },
+  swatchPointMarkerIcon: {
+    marginTop: 1,
   },
   swatchPolygon: {
     width: 28,

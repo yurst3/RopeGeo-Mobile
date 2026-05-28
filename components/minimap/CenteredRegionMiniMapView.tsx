@@ -11,7 +11,7 @@ import {
   type RoutesState,
 } from "@/components/screens/explore/RouteMarkersLayer";
 import {
-  ROUTE_MARKER_IMAGES,
+  ROUTE_MARKER_NATIVE_ASSET_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
 } from "@/components/screens/explore/routeMarkerIcons";
@@ -586,7 +586,7 @@ export function CenteredRegionMiniMapView({
                 filter={["has", "point_count"]}
                 style={offlineClusterStyle}
               />
-              <Images images={{ ...ROUTE_MARKER_IMAGES }} />
+              <Images nativeAssetImages={[...ROUTE_MARKER_NATIVE_ASSET_IMAGES]} />
             </ShapeSource>
           ) : null}
           <TrailsLayer

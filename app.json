@@ -52,6 +52,7 @@
       [
         "@rnmapbox/maps"
       ],
+      "./plugins/withMapboxNativeMarkerImages",
       [
         "expo-location",
         {

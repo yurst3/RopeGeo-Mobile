@@ -45,6 +45,7 @@ import {
 import { mapboxPackName } from "@/lib/downloadQueue/util/downloadUtils";
 import { ensureParentDir, extFromUrl } from "@/lib/downloadQueue/util/downloadUtils";
 import { fetchMapDataTileKeys } from "@/lib/downloadQueue/util/fetchMapDataTileKeys";
+import { gunzipVectorTileFileIfNeeded } from "@/lib/offline/prepareOfflineVectorTiles";
 import { relativePathFromTileUrl } from "@/lib/offline/tileUrlPaths";
 import {
   DownloadPhase,
@@ -541,6 +542,7 @@ export class DownloadTask {
             const dest = `${mapRoot}${relPath}`;
             await ensureParentDir(dest);
             await FileSystem.downloadAsync(tileUrl, dest);
+            await gunzipVectorTileFileIfNeeded(dest);
             const info = await FileSystem.getInfoAsync(dest);
             if (info.exists && typeof info.size === "number") {
               bytesDone += info.size;

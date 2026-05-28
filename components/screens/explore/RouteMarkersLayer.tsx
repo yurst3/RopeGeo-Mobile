@@ -24,7 +24,7 @@ import {
 } from "./mapMarkerLayerStyles";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
-  ROUTE_MARKER_IMAGES,
+  ROUTE_MARKER_NATIVE_ASSET_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
 } from "./routeMarkerIcons";
@@ -223,7 +223,7 @@ function RouteMarkersLayerContent({
         filter={["has", "point_count"]}
         style={clusterStyle}
       />
-      <Images images={{ ...ROUTE_MARKER_IMAGES }} />
+      <Images nativeAssetImages={[...ROUTE_MARKER_NATIVE_ASSET_IMAGES]} />
     </ShapeSource>
   );
 }

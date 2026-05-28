@@ -1,4 +1,5 @@
 import type { MarkerColors } from "@/constants/colors/types";
+import { ROUTE_MARKER_CLUSTER_IMAGE } from "@/lib/mapbox/nativeMarkerImages";
 import type { SymbolLayerStyle } from "@rnmapbox/maps";
 import { ROUTE_MARKER_ICON_SIZE_INTERPOLATE } from "./routeMarkerIcons";
 
@@ -30,7 +31,7 @@ export function clusterRouteMarkerSymbolStyle(
   marker: MarkerColors,
 ): SymbolLayerStyle {
   return {
-    iconImage: "route-marker-cluster",
+    iconImage: ROUTE_MARKER_CLUSTER_IMAGE,
     iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
     iconColor: marker.clusterIcon,
     iconAllowOverlap: true,

@@ -42,6 +42,15 @@ import {
   SymbolLayer,
   VectorSource,
 } from "@rnmapbox/maps";
+import {
+  ROUTE_MARKER_IMAGE,
+  ROUTE_MARKER_NATIVE_ASSET_IMAGES,
+  ROUTE_MARKER_SELECTED_IMAGE,
+} from "@/lib/mapbox/nativeMarkerImages";
+import {
+  offlineVectorTilesRootFromTemplate,
+  prepareOfflineVectorTilesForMapbox,
+} from "@/lib/offline/prepareOfflineVectorTiles";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -60,11 +69,6 @@ const PAGE_POINT_ICON_LAYER_ID = "page-mini-map-point-icons";
 const PAGE_SELECTED_HALO_SOURCE_ID = "page-mini-map-selected-halo";
 const PAGE_SELECTED_HALO_LAYER_ID = "page-mini-map-selected-halo-line";
 const PAGE_SELECTED_OVERLAY_LAYER_ID = "page-mini-map-selected-overlay-line";
-
-const PAGE_POINT_MARKER_IMAGES = {
-  "page-map-marker": require("@/assets/images/icons/markers/marker.png"),
-  "page-map-marker-selected": require("@/assets/images/icons/markers/markerSelected.png"),
-} as const;
 
 const USER_LOCATION_ZOOM = 14;
 const COLLAPSED_CAMERA_ANIMATION_MS = 250;
@@ -153,6 +157,34 @@ export function PageMiniMapView({
     miniMap.fetchType === "offline"
       ? miniMap.offlineTilesTemplate
       : miniMap.onlineTilesTemplate;
+  const isOfflineTiles = miniMap.fetchType === "offline";
+  const [offlineTilesPrepared, setOfflineTilesPrepared] = useState(!isOfflineTiles);
+
+  useEffect(() => {
+    if (!isOfflineTiles || !shell.mountNativeMap) {
+      setOfflineTilesPrepared(!isOfflineTiles);
+      return;
+    }
+    let cancelled = false;
+    setOfflineTilesPrepared(false);
+    void (async () => {
+      const tilesRoot = offlineVectorTilesRootFromTemplate(tileTemplate);
+      if (tilesRoot == null) {
+        if (!cancelled) setOfflineTilesPrepared(true);
+        return;
+      }
+      try {
+        await prepareOfflineVectorTilesForMapbox(tilesRoot);
+      } catch {
+        /* still mount map; load error UI handles failures */
+      }
+      if (!cancelled) setOfflineTilesPrepared(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOfflineTiles, shell.mountNativeMap, tileTemplate]);
+
   const miniMapReloadKey = useMemo(
     () =>
       `${miniMap.fetchType}:${miniMap.polyLineLayerId}:${miniMap.pointLayerId}:${tileTemplate}`,
@@ -333,11 +365,14 @@ export function PageMiniMapView({
     shell.setLoadingOverlayVisible(
       shell.mapBodyVisible &&
         mapBlockingErrorMessage == null &&
-        !mapFinishedLoading,
+        !mapFinishedLoading &&
+        (!isOfflineTiles || offlineTilesPrepared),
     );
   }, [
+    isOfflineTiles,
     mapFinishedLoading,
     mapBlockingErrorMessage,
+    offlineTilesPrepared,
     shell.mapBodyVisible,
     shell.setLoadingOverlayVisible,
   ]);
@@ -438,8 +473,8 @@ export function PageMiniMapView({
     return [
       "case",
       ["==", ["to-string", ["get", "legendId"]], key],
-      "page-map-marker-selected",
-      "page-map-marker",
+      ROUTE_MARKER_SELECTED_IMAGE,
+      ROUTE_MARKER_IMAGE,
     ] as const;
   }, [selectedSegmentKey]);
 
@@ -609,12 +644,13 @@ export function PageMiniMapView({
 
   return (
     <>
-      {shell.mapBodyVisible ? (
+      {shell.mapBodyVisible && (!isOfflineTiles || offlineTilesPrepared) ? (
         <View
           style={minimapStyles.map}
           pointerEvents={shell.expanded ? "auto" : "none"}
         >
           <MapView
+            key={`${miniMapReloadKey}:offline-prepared`}
             ref={mapRef}
             styleURL={map.styleUrl}
             style={StyleSheet.absoluteFill}
@@ -646,7 +682,7 @@ export function PageMiniMapView({
                 },
               }}
             />
-            <Images images={{ ...PAGE_POINT_MARKER_IMAGES }} />
+            <Images nativeAssetImages={[...ROUTE_MARKER_NATIVE_ASSET_IMAGES]} />
             <VectorSource id={PAGE_VECTOR_SOURCE_ID} tileUrlTemplates={[tileTemplate]}>
               <LineLayer
                 id={PAGE_LINE_LAYER_ID}

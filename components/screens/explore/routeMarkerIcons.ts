@@ -1,13 +1,17 @@
 import type { SymbolLayerStyle } from "@rnmapbox/maps";
+import {
+  ROUTE_MARKER_CLUSTER_IMAGE,
+  ROUTE_MARKER_IMAGE,
+  ROUTE_MARKER_NATIVE_ASSET_IMAGES,
+  ROUTE_MARKER_SELECTED_IMAGE,
+} from "@/lib/mapbox/nativeMarkerImages";
 
-/**
- * Mapbox `Images` keys + {@link unclusteredRouteMarkerIconImage} for route {@link ShapeSource} layers.
- */
-export const ROUTE_MARKER_IMAGES = {
-  "route-marker": require("@/assets/images/icons/markers/marker.png"),
-  "route-marker-cluster": require("@/assets/images/icons/markers/markerCluster.png"),
-  "route-marker-selected": require("@/assets/images/icons/markers/markerSelected.png"),
-} as const;
+export {
+  ROUTE_MARKER_NATIVE_ASSET_IMAGES,
+  ROUTE_MARKER_IMAGE,
+  ROUTE_MARKER_SELECTED_IMAGE,
+  ROUTE_MARKER_CLUSTER_IMAGE,
+};
 
 /**
  * Route marker icon size (constant screen size at all zoom levels).
@@ -92,7 +96,7 @@ export function unclusteredRouteMarkerIconImage(
   const ids = new Set<string>();
   if (focusedRouteId) ids.add(focusedRouteId);
   if (accentRouteId) ids.add(accentRouteId);
-  if (ids.size === 0) return "route-marker";
+  if (ids.size === 0) return ROUTE_MARKER_IMAGE;
 
   const key: ["to-string", ["get", "id"]] = ["to-string", ["get", "id"]];
   if (ids.size === 1) {
@@ -100,14 +104,14 @@ export function unclusteredRouteMarkerIconImage(
     return [
       "case",
       ["==", key, id],
-      "route-marker-selected",
-      "route-marker",
+      ROUTE_MARKER_SELECTED_IMAGE,
+      ROUTE_MARKER_IMAGE,
     ] as SymbolLayerStyle["iconImage"];
   }
   return [
     "case",
     ["any", ...[...ids].map((id) => ["==", key, id] as ["==", typeof key, string])],
-    "route-marker-selected",
-    "route-marker",
+    ROUTE_MARKER_SELECTED_IMAGE,
+    ROUTE_MARKER_IMAGE,
   ] as SymbolLayerStyle["iconImage"];
 }
