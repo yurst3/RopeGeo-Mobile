@@ -1,4 +1,4 @@
-name: Publish Mobile
+name: submit
 
 on:
   push:
@@ -10,6 +10,14 @@ env:
   SUBMIT_ANDROID: 'false'
 
 jobs:
+  workflow-config:
+    runs-on: ubuntu-latest
+    outputs:
+      submit_android: ${{ steps.config.outputs.submit_android }}
+    steps:
+      - id: config
+        run: echo "submit_android=${{ env.SUBMIT_ANDROID }}" >> "$GITHUB_OUTPUT"
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -66,8 +74,8 @@ jobs:
         run: eas submit --platform ios --profile production --latest --non-interactive --wait
 
   submit-android:
-    needs: build
-    if: env.SUBMIT_ANDROID == 'true'
+    needs: [build, workflow-config]
+    if: needs.workflow-config.outputs.submit_android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
