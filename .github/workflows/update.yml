@@ -1,6 +1,6 @@
 # Publishes a JS/asset OTA update to the production channel.
-# Mutually exclusive with build-and-submit.yml: runs only when a push does not
-# touch native/build config paths (see paths-ignore below).
+# Skipped when any native/build config file changed in the commit (see detect job),
+# so mixed commits only run build-and-submit.yml.
 name: Update
 
 on:
@@ -8,20 +8,35 @@ on:
     branches:
       - main
     paths-ignore:
-      - app.json
-      - app.config.js
-      - package.json
-      - package-lock.json
-      - eas.json
-      - plugins/**
-      - ios/**
-      - android/**
-      - assets/images/icons/markers/**
       - .github/**
       - '**/*.md'
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.filter.outputs.native }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            native:
+              - app.json
+              - app.config.js
+              - package.json
+              - package-lock.json
+              - eas.json
+              - plugins/**
+              - ios/**
+              - android/**
+              - assets/images/icons/markers/**
+
   update:
+    needs: detect
+    if: needs.detect.outputs.native != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

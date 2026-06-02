@@ -2,11 +2,11 @@
 
 ## Releases (EAS Update vs build and submit)
 
-Production releases use two GitHub Actions workflows with **mutually exclusive** triggers on push to `main` — only one runs per commit.
+Production releases use two GitHub Actions workflows. On push to `main`, **Update** skips itself when the commit touches any native/build config file (same paths as **Build and Submit**), so mixed commits run **Build and Submit** only.
 
 | Workflow | When it runs | What it does |
 |----------|----------------|--------------|
-| **Update** (`.github/workflows/update.yml`) | Push to `main` that only changes app source (JS/TS, most assets, tests, etc.) | `eas update` → OTA bundle on the `production` channel |
+| **Update** (`.github/workflows/update.yml`) | Push to `main` with no native/build config changes (detected via `dorny/paths-filter`) | `eas update` → OTA bundle on the `production` channel |
 | **Build and Submit** (`.github/workflows/build-and-submit.yml`) | Push to `main` that touches native/build config (see paths in the workflow), push of a `v*` tag, or **manual** run | `eas build` + `eas submit` per platform (iOS always; Android when enabled) |
 
 If a single commit changes both app source and native config (e.g. `app.json` and a screen), **only Build and Submit** runs. OTA updates require a store build that was compiled with `expo-updates` and the same `runtimeVersion` as `expo.version` in `app.json`.
