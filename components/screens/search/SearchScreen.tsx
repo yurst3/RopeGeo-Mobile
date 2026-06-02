@@ -5,11 +5,14 @@ import {
   ToastKeyNotFoundError,
   useToast,
 } from "@/context/ToastContext";
+import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { SearchScreenInner } from "@/components/screens/search/SearchScreenInner";
+import { SearchScreenHeader } from "@/components/screens/search/SearchScreenHeader";
+import { SearchScreenResults } from "@/components/screens/search/SearchScreenResults";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, TextInput, View } from "react-native";
 import { RopeGeoPagedDataLoader, Method, Service } from "ropegeo-common/components";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
 import {
@@ -48,6 +51,7 @@ function buildSearchParamsWhenValid(
 }
 
 export function SearchScreen() {
+  const themeColors = useColorTheme();
   const {
     getEffectiveSearchFilter,
     searchPersisted,
@@ -59,6 +63,7 @@ export function SearchScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchPos, setSearchPos] = useState<SearchParamsPosition | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState<SearchFilter | null>(null);
   /** While the filter sheet is open, keep using the same `/search` params until close (persist still updates). */
@@ -318,45 +323,56 @@ export function SearchScreen() {
       : null;
 
   return (
-    <RopeGeoPagedDataLoader<Preview>
-      key={queryKey}
-      service={Service.WEBSCRAPER}
-      method={Method.GET}
-      onlinePath="/search"
-      queryParams={searchParamsForRequest}
-      timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
-      isOnline={isOnline}
-    >
-      {({
-        loadingNextPage,
-        data,
-        errors,
-        loadNextPage,
-        morePages,
-        timeoutCountdown,
-        reload,
-      }) => (
-        <SearchScreenInner
-          query={query}
-          onChangeQuery={setQuery}
-          searchPersisted={searchPersisted}
-          setFilterSheetOpen={setFilterSheetOpen}
-          filterSheetOpen={filterSheetOpen}
-          onCloseFilterSheet={closeFilterSheet}
-          filterSheetMode={filterSheetMode}
-          awaitingDistanceGps={awaitingDistanceGps}
-          isOnline={isOnline}
-          queryKey={queryKey}
-          loadingNextPage={loadingNextPage}
-          data={data}
-          errors={errors}
-          loadNextPage={loadNextPage}
-          morePages={morePages}
-          timeoutCountdown={timeoutCountdown}
-          onRetryRequest={reload}
-        />
-      )}
-    </RopeGeoPagedDataLoader>
+    <View style={[styles.screen, { backgroundColor: themeColors.background }]}>
+      <SearchScreenHeader
+        ref={searchInputRef}
+        query={query}
+        onChangeQuery={setQuery}
+        searchPersisted={searchPersisted}
+        setFilterSheetOpen={setFilterSheetOpen}
+      />
+      <RopeGeoPagedDataLoader<Preview>
+        service={Service.WEBSCRAPER}
+        method={Method.GET}
+        onlinePath="/search"
+        queryParams={searchParamsForRequest}
+        timeoutAfterSeconds={REQUEST_TIMEOUT_SECONDS}
+        isOnline={isOnline}
+      >
+        {({
+          loadingNextPage,
+          data,
+          errors,
+          loadNextPage,
+          morePages,
+          timeoutCountdown,
+          reload,
+        }) => (
+          <SearchScreenResults
+            filterSheetOpen={filterSheetOpen}
+            onCloseFilterSheet={closeFilterSheet}
+            filterSheetMode={filterSheetMode}
+            awaitingDistanceGps={awaitingDistanceGps}
+            isOnline={isOnline}
+            queryKey={queryKey}
+            loadingNextPage={loadingNextPage}
+            data={data}
+            errors={errors}
+            loadNextPage={loadNextPage}
+            morePages={morePages}
+            timeoutCountdown={timeoutCountdown}
+            onRetryRequest={reload}
+            onDismissKeyboard={() => searchInputRef.current?.blur()}
+          />
+        )}
+      </RopeGeoPagedDataLoader>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+});
 

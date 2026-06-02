@@ -1,9 +1,25 @@
-name: submit
+# Builds production binaries and submits to the App Store / Google Play.
+# Mutually exclusive with update.yml on branch pushes: runs only when native or
+# build config paths change, on version tags, or when started manually.
+name: Build and Submit
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - app.json
+      - app.config.js
+      - package.json
+      - package-lock.json
+      - eas.json
+      - plugins/**
+      - ios/**
+      - android/**
+      - assets/images/icons/markers/**
+    tags:
+      - 'v*'
 
 env:
   # Flip to 'true' once the Google Play service account is verified in EAS credentials.
@@ -18,7 +34,7 @@ jobs:
       - id: config
         run: echo "submit_android=${{ env.SUBMIT_ANDROID }}" >> "$GITHUB_OUTPUT"
 
-  build:
+  build-ios:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +52,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build iOS and Android
-        run: eas build --platform all --profile production --non-interactive --wait
+      - name: Build iOS
+        run: eas build --platform ios --profile production --non-interactive --wait
 
   submit-ios:
-    needs: build
+    needs: build-ios
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,8 +69,31 @@ jobs:
       - name: Submit to App Store Connect
         run: eas submit --platform ios --profile production --latest --non-interactive --wait
 
+  build-android:
+    needs: workflow-config
+    if: needs.workflow-config.outputs.submit_android == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android
+        run: eas build --platform android --profile production --non-interactive --wait
+
   submit-android:
-    needs: [build, workflow-config]
+    needs: [workflow-config, build-android]
     if: needs.workflow-config.outputs.submit_android == 'true'
     runs-on: ubuntu-latest
     steps:

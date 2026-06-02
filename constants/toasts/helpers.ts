@@ -29,6 +29,13 @@ export function normalizeRoutePath(route: string): string {
   return withoutQuery.endsWith("/") ? withoutQuery.slice(0, -1) : withoutQuery;
 }
 
+/** Builds a normalized route from expo-router segments (strips route-group segments). */
+export function routePathFromSegments(segments: string[]): string {
+  const parts = segments.filter((segment) => !/^\(.+\)$/.test(segment));
+  if (parts.length === 0) return "/";
+  return normalizeRoutePath(`/${parts.join("/")}`);
+}
+
 export function routeMatchesPattern(route: string, pattern: string): boolean {
   return patternToRegex(pattern).test(normalizeRoutePath(route));
 }

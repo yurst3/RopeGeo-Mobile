@@ -3,6 +3,7 @@ import { TOAST_KEY_DOWNLOAD_PROGRESS } from "@/constants/toasts/toastArchetypes"
 import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import { useToast } from "@/context/ToastContext";
 import type { DownloadTaskSnapshot } from "@/lib/downloadQueue/downloadQueue";
+import { useIsFocused } from "@react-navigation/native";
 import { useEffect, useMemo } from "react";
 
 /**
@@ -85,6 +86,7 @@ export function useDownloadProgressToasts({
   zIndex,
 }: UseDownloadProgressToastsArgs): void {
   const { upsertProgress, dismiss } = useToast();
+  const isFocused = useIsFocused();
   const toastKey = `${TOAST_KEY_DOWNLOAD_PROGRESS}-${resetKey}`;
   const allowedRoutes = useMemo(
     () => [`/explore/${resetKey}/page`, `/saved/${resetKey}/page`],
@@ -96,13 +98,13 @@ export function useDownloadProgressToasts({
   }, [toastKey, dismiss]);
 
   useEffect(() => {
-    if (!toastVisible) {
+    if (!toastVisible || !isFocused) {
       dismiss(toastKey);
     }
-  }, [toastVisible, dismiss, toastKey]);
+  }, [toastVisible, isFocused, dismiss, toastKey]);
 
   useEffect(() => {
-    if (!toastVisible) return;
+    if (!toastVisible || !isFocused) return;
     if (downloadUi.kind === "idle") {
       dismiss(toastKey);
       return;
@@ -130,6 +132,7 @@ export function useDownloadProgressToasts({
     });
   }, [
     toastVisible,
+    isFocused,
     downloadUi,
     dismiss,
     upsertProgress,

@@ -8,6 +8,12 @@
     "scheme": "ropegeo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0f64b6b2-d71d-4161-bc58-9002596085ce"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yurst3.RopeGeo",

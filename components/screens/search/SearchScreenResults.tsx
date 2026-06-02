@@ -1,6 +1,4 @@
-import { BackButton } from "@/components/buttons/standard/BackButton";
 import { FilterBottomSheet, type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
-import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import {
@@ -13,17 +11,15 @@ import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMore
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
-import { SearchBar, SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
+import { SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
 import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -32,16 +28,10 @@ import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { type OnlinePagePreview, Preview } from "ropegeo-common/models";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const HEADER_BUTTON_SIZE = 44;
-const HEADER_BUTTON_GAP = 8;
 const LOAD_MORE_BOTTOM_THRESHOLD = 100;
 const SEARCH_HTTP_PLACEHOLDER_COUNT = 8;
 
-type SearchScreenInnerProps = {
-  query: string;
-  onChangeQuery: (next: string) => void;
-  searchPersisted: boolean;
-  setFilterSheetOpen: Dispatch<SetStateAction<boolean>>;
+type SearchScreenResultsProps = {
   filterSheetOpen: boolean;
   onCloseFilterSheet: () => void;
   filterSheetMode: FilterSheetMode | null;
@@ -55,13 +45,10 @@ type SearchScreenInnerProps = {
   morePages: boolean;
   timeoutCountdown: number | null;
   onRetryRequest: () => void;
+  onDismissKeyboard: () => void;
 };
 
-export function SearchScreenInner({
-  query,
-  onChangeQuery,
-  searchPersisted,
-  setFilterSheetOpen,
+export function SearchScreenResults({
   filterSheetOpen,
   onCloseFilterSheet,
   filterSheetMode,
@@ -75,26 +62,18 @@ export function SearchScreenInner({
   morePages,
   timeoutCountdown,
   onRetryRequest,
-}: SearchScreenInnerProps) {
+  onDismissKeyboard,
+}: SearchScreenResultsProps) {
   const themeColors = useColorTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const isFocused = useIsFocused();
   const { upsertPill, dismiss } = useToast();
-  const searchInputRef = useRef<TextInput>(null);
   const searchBarTop = insets.top + 8;
   const searchBarHeight = SEARCH_BAR_HEIGHT;
   const scrollYRef = useRef(0);
   const layoutHRef = useRef(0);
   const contentHRef = useRef(0);
   const [listNearBottom, setListNearBottom] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      const timer = setTimeout(() => searchInputRef.current?.focus(), 0);
-      return () => clearTimeout(timer);
-    }, []),
-  );
 
   useNetworkRequestToasts({
     errors: null,
@@ -202,44 +181,13 @@ export function SearchScreenInner({
     });
   }, [showNoResultsOnly, dismiss, upsertPill]);
 
+  const contentTopPadding = searchBarTop + searchBarHeight + 12;
+
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={[styles.headerRow, { top: searchBarTop }]}>
-        <View
-          style={[
-            styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
-          ]}
-        >
-          <BackButton onPress={() => router.back()} />
-        </View>
-        <SearchBar
-          ref={searchInputRef}
-          style={styles.searchBarFlex}
-          placeholder="Search"
-          value={query}
-          onChangeText={onChangeQuery}
-        />
-        <View
-          style={[
-            styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
-          ]}
-        >
-          <FilterButton persisted={searchPersisted} onPress={() => setFilterSheetOpen(true)} />
-        </View>
-      </View>
-      <Pressable
-        style={styles.content}
-        onPress={() => searchInputRef.current?.blur()}
-      >
+    <>
+      <Pressable style={styles.content} onPress={onDismissKeyboard}>
         {awaitingDistanceGps ? (
-          <View
-            style={[
-              styles.centered,
-              { paddingTop: searchBarTop + searchBarHeight + 12 },
-            ]}
-          >
+          <View style={[styles.centered, { paddingTop: contentTopPadding }]}>
             <ActivityIndicator
               size="large"
               color={themeColors.loadingIndicator}
@@ -255,7 +203,7 @@ export function SearchScreenInner({
                 style={styles.scroll}
                 contentContainerStyle={[
                   styles.scrollContent,
-                  { paddingTop: searchBarTop + searchBarHeight + 12 },
+                  { paddingTop: contentTopPadding },
                 ]}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
@@ -302,12 +250,7 @@ export function SearchScreenInner({
               </ScrollView>
             ) : null}
             {showNoResultsOnly ? (
-              <View
-                style={[
-                  styles.noResultsFill,
-                  { paddingTop: searchBarTop + searchBarHeight + 12 },
-                ]}
-              />
+              <View style={[styles.noResultsFill, { paddingTop: contentTopPadding }]} />
             ) : null}
           </>
         )}
@@ -317,31 +260,11 @@ export function SearchScreenInner({
         onClose={onCloseFilterSheet}
         mode={filterSheetMode}
       />
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerRow: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    zIndex: 3,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchBarFlex: {
-    flex: 1,
-    minWidth: 0,
-  },
   content: {
     flex: 1,
   },

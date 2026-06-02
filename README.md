@@ -1,5 +1,51 @@
 # RopeGeo Mobile
 
+## Releases (EAS Update vs build and submit)
+
+Production releases use two GitHub Actions workflows with **mutually exclusive** triggers on push to `main` — only one runs per commit.
+
+| Workflow | When it runs | What it does |
+|----------|----------------|--------------|
+| **Update** (`.github/workflows/update.yml`) | Push to `main` that only changes app source (JS/TS, most assets, tests, etc.) | `eas update` → OTA bundle on the `production` channel |
+| **Build and Submit** (`.github/workflows/build-and-submit.yml`) | Push to `main` that touches native/build config (see paths in the workflow), push of a `v*` tag, or **manual** run | `eas build` + `eas submit` per platform (iOS always; Android when enabled) |
+
+If a single commit changes both app source and native config (e.g. `app.json` and a screen), **only Build and Submit** runs. OTA updates require a store build that was compiled with `expo-updates` and the same `runtimeVersion` as `expo.version` in `app.json`.
+
+### Use **Update** (OTA) for
+
+- Bug fixes and UI changes in TypeScript/React
+- New images and assets loaded via `require()` / Metro (not native Mapbox marker assets under `assets/images/icons/markers/`)
+- Logic that does not need new native modules or permissions
+
+Users on a compatible store build receive the update on next app launch (no App Store / Play review).
+
+### Use **Build and Submit** for
+
+- First store release, or bumping `expo.version` in `app.json` (new `runtimeVersion` for OTA)
+- Changes to `package.json` / `package-lock.json`, `app.json`, `app.config.js`, `eas.json`, or `plugins/`
+- Native Mapbox route marker images (`assets/images/icons/markers/`)
+- New or upgraded packages with native code, permissions, icons, or splash screen
+
+After a new store build ships, resume using **Update** for JS-only changes on that version.
+
+### Manual release
+
+Run **Build and Submit** from the Actions tab (`workflow_dispatch`) when you want a store release without changing the path-filtered files (e.g. before enabling OTA on an existing binary).
+
+### Android submit
+
+Set `SUBMIT_ANDROID: 'true'` in `build-and-submit.yml` after the Google Play service account is configured in EAS.
+
+### Local commands
+
+```bash
+eas update --channel production          # same as Update workflow
+eas build --platform ios --profile production
+eas submit --platform ios --profile production --latest
+```
+
+Requires `EXPO_TOKEN` locally or `eas login`. Mapbox and other secrets are configured in the Expo project.
+
 ## App routes
 
 | Route | Description |

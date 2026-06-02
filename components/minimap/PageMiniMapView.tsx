@@ -671,7 +671,11 @@ export function PageMiniMapView({
             onDidFinishLoadingMap={() => setMapFinishedLoading(true)}
             onMapLoadingError={() => setMapLoadError(new Error("Could not load map"))}
           >
-            <LocationPuck />
+            <LocationPuck
+              puckBearingEnabled
+              puckBearing="heading"
+              pulsing={{ isEnabled: true, radius: "accuracy" }}
+            />
             <Camera
               ref={cameraRef}
               defaultSettings={{

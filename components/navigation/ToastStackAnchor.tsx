@@ -1,6 +1,7 @@
 import { STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP } from "@/components/minimap/shared/fullScreenMapLayout";
+import { routePathFromSegments } from "@/constants/toasts/helpers";
 import { useToast } from "@/context/ToastContext";
-import { usePathname } from "expo-router";
+import { usePathname, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,13 +21,21 @@ export function computeToastStackAnchorY(pathname: string, insetsTop: number): n
  */
 export function ToastStackAnchor(): null {
   const pathname = usePathname();
+  const segments = useSegments();
+  const segmentPath = routePathFromSegments(segments);
   const insets = useSafeAreaInsets();
   const { setToastStackTopPosition, dismissUnallowedToasts } = useToast();
 
   useEffect(() => {
     setToastStackTopPosition(computeToastStackAnchorY(pathname, insets.top));
-    dismissUnallowedToasts(pathname);
-  }, [pathname, insets.top, setToastStackTopPosition, dismissUnallowedToasts]);
+    dismissUnallowedToasts(segmentPath);
+  }, [
+    pathname,
+    segmentPath,
+    insets.top,
+    setToastStackTopPosition,
+    dismissUnallowedToasts,
+  ]);
 
   return null;
 }

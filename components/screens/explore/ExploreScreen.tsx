@@ -298,7 +298,11 @@ export function ExploreScreen() {
                 }
               }}
             >
-              <LocationPuck />
+              <LocationPuck
+                puckBearingEnabled
+                puckBearing="heading"
+                pulsing={{ isEnabled: true, radius: "accuracy" }}
+              />
               <Camera
                 ref={cameraRef}
                 defaultSettings={{

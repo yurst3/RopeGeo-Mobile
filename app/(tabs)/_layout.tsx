@@ -1,4 +1,5 @@
 import { SavedTabBarIcon } from "@/components/navigation/SavedTabBarIcon";
+import { useTabFocusToastScreenListeners } from "@/components/navigation/useTabFocusToastScreenListeners";
 import { SavedTabHighlightProvider } from "@/context/SavedTabHighlightContext";
 import { ShareSheetDimmerOverlay } from "@/context/ShareSheetDimmerContext";
 import { useColorTheme } from "@/context/ColorThemeContext";
@@ -11,6 +12,7 @@ const EXPLORE_TAB_HREF = "/(tabs)/explore" as const;
 
 export default function TabsLayout() {
   const { tabBar } = useColorTheme();
+  const tabFocusToastListeners = useTabFocusToastScreenListeners();
 
   const screenOptions = useMemo(
     () => ({
@@ -28,7 +30,7 @@ export default function TabsLayout() {
   return (
     <SavedTabHighlightProvider>
       <View style={styles.tabsHost}>
-        <Tabs screenOptions={screenOptions}>
+        <Tabs screenOptions={screenOptions} screenListeners={tabFocusToastListeners}>
           <Tabs.Screen
             name="explore"
             listeners={({ navigation }) => ({

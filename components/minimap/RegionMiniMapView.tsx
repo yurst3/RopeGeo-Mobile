@@ -318,7 +318,11 @@ export function RegionMiniMapView({
           }}
           onCameraChanged={onCameraChangedWrapped}
         >
-          <LocationPuck />
+          <LocationPuck
+            puckBearingEnabled
+            puckBearing="heading"
+            pulsing={{ isEnabled: true, radius: "accuracy" }}
+          />
           <Camera
             ref={cameraRef}
             defaultSettings={
