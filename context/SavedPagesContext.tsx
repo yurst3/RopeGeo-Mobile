@@ -25,6 +25,7 @@ type SavedPagesContextValue = {
   removeSaved: (pageId: string) => void;
   removeDownloadBundle: (pageId: string) => Promise<void>;
   toggleSaveFromRopewikiPage: (data: OnlinePageView) => void;
+  refreshFromStorage: () => Promise<void>;
 };
 
 const SavedPagesContext = createContext<SavedPagesContextValue | null>(null);
@@ -180,6 +181,15 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
     [schedulePersist],
   );
 
+  const refreshFromStorage = useCallback(async () => {
+    try {
+      const entries = await loadEntries();
+      setSavedEntries(entries);
+    } catch (e) {
+      console.warn("[SavedPages] refresh failed", e);
+    }
+  }, []);
+
   const value = useMemo<SavedPagesContextValue>(
     () => ({
       savedEntries,
@@ -190,6 +200,7 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
       removeSaved,
       removeDownloadBundle,
       toggleSaveFromRopewikiPage,
+      refreshFromStorage,
     }),
     [
       savedEntries,
@@ -200,6 +211,7 @@ export function SavedPagesProvider({ children }: { children: ReactNode }) {
       removeSaved,
       removeDownloadBundle,
       toggleSaveFromRopewikiPage,
+      refreshFromStorage,
     ],
   );
 

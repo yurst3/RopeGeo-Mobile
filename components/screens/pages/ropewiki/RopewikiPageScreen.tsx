@@ -12,15 +12,19 @@ import {
 import {
   TOAST_HORIZONTAL_INSET,
 } from "@/constants/toasts";
-import { TOAST_KEY_PAGE_ERROR } from "@/constants/toasts/toastArchetypes";
+import {
+  TOAST_KEY_NETWORK_OFFLINE,
+  TOAST_KEY_PAGE_ERROR,
+} from "@/constants/toasts/toastArchetypes";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { useFocusEffect } from "@react-navigation/native";
 import { usePathname } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   PageDataSource,
@@ -55,6 +59,7 @@ function RopewikiPageScreenInner({
     errors,
     timeoutCountdown,
     resetKey: pageId,
+    watchOffline: false,
     errorToastKey: TOAST_KEY_PAGE_ERROR,
     errorToastTitle: "Error loading page",
     incrementErrorMultipleOnCollision: true,
@@ -78,8 +83,14 @@ export function RopewikiPageScreen({
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const { isOnline } = useNetworkStatus();
-  const { upsertPill } = useToast();
+  const { upsertPill, dismiss } = useToast();
   const { savedEntries, replaceSaved, isLoading: savedPagesLoading } = useSavedPages();
+
+  useFocusEffect(
+    useCallback(() => {
+      dismiss(TOAST_KEY_NETWORK_OFFLINE);
+    }, [dismiss]),
+  );
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
   const [preferOfflineForSession, setPreferOfflineForSession] = useState(false);
   const shouldUseOffline =

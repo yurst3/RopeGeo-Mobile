@@ -2,12 +2,12 @@ import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import { TOAST_KEY_DOWNLOAD_PROGRESS } from "@/constants/toasts/toastArchetypes";
 import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import { useToast } from "@/context/ToastContext";
-import type { DownloadTaskSnapshot } from "@/lib/downloadQueue/downloadQueue";
+import type { DownloadJobUISnapshot } from "ropegeo-common/download";
 import { useIsFocused } from "@react-navigation/native";
 import { useEffect, useMemo } from "react";
 
 /**
- * Normalized page-offline download UI for any page view backed by {@link DownloadQueue}.
+ * Normalized page-offline download UI for any page view backed by {@link DownloadJobQueue}.
  * Matches queue phases (page JSON → images → Mapbox → tiles) and task states.
  */
 export type PageDownloadUi =
@@ -35,8 +35,8 @@ export type UseDownloadProgressToastsArgs = {
 /**
  * Maps the shared download-queue snapshot to {@link PageDownloadUi} for any page view type.
  */
-export function pageDownloadUiFromTaskSnapshot(
-  task: DownloadTaskSnapshot | null,
+export function pageDownloadUiFromJobSnapshot(
+  task: DownloadJobUISnapshot | null,
 ): PageDownloadUi {
   if (task == null) return { kind: "idle" };
   if (task.state === "cancelled") {

@@ -1,7 +1,7 @@
 import { MiniDownloadButton } from "@/components/buttons/nonstandard/MiniDownloadButton";
 import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useDownloadQueue } from "@/context/DownloadQueueContext";
+import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -69,7 +69,7 @@ export function PagePreview({
   const { sourceIconBackground } = previewColors.page;
   const router = useRouter();
   const { savedEntries, removeDownloadBundle } = useSavedPages();
-  const { getTaskSnapshot, enqueueSavedPageDownload } = useDownloadQueue();
+  const { getJobUISnapshot, enqueueSavedPageDownload } = useDownloadJobQueue();
   const previewImageUri =
     preview.fetchType === "online"
       ? preview.imageUrl
@@ -85,23 +85,23 @@ export function PagePreview({
     phaseTotalForLabel: number | null;
   } | null = null;
   if (showMiniDownload && stored != null) {
-    const task = getTaskSnapshot(preview.id);
+    const job = getJobUISnapshot(preview.id);
     const downloading =
-      task?.state === "queued" || task?.state === "running";
+      job?.state === "queued" || job?.state === "running";
     const isDownloaded = stored.downloadedPageViewPath != null;
     const phaseProgress =
-      task != null &&
-      (task.state === "queued" || task.state === "running")
-        ? task.phaseProgress
+      job != null &&
+      (job.state === "queued" || job.state === "running")
+        ? job.phaseProgress
         : 0;
     const showStepLabel =
-      downloading && task != null && task.displayTotal > 0;
+      downloading && job != null && job.displayTotal > 0;
     miniDownloadState = {
       downloading,
       isDownloaded,
       phaseProgress,
-      phaseStepForLabel: showStepLabel ? task.displayStep : null,
-      phaseTotalForLabel: showStepLabel ? task.displayTotal : null,
+      phaseStepForLabel: showStepLabel ? job.displayStep : null,
+      phaseTotalForLabel: showStepLabel ? job.displayTotal : null,
     };
   }
 

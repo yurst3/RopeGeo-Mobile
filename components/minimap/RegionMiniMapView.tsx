@@ -21,7 +21,7 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
@@ -80,7 +80,6 @@ export function RegionMiniMapView({
   onRoutesStateChange,
   reloadRegisterRef,
 }: RegionMiniMapViewProps) {
-  const { map } = useColorTheme();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -297,7 +296,7 @@ export function RegionMiniMapView({
     <>
       {shell.mapBodyVisible ? (
         <MapView
-          styleURL={map.styleUrl}
+          styleURL={MAPBOX_STYLE_URL}
           style={minimapStyles.map}
           projection="globe"
           onLayout={onMapLayout}

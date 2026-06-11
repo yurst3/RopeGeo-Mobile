@@ -176,7 +176,6 @@ export type MapColors = {
    * segment (or its legend row) has `strokeColor` / tile `stroke`.
    */
   focusedLineSegment: string;
-  styleUrl: string;
   minimap: MiniMapColors;
 };
 

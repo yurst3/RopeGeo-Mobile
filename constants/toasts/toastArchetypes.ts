@@ -14,6 +14,8 @@ export const TOAST_KEY_PAGE_ERROR = "error-page";
 export const TOAST_KEY_DOWNLOAD_PROGRESS = "download-progress";
 /** Prefix with `-${pageId}` for per-page dedupe (see `getToastArchetypeForKey`). */
 export const TOAST_KEY_DOWNLOAD_CANCELLED = "download-cancelled";
+/** Prefix with `-${pageId}` for per-page invalid stored download job (saved tab only). */
+export const TOAST_KEY_INVALID_STORED_DOWNLOAD_JOB = "error-download-invalid";
 export const TOAST_KEY_PAGE_SAVED = "saved-page";
 export const TOAST_KEY_DISTANCE_GPS_TIMEOUT = "error-search-distance-gps-timeout";
 

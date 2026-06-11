@@ -4,6 +4,7 @@ import {
   TOAST_ARCHETYPE,
   TOAST_KEY_DOWNLOAD_CANCELLED,
   TOAST_KEY_DOWNLOAD_PROGRESS,
+  TOAST_KEY_INVALID_STORED_DOWNLOAD_JOB,
 } from "./toastArchetypes";
 import type { ProgressToastKind, ToastArchetype } from "./types";
 
@@ -116,6 +117,16 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
     return {
       priority: 3,
       allowedRoutes: ["/explore/[id]/page", "/saved/[id]/page"],
+      durationMs: 5000,
+      variant: "pill",
+      style: "error",
+    };
+  }
+
+  if (key.startsWith(`${TOAST_KEY_INVALID_STORED_DOWNLOAD_JOB}-`)) {
+    return {
+      priority: 2,
+      allowedRoutes: ["/saved/[id]/page"],
       durationMs: 5000,
       variant: "pill",
       style: "error",

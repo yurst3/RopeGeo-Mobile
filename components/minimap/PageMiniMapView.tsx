@@ -22,6 +22,7 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
+import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
@@ -652,7 +653,7 @@ export function PageMiniMapView({
           <MapView
             key={`${miniMapReloadKey}:offline-prepared`}
             ref={mapRef}
-            styleURL={map.styleUrl}
+            styleURL={MAPBOX_STYLE_URL}
             style={StyleSheet.absoluteFill}
             projection="globe"
             onLayout={onMapLayout}

@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DownloadQueue } from "@/lib/downloadQueue/downloadQueue";
+import { mobileDownloadJobQueue } from "@/lib/download/mobileDownloadJobQueue";
 import type { NetworkState } from "expo-network";
 import { AppState } from "react-native";
 
@@ -42,6 +42,8 @@ const NetworkStatusContext = createContext<NetworkStatusContextValue | null>(nul
 
 export function NetworkStatusProvider({ children }: { children: ReactNode }) {
   const [networkState, setNetworkState] = useState<NetworkState | null>(null);
+  /** Used to ignore transient offline reports while the app is backgrounded. */
+  const appStateRef = useRef(AppState.currentState);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +64,7 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
     });
 
     const appSub = AppState.addEventListener("change", (next) => {
+      appStateRef.current = next;
       if (next === "active") void refreshFromNative();
     });
 
@@ -90,7 +93,14 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
     const prev = prevOnlineRef.current;
     prevOnlineRef.current = isOnline;
     if (prev === true && !isOnline) {
-      DownloadQueue.getInstance().abortAllTasks();
+      // expo-network often reports offline while inactive/backgrounded even though
+      // connectivity is fine. Let in-flight page downloads continue; individual
+      // fetch failures still surface if the device is truly offline.
+      if (appStateRef.current === "active") {
+        for (const pageId of Object.keys(mobileDownloadJobQueue.getSnapshots())) {
+          mobileDownloadJobQueue.abort(pageId);
+        }
+      }
     }
   }, [isOnline]);
 

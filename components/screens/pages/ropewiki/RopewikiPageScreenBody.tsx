@@ -2,7 +2,7 @@ import { BackButton } from "@/components/buttons/standard/BackButton";
 import { SaveButton } from "@/components/buttons/standard/SaveButton";
 import { ShareButton } from "@/components/buttons/standard/ShareButton";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useDownloadQueue } from "@/context/DownloadQueueContext";
+import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
 import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useShareSheetDimmer } from "@/context/ShareSheetDimmerContext";
@@ -20,11 +20,11 @@ import {
 } from "@/constants/toasts/toastArchetypes";
 import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import {
-  pageDownloadUiFromTaskSnapshot,
+  pageDownloadUiFromJobSnapshot,
   useDownloadProgressToasts,
 } from "@/components/toast/useDownloadProgressToasts";
 import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -87,7 +87,9 @@ export function RopewikiPageScreenBody({
   const insets = useSafeAreaInsets();
   const { showPill, dismiss, upsertPill } = useToast();
   const router = useRouter();
-  const { abortTask, enqueuePageDownload, getTaskSnapshot } = useDownloadQueue();
+  const { abortJob, enqueuePageDownload, getJobUISnapshot, takeInvalidStoredDownloadPageId } =
+    useDownloadJobQueue();
+  const pathname = usePathname();
   const { setHighlightSavedTab } = useSavedTabHighlight();
   const {
     isSaved,
@@ -101,13 +103,48 @@ export function RopewikiPageScreenBody({
   const savedEntry = savedEntries.find((e) => e.preview.id === pageId) ?? null;
   const isDownloaded = savedEntry?.downloadedPageViewPath != null;
   const routeTypeResolved = data.routeType;
-  const downloadTask = getTaskSnapshot(pageId);
+  const downloadJob = getJobUISnapshot(pageId);
   const downloading =
-    downloadTask?.state === "queued" || downloadTask?.state === "running";
+    downloadJob?.state === "queued" || downloadJob?.state === "running";
   const downloadUi = useMemo(
-    () => pageDownloadUiFromTaskSnapshot(downloadTask),
-    [downloadTask],
+    () => pageDownloadUiFromJobSnapshot(downloadJob),
+    [downloadJob],
   );
+
+  useEffect(() => {
+    if (!pathname.includes("/saved/")) {
+      return;
+    }
+    if (!takeInvalidStoredDownloadPageId(pageId)) {
+      return;
+    }
+    const invalidKey = `error-download-invalid-${pageId}`;
+    const savedPageRoute = `/saved/${pageId}/page`;
+    const durationMs = getToastArchetypeForKey(invalidKey)?.durationMs ?? 5000;
+    try {
+      showPill({
+        key: invalidKey,
+        message: "Error downloading page",
+        subtitle: "Invalid stored download job",
+        durationMs,
+        allowedRoutes: [savedPageRoute],
+        horizontalInset: TOAST_HORIZONTAL_INSET,
+      });
+    } catch (error) {
+      if (!(error instanceof ToastKeyCollisionError)) {
+        throw error;
+      }
+      upsertPill({
+        key: invalidKey,
+        message: "Error downloading page",
+        subtitle: "Invalid stored download job",
+        durationMs,
+        allowedRoutes: [savedPageRoute],
+        horizontalInset: TOAST_HORIZONTAL_INSET,
+      });
+    }
+  }, [pageId, pathname, showPill, takeInvalidStoredDownloadPageId, upsertPill]);
+
   const onRemoveDownloadPress = useCallback(async () => {
     if (!isDownloaded) return;
     await removeDownloadBundle(pageId);
@@ -156,7 +193,7 @@ export function RopewikiPageScreenBody({
     if (saved) {
       dismissSavedToastImmediate();
       if (downloading) {
-        abortTask(pageId);
+        abortJob(pageId);
         const cancelKey = `${TOAST_KEY_DOWNLOAD_CANCELLED}-${pageId}`;
         const pageAllowedRoutes = [`/explore/${pageId}/page`, `/saved/${pageId}/page`];
         const cancelDurationMs =

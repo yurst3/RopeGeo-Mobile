@@ -86,7 +86,6 @@ export const lightTheme: ThemeColors = {
     },
     unfocusedLineSegment: "#6b7280",
     focusedLineSegment: "#000000", // Default for uncolored line segments, overriden if the segment has a "strokeColor" property in its map data
-    styleUrl: "mapbox://styles/mapbox/outdoors-v12",
     minimap: {
       title: {
         background: "#ffffff",

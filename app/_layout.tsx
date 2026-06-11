@@ -6,7 +6,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
 import { SavedPagesProvider } from "@/context/SavedPagesContext";
 import { SavedFiltersProvider } from "@/context/SavedFiltersContext";
-import { DownloadQueueProvider } from "@/context/DownloadQueueContext";
+import { DownloadJobQueueProvider } from "@/context/DownloadJobQueueContext";
 import { stackScreenOptions } from "@/lib/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -23,7 +23,7 @@ export default function RootLayout() {
             <ShareSheetDimmerProvider>
               <SavedPagesProvider>
                 <SavedFiltersProvider>
-                  <DownloadQueueProvider>
+                  <DownloadJobQueueProvider>
                     <Stack screenOptions={stackScreenOptions}>
                       <Stack.Screen
                         name="(tabs)"
@@ -38,7 +38,7 @@ export default function RootLayout() {
                         }}
                       />
                     </Stack>
-                  </DownloadQueueProvider>
+                  </DownloadJobQueueProvider>
                 </SavedFiltersProvider>
               </SavedPagesProvider>
             </ShareSheetDimmerProvider>

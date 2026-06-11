@@ -1,6 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { offlineManager } from "@rnmapbox/maps";
-import { mapboxPackName } from "@/lib/downloadQueue/util/downloadUtils";
+import { mapboxPackName } from "@/lib/download/mapboxPackName";
 import { removeDownloadedRoutePreviewsForPage } from "@/lib/offline/downloadedRoutePreviewsStorage";
 import { getOfflinePageRootUri } from "@/lib/offline/paths";
 

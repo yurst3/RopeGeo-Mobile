@@ -13,7 +13,7 @@ import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToa
 import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
 import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toasts/toastArchetypes";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { RouteMarkersLayer, type RoutesState } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
@@ -67,7 +67,6 @@ function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
 }
 
 export function ExploreScreen() {
-  const { map } = useColorTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -269,7 +268,7 @@ export function ExploreScreen() {
           />
         </View>
         <MapView
-              styleURL={map.styleUrl}
+              styleURL={MAPBOX_STYLE_URL}
               style={styles.map}
               projection="globe"
               scaleBarEnabled={false}

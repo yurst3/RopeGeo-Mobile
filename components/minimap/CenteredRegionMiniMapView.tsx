@@ -20,6 +20,7 @@ import {
   unclusteredRouteMarkerSymbolStyle,
 } from "@/components/screens/explore/mapMarkerLayerStyles";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
+import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import {
   expandedMiniMapButtonStackTop,
@@ -508,7 +509,7 @@ export function CenteredRegionMiniMapView({
     <>
       {shell.mapBodyVisible ? (
         <MapView
-          styleURL={map.styleUrl}
+          styleURL={MAPBOX_STYLE_URL}
           style={minimapStyles.map}
           projection="globe"
           onLayout={onMapLayout}
