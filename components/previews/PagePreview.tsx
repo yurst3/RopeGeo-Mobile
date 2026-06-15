@@ -1,10 +1,16 @@
 import { MiniDownloadButton } from "@/components/buttons/nonstandard/MiniDownloadButton";
+import { ScalingText } from "@/components/ScalingText";
 import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
+import {
+  PREVIEW_META_MAX_LINES,
+  PREVIEW_TITLE_MAX_LINES,
+  usePreviewTextMetrics,
+} from "@/utils/previewLayout";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
@@ -65,6 +71,7 @@ export function PagePreview({
   showMiniDownload = false,
 }: Props) {
   const themeColors = useColorTheme();
+  const textMetrics = usePreviewTextMetrics();
   const { text, image, preview: previewColors, button } = themeColors;
   const { sourceIconBackground } = previewColors.page;
   const router = useRouter();
@@ -122,6 +129,29 @@ export function PagePreview({
       : "";
   const rating = preview.rating ?? 0;
   const ratingCount = preview.ratingCount ?? 0;
+  const [titleFontSize, setTitleFontSize] = useState(
+    textMetrics.titleMaxFontSize,
+  );
+  const [difficultyWidthAtMax, setDifficultyWidthAtMax] = useState(0);
+
+  useEffect(() => {
+    setTitleFontSize(textMetrics.titleMaxFontSize);
+  }, [
+    preview.title,
+    textMetrics.fontScale,
+    textMetrics.titleMaxFontSize,
+  ]);
+
+  useEffect(() => {
+    setDifficultyWidthAtMax(0);
+  }, [difficultyText, textMetrics.titleMaxFontSize]);
+
+  const onTitleFontSizeChange = useCallback((fontSize: number) => {
+    setTitleFontSize((prev) =>
+      Math.abs(prev - fontSize) < 0.25 ? prev : fontSize,
+    );
+  }, []);
+
   const icon = sourceIcon(preview.source);
 
   const onPress = () => {
@@ -203,32 +233,127 @@ export function PagePreview({
         </View>
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
+            <ScalingText
+              containerStyle={styles.titleFlex}
+              maxFontSize={textMetrics.titleMaxFontSize}
+              minFontSize={textMetrics.titleMinFontSize}
+              numberOfLines={PREVIEW_TITLE_MAX_LINES}
+              ellipsizeMode="tail"
+              measureKey={textMetrics.fontScale}
+              onFontSizeChange={onTitleFontSizeChange}
+              measure={{
+                type: "width",
+                widthSafetyMargin: textMetrics.widthSafetyMargin,
+              }}
+              measureTextStyle={styles.titleMeasure}
+              style={[styles.title, { color: text.primary }]}
+            >
               {preview.title}
-            </Text>
+            </ScalingText>
             {difficultyText ? (
-              <Text style={[styles.difficulty, { color: text.secondary }]} numberOfLines={1}>
-                {difficultyText}
-              </Text>
+              <View
+                style={[
+                  styles.difficultySlot,
+                  difficultyWidthAtMax > 0
+                    ? { minWidth: difficultyWidthAtMax }
+                    : null,
+                ]}
+              >
+                {difficultyWidthAtMax === 0 ? (
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    style={[
+                      styles.difficultyMeasure,
+                      { fontSize: textMetrics.titleMaxFontSize },
+                    ]}
+                    onTextLayout={(event) => {
+                      const width = event.nativeEvent.lines[0]?.width ?? 0;
+                      if (width > 0) {
+                        setDifficultyWidthAtMax(width);
+                      }
+                    }}
+                  >
+                    {difficultyText}
+                  </Text>
+                ) : null}
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[
+                    styles.difficulty,
+                    { color: text.secondary, fontSize: titleFontSize },
+                  ]}
+                >
+                  {difficultyText}
+                </Text>
+              </View>
             ) : null}
           </View>
           {preview.aka?.length > 0 ? (
-            <Text style={[styles.meta, styles.akaLine, { color: text.secondary }]} numberOfLines={1}>
-              <Text style={{ color: text.secondary }}>AKA: </Text>
-              <Text style={styles.akaNamesBold}>{preview.aka.join(", ")}</Text>
-            </Text>
+            <ScalingText
+              containerStyle={styles.akaRow}
+              maxFontSize={textMetrics.metaMaxFontSize}
+              minFontSize={textMetrics.metaMinFontSize}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              measureKey={textMetrics.fontScale}
+              measure={{
+                type: "width",
+                widthSafetyMargin: textMetrics.widthSafetyMargin,
+              }}
+              measureTextStyle={styles.akaNamesBold}
+              renderLabel={(fontSize) => {
+                const akaNames = preview.aka.join(", ");
+                return (
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[
+                      styles.meta,
+                      styles.akaLine,
+                      { color: text.secondary, fontSize },
+                    ]}
+                  >
+                    <Text>AKA: </Text>
+                    <Text style={styles.akaNamesBold}>{akaNames}</Text>
+                  </Text>
+                );
+              }}
+            >
+              {`AKA: ${preview.aka.join(", ")}`}
+            </ScalingText>
           ) : null}
           {regionLine ? (
-            <Text style={[styles.meta, { color: text.secondary }]} numberOfLines={2}>
+            <ScalingText
+              maxFontSize={textMetrics.metaMaxFontSize}
+              minFontSize={textMetrics.metaMinFontSize}
+              numberOfLines={PREVIEW_META_MAX_LINES}
+              ellipsizeMode="tail"
+              hideWhenEmpty
+              measureKey={textMetrics.fontScale}
+              measure={{
+                type: "lineCount",
+                maxLinesAtMaxSize: PREVIEW_META_MAX_LINES,
+                widthSafetyMargin: textMetrics.widthSafetyMargin,
+              }}
+              style={[styles.meta, { color: text.secondary }]}
+            >
               {regionLine}
-            </Text>
+            </ScalingText>
           ) : null}
           <StarRating
             rating={rating}
             count={ratingCount}
-            size={14}
+            size={textMetrics.starRatingSize}
+            allowFontScaling={false}
             style={styles.stars}
-            textStyle={styles.starText}
+            textStyle={[
+              styles.starText,
+              { fontSize: textMetrics.starRatingFontSize },
+            ]}
           />
         </View>
       </Pressable>
@@ -273,7 +398,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: 12,
     padding: 3,
-    marginBottom: 6,
   },
   cardMain: {
     flex: 1,
@@ -351,24 +475,46 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     gap: 6,
     marginBottom: 2,
   },
-  title: {
+  titleFlex: {
     flex: 1,
-    fontSize: 16,
+    minWidth: 0,
+  },
+  titleMeasure: {
     fontWeight: "700",
+    textAlign: "center",
+  },
+  title: {
+    fontWeight: "700",
+    textAlign: "left",
+  },
+  difficultySlot: {
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  difficultyMeasure: {
+    position: "absolute",
+    opacity: 0,
+    left: 0,
+    top: 0,
   },
   difficulty: {
-    fontSize: 16,
+    textAlign: "center",
   },
   meta: {
-    fontSize: 12,
     marginBottom: 2,
   },
-  akaLine: {
+  akaRow: {
     marginLeft: 12,
+    marginBottom: 2,
+    minWidth: 0,
+  },
+  akaLine: {
+    marginBottom: 0,
   },
   akaNamesBold: {
     fontWeight: "700",
@@ -378,7 +524,6 @@ const styles = StyleSheet.create({
   },
   starText: {
     marginLeft: 4,
-    fontSize: 12,
   },
   downloadRail: {
     marginLeft: 8,

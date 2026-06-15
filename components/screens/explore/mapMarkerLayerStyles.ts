@@ -1,12 +1,14 @@
 import type { MarkerColors } from "@/constants/colors/types";
 import { ROUTE_MARKER_CLUSTER_IMAGE } from "@/lib/mapbox/nativeMarkerImages";
 import type { SymbolLayerStyle } from "@rnmapbox/maps";
-import { ROUTE_MARKER_ICON_SIZE_INTERPOLATE } from "./routeMarkerIcons";
+import type { RouteMarkerMetrics } from "@/utils/routeMarkerLayout";
+import { routeMarkerIconSizeInterpolate } from "./routeMarkerIcons";
 
 export function unclusteredRouteMarkerSymbolStyle(
   marker: MarkerColors,
   iconImage: SymbolLayerStyle["iconImage"],
   iconSize: SymbolLayerStyle["iconSize"],
+  markerMetrics: RouteMarkerMetrics,
 ): SymbolLayerStyle {
   return {
     iconImage,
@@ -16,11 +18,11 @@ export function unclusteredRouteMarkerSymbolStyle(
     iconIgnorePlacement: true,
     iconAnchor: "bottom",
     textField: ["get", "name"],
-    textSize: 12,
+    textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,
-    textHaloWidth: 1.5,
-    textOffset: [0, 0.2],
+    textHaloWidth: markerMetrics.textHaloWidth,
+    textOffset: [0, markerMetrics.textOffsetY],
     textAnchor: "top",
     textAllowOverlap: true,
     textIgnorePlacement: true,
@@ -29,10 +31,11 @@ export function unclusteredRouteMarkerSymbolStyle(
 
 export function clusterRouteMarkerSymbolStyle(
   marker: MarkerColors,
+  markerMetrics: RouteMarkerMetrics,
 ): SymbolLayerStyle {
   return {
     iconImage: ROUTE_MARKER_CLUSTER_IMAGE,
-    iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+    iconSize: routeMarkerIconSizeInterpolate(markerMetrics.iconSizeScale),
     iconColor: marker.clusterIcon,
     iconAllowOverlap: true,
     iconIgnorePlacement: true,
@@ -43,11 +46,11 @@ export function clusterRouteMarkerSymbolStyle(
       ["to-string", ["get", "point_count"]],
       ")",
     ],
-    textSize: 12,
+    textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,
-    textHaloWidth: 1.5,
-    textOffset: [0, 0.2],
+    textHaloWidth: markerMetrics.textHaloWidth,
+    textOffset: [0, markerMetrics.textOffsetY],
     textAnchor: "top",
     textAllowOverlap: true,
     textIgnorePlacement: true,

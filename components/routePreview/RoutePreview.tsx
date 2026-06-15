@@ -1,3 +1,10 @@
+import { BadgeLayoutProvider } from "@/components/badges/Badge";
+import {
+  ROUTE_PREVIEW_CARD_BORDER_RADIUS,
+  ROUTE_PREVIEW_CARD_MARGIN_H,
+  ROUTE_PREVIEW_CARD_PADDING,
+  useRoutePreviewMetrics,
+} from "@/utils/routePreviewLayout";
 import { SavedPageGlyph } from "@/components/buttons/standard/SavedPageGlyph";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toasts/toastArchetypes";
@@ -15,7 +22,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
   type StyleProp,
@@ -43,21 +49,14 @@ import {
   RouteType,
 } from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
+import { RoutePreviewLocation, RoutePreviewTitle } from "./RoutePreviewText";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
 
-const CARD_BORDER_RADIUS = 12;
-const CARD_PADDING = 12;
-const IMAGE_ASPECT = 3 / 4;
 const NO_IMAGE_ICON_SIZE = 36;
 const EXTERNAL_LINK_BUTTON_GAP = 8;
 /** Matches {@link ExternalLinkButton} circle (white + shadow). */
 const SAVED_GLYPH_BUTTON_SIZE = 48;
-/** Minimum height so loading and loaded preview cards stay the same size. */
-const PREVIEW_CARD_MIN_HEIGHT = 140;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_MARGIN_H = 16;
-const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
 
 const SLIDE_ENTER_MS = 320;
 const SLIDE_EXIT_MS = 260;
@@ -97,15 +96,14 @@ function showBadges(
 function SinglePreviewCard({
   preview,
   routeType = null,
-  badgeScale = 0.65,
   onPress,
 }: {
   preview: PreviewCardData;
   routeType?: RouteType | null;
-  badgeScale?: number;
   onPress?: (preview: PreviewCardData) => void;
 }) {
   const themeColors = useColorTheme();
+  const metrics = useRoutePreviewMetrics();
   const { text, image, background } = themeColors;
   const previewImageUri =
     preview.fetchType === "online" ? preview.imageUrl : preview.downloadedImagePath;
@@ -117,30 +115,31 @@ function SinglePreviewCard({
     : "";
   const hasBadges = showBadges(preview, routeType);
 
-  const topContent = (
-    <>
-      <StarRating
-        rating={rating}
-        count={ratingCount}
-        size={14}
-        style={styles.starRatingRow}
-        textStyle={styles.starRatingText}
-      />
-      <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
-        {preview.title}
-      </Text>
-      {location ? (
-        <Text style={[styles.regions, { color: text.secondary }]} numberOfLines={2}>
-          {location}
-        </Text>
-      ) : null}
-    </>
-  );
-
   const cardContent = (
-    <View style={[styles.card, { backgroundColor: background }]}>
-      <View style={styles.cardContent}>
-        <View style={[styles.imageContainer, { backgroundColor: image.background }]}>
+    <BadgeLayoutProvider
+      size={metrics.badgeSize}
+      labelFontSize={metrics.badgeLabelFontSize}
+      allowLabelFontScaling={false}
+    >
+      <View
+        style={[
+          styles.card,
+          {
+            width: metrics.cardWidth,
+            backgroundColor: background,
+          },
+        ]}
+      >
+        <View style={styles.cardContent}>
+          <View
+            style={[
+              styles.imageContainer,
+              {
+                width: metrics.imageWidth,
+                backgroundColor: image.background,
+              },
+            ]}
+          >
           {previewImageUri ? (
             <>
               {imageLoading && (
@@ -180,23 +179,37 @@ function SinglePreviewCard({
             </View>
           )}
         </View>
-        <View style={[styles.info, !hasBadges && styles.infoCentered]}>
-          {hasBadges ? (
-            <>
-              {topContent}
+        <View style={styles.info}>
+          <View style={[styles.infoStack, { gap: metrics.infoRowGap }]}>
+            <StarRating
+              rating={rating}
+              count={ratingCount}
+              size={metrics.starRatingSize}
+              allowFontScaling={false}
+              style={styles.starRatingRow}
+              textStyle={[
+                styles.starRatingText,
+                { fontSize: metrics.starRatingFontSize },
+              ]}
+            />
+            <RoutePreviewTitle title={preview.title} color={text.primary} />
+            {location ? (
+              <RoutePreviewLocation location={location} color={text.secondary} />
+            ) : null}
+            {hasBadges ? (
               <BadgeRow
                 difficultyRating={preview.difficultyRating}
                 permit={preview.permit}
                 routeType={routeType}
-                scale={badgeScale}
+                badgeGap={metrics.badgeGap}
+                maxVisibleBadges={metrics.maxVisibleBadges}
               />
-            </>
-          ) : (
-            <View style={styles.infoCenterWrap}>{topContent}</View>
-          )}
+            ) : null}
+          </View>
         </View>
       </View>
     </View>
+    </BadgeLayoutProvider>
   );
 
   if (onPress != null) {
@@ -245,26 +258,23 @@ export type RoutePreviewProps = {
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
   /** Called when the user presses the preview card. Receives the tapped preview. */
   onPreviewPress?: (preview: PreviewCardData) => void;
-  /** Scale factor for difficulty badges (e.g. 0.65 for 65%). Default 0.65. */
-  badgeScale?: number;
 };
 
 function RoutePreviewDataView({
   data,
   loading,
   routeType,
-  badgeScale,
   onPreviewPress,
   onCurrentPreviewChange,
 }: {
   data: PreviewCardData[];
   loading: boolean;
   routeType?: RouteType | null;
-  badgeScale: number;
   onPreviewPress?: (preview: PreviewCardData) => void;
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
 }) {
   const themeColors = useColorTheme();
+  const metrics = useRoutePreviewMetrics();
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { isSaved } = useSavedPages();
@@ -321,7 +331,6 @@ function RoutePreviewDataView({
           <SinglePreviewCard
             preview={data[0]}
             routeType={routeType}
-            badgeScale={badgeScale}
             onPress={onPreviewPress ?? undefined}
           />
         </View>
@@ -334,18 +343,20 @@ function RoutePreviewDataView({
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(e) => {
               const i = Math.round(
-                e.nativeEvent.contentOffset.x / CARD_WIDTH,
+                e.nativeEvent.contentOffset.x / metrics.cardWidth,
               );
               setCurrentIndex(Math.min(i, data.length - 1));
             }}
             contentContainerStyle={styles.scrollContent}
           >
             {data.map((preview) => (
-              <View key={preview.id} style={styles.page}>
+              <View
+                key={preview.id}
+                style={[styles.page, { width: metrics.cardWidth }]}
+              >
                 <SinglePreviewCard
                   preview={preview}
                   routeType={routeType}
-                  badgeScale={badgeScale}
                   onPress={onPreviewPress ?? undefined}
                 />
               </View>
@@ -377,7 +388,6 @@ function RoutePreviewInner({
   pipelineActive,
   routeId,
   routeType,
-  badgeScale,
   onPreviewPress,
   onCurrentPreviewChange,
   data,
@@ -391,7 +401,6 @@ function RoutePreviewInner({
   pipelineActive: boolean;
   routeId: string;
   routeType?: RouteType | null;
-  badgeScale: number;
   onPreviewPress?: (preview: PreviewCardData) => void;
   onCurrentPreviewChange?: (preview: PreviewCardData | null) => void;
   data: OnlinePagePreview[] | null;
@@ -439,7 +448,6 @@ function RoutePreviewInner({
         data={data}
         loading={false}
         routeType={routeType}
-        badgeScale={badgeScale}
         onPreviewPress={onPreviewPress}
         onCurrentPreviewChange={onCurrentPreviewChange}
       />
@@ -462,7 +470,6 @@ export function RoutePreview({
   containerStyle,
   onCurrentPreviewChange,
   onPreviewPress,
-  badgeScale = 0.65,
 }: RoutePreviewProps) {
   const { isOnline } = useNetworkStatus();
   const { height: windowHeight } = useWindowDimensions();
@@ -590,7 +597,6 @@ export function RoutePreview({
           pipelineActive={pipelineActive}
           routeId={loaderRouteId}
           routeType={visible?.routeType ?? null}
-          badgeScale={badgeScale}
           onPreviewPress={onPreviewPress}
           onCurrentPreviewChange={onCurrentPreviewChange}
           data={data}
@@ -620,7 +626,7 @@ const styles = StyleSheet.create({
   savedGlyphWrap: {
     position: "absolute",
     top: -(SAVED_GLYPH_BUTTON_SIZE + EXTERNAL_LINK_BUTTON_GAP),
-    left: CARD_MARGIN_H,
+    left: ROUTE_PREVIEW_CARD_MARGIN_H,
     zIndex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -641,23 +647,21 @@ const styles = StyleSheet.create({
   externalLinkButtonWrap: {
     position: "absolute",
     top: -(48 + EXTERNAL_LINK_BUTTON_GAP),
-    right: CARD_MARGIN_H,
+    right: ROUTE_PREVIEW_CARD_MARGIN_H,
     zIndex: 1,
   },
   outer: {
-    paddingHorizontal: CARD_MARGIN_H,
+    paddingHorizontal: ROUTE_PREVIEW_CARD_MARGIN_H,
     marginBottom: 8,
   },
   scrollContent: {
     paddingRight: 0,
   },
   page: {
-    width: CARD_WIDTH,
     marginRight: 0,
   },
   card: {
-    minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    borderRadius: CARD_BORDER_RADIUS,
+    borderRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
     overflow: "hidden",
   },
   imageLoadingOverlay: {
@@ -670,52 +674,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   imageContainer: {
-    width: CARD_WIDTH * 0.35,
     alignSelf: "stretch",
-    borderTopLeftRadius: CARD_BORDER_RADIUS,
-    borderBottomLeftRadius: CARD_BORDER_RADIUS,
+    borderTopLeftRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
+    borderBottomLeftRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
     overflow: "hidden",
   },
   image: {
-    width: "100%",
-    height: "100%",
+    ...StyleSheet.absoluteFillObject,
   },
   noImageWrap: {
-    width: "100%",
-    height: "100%",
+    ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
   },
   noImageIcon: {},
   info: {
     flex: 1,
-    minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    padding: CARD_PADDING,
+    minWidth: 0,
+    paddingTop: ROUTE_PREVIEW_CARD_PADDING,
+    paddingBottom: ROUTE_PREVIEW_CARD_PADDING,
+    paddingHorizontal: ROUTE_PREVIEW_CARD_PADDING,
+    overflow: "hidden",
+  },
+  infoStack: {
+    alignSelf: "stretch",
     justifyContent: "flex-start",
   },
-  infoCentered: {
-    justifyContent: "center",
-  },
-  infoCenterWrap: {
-    flex: 1,
-    justifyContent: "center",
-  },
   starRatingRow: {
-    marginBottom: 4,
     gap: 2,
   },
   starRatingText: {
     marginLeft: 6,
-    fontSize: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  regions: {
-    fontSize: 12,
-    marginBottom: 2,
   },
   dots: {
     flexDirection: "row",

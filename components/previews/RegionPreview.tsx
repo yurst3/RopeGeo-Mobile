@@ -1,5 +1,11 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRouter } from "expo-router";
+import { ScalingText } from "@/components/ScalingText";
+import {
+  PREVIEW_META_MAX_LINES,
+  PREVIEW_TITLE_MAX_LINES,
+  usePreviewTextMetrics,
+} from "@/utils/previewLayout";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/models";
 import { useState } from "react";
 import { Image } from "expo-image";
@@ -40,6 +46,7 @@ type Props = {
 
 export function RegionPreview({ preview }: Props) {
   const themeColors = useColorTheme();
+  const textMetrics = usePreviewTextMetrics();
   const { text, image } = themeColors;
   const { regionIconBackground, regionIcon, shadowColor, sourceIconBackground } =
     themeColors.preview.region;
@@ -119,15 +126,49 @@ export function RegionPreview({ preview }: Props) {
         </View>
       </View>
       <View style={styles.body}>
-        <Text style={[styles.title, { color: text.primary }]} numberOfLines={2}>
+        <ScalingText
+          maxFontSize={textMetrics.titleMaxFontSize}
+          minFontSize={textMetrics.titleMinFontSize}
+          numberOfLines={PREVIEW_TITLE_MAX_LINES}
+          ellipsizeMode="tail"
+          measureKey={textMetrics.fontScale}
+          containerStyle={styles.titleWrap}
+          measure={{
+            type: "width",
+            widthSafetyMargin: textMetrics.widthSafetyMargin,
+          }}
+          measureTextStyle={styles.titleMeasure}
+          style={[styles.title, { color: text.primary }]}
+        >
           {preview.name}
-        </Text>
+        </ScalingText>
         {regionLine ? (
-          <Text style={[styles.meta, { color: text.secondary }]} numberOfLines={2}>
+          <ScalingText
+            maxFontSize={textMetrics.metaMaxFontSize}
+            minFontSize={textMetrics.metaMinFontSize}
+            numberOfLines={PREVIEW_META_MAX_LINES}
+            ellipsizeMode="tail"
+            hideWhenEmpty
+            measureKey={textMetrics.fontScale}
+            measure={{
+              type: "lineCount",
+              maxLinesAtMaxSize: PREVIEW_META_MAX_LINES,
+              widthSafetyMargin: textMetrics.widthSafetyMargin,
+            }}
+            style={[styles.meta, { color: text.secondary }]}
+          >
             {regionLine}
-          </Text>
+          </ScalingText>
         ) : null}
-        <Text style={[styles.counts, { color: text.secondary }]}>{countsText}</Text>
+        <Text
+          allowFontScaling={false}
+          style={[
+            styles.counts,
+            { color: text.secondary, fontSize: textMetrics.metaMaxFontSize },
+          ]}
+        >
+          {countsText}
+        </Text>
       </View>
       {icon != null ? (
         <View
@@ -154,7 +195,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: 12,
     padding: 3,
-    marginBottom: 6,
   },
   cardPressed: {
     opacity: 0.9,
@@ -207,18 +247,21 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     justifyContent: "center",
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
+  titleWrap: {
     marginBottom: 2,
+  },
+  titleMeasure: {
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  title: {
+    fontWeight: "700",
+    textAlign: "left",
   },
   meta: {
-    fontSize: 12,
     marginBottom: 2,
   },
-  counts: {
-    fontSize: 12,
-  },
+  counts: {},
   sourceIconCircle: {
     marginLeft: 8,
     width: SOURCE_ICON_CIRCLE_SIZE,

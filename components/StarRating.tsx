@@ -14,6 +14,8 @@ export type StarRatingProps = {
    * label uses {@link ThemeColors.text.secondary}.
    */
   placeholderColor?: boolean;
+  /** When false, label text uses the explicit `fontSize` from `textStyle` without system scaling. */
+  allowFontScaling?: boolean;
   style?: React.ComponentProps<typeof View>["style"];
   textStyle?: React.ComponentProps<typeof Text>["style"];
 };
@@ -25,6 +27,7 @@ export function StarRating({
   count,
   size = DEFAULT_SIZE,
   placeholderColor = false,
+  allowFontScaling = true,
   style,
   textStyle,
 }: StarRatingProps) {
@@ -61,7 +64,10 @@ export function StarRating({
   return (
     <View style={[styles.starRow, style]}>
       {stars}
-      <Text style={[styles.ratingText, { color: labelColor }, textStyle]}>
+      <Text
+        allowFontScaling={allowFontScaling}
+        style={[styles.ratingText, { color: labelColor }, textStyle]}
+      >
         {rating.toFixed(1)} ({count})
       </Text>
     </View>

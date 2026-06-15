@@ -38,6 +38,11 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
 const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
+/** How much of the next/previous image is visible beside the active slide. */
+const SLIDE_PEEK = 8;
+/** Negative margin overlaps slides so full-width images still show a neighbor peek. */
+const SLIDE_MARGIN_RIGHT = CARD_PADDING_HORIZONTAL - SLIDE_PEEK;
+const SLIDE_ITEM_LENGTH = CONTENT_WIDTH + SLIDE_MARGIN_RIGHT;
 const IMAGE_HEIGHT = 220;
 /** Distance from the bottom edge of the image to the indicator pill. */
 const IMAGE_INDICATOR_BOTTOM_INSET = 8;
@@ -182,11 +187,7 @@ export type BetaSectionImagesProps = {
 const keyExtractor = (item: OnlineBetaSectionImage | OfflineBetaSectionImage) =>
   item.linkUrl + item.order;
 
-const getItemLayout = (_: unknown, index: number) => ({
-  length: SCREEN_WIDTH,
-  offset: SCREEN_WIDTH * index,
-  index,
-});
+const getSnapOffset = (index: number) => index * SLIDE_ITEM_LENGTH;
 
 export function BetaSectionImages({
   images,
@@ -198,6 +199,10 @@ export function BetaSectionImages({
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.order - b.order),
     [images]
+  );
+  const snapToOffsets = useMemo(
+    () => sortedImages.map((_, index) => getSnapOffset(index)),
+    [sortedImages]
   );
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -235,7 +240,7 @@ export function BetaSectionImages({
     if (idx < 0) return;
 
     flatListRef.current?.scrollToOffset({
-      offset: idx * SCREEN_WIDTH,
+      offset: getSnapOffset(idx),
       animated: false,
     });
 
@@ -364,11 +369,13 @@ export function BetaSectionImages({
       <FlatList
         ref={flatListRef}
         style={styles.flatList}
+        contentContainerStyle={styles.flatListContent}
         data={sortedImages}
         keyExtractor={keyExtractor}
-        getItemLayout={getItemLayout}
         horizontal
-        pagingEnabled
+        snapToOffsets={snapToOffsets}
+        snapToAlignment="start"
+        decelerationRate="normal"
         showsHorizontalScrollIndicator={false}
         renderItem={renderItem}
         initialNumToRender={Math.min(3, sortedImages.length || 1)}
@@ -424,9 +431,13 @@ const styles = StyleSheet.create({
   flatList: {
     height: SLIDE_HEIGHT,
   },
+  flatListContent: {
+    paddingLeft: CARD_PADDING_HORIZONTAL,
+    paddingRight: CARD_PADDING_HORIZONTAL,
+  },
   imageSlide: {
-    width: SCREEN_WIDTH,
-    paddingHorizontal: CARD_PADDING_HORIZONTAL,
+    width: CONTENT_WIDTH,
+    marginRight: SLIDE_MARGIN_RIGHT,
   },
   imageContainer: {
     borderRadius: 12,

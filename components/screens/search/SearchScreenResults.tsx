@@ -11,7 +11,8 @@ import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMore
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
-import { SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
+import { getSearchBarHeight } from "@/components/SearchBar";
+import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -23,6 +24,7 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  useWindowDimensions,
 } from "react-native";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { type OnlinePagePreview, Preview } from "ropegeo-common/models";
@@ -65,11 +67,13 @@ export function SearchScreenResults({
   onDismissKeyboard,
 }: SearchScreenResultsProps) {
   const themeColors = useColorTheme();
+  const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const isFocused = useIsFocused();
   const { upsertPill, dismiss } = useToast();
   const searchBarTop = insets.top + 8;
-  const searchBarHeight = SEARCH_BAR_HEIGHT;
+  const searchBarHeight = getSearchBarHeight(fontScale);
   const scrollYRef = useRef(0);
   const layoutHRef = useRef(0);
   const contentHRef = useRef(0);
@@ -203,7 +207,10 @@ export function SearchScreenResults({
                 style={styles.scroll}
                 contentContainerStyle={[
                   styles.scrollContent,
-                  { paddingTop: contentTopPadding },
+                  {
+                    paddingTop: contentTopPadding,
+                    gap: previewMetrics.itemGap,
+                  },
                 ]}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"

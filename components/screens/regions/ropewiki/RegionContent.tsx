@@ -15,6 +15,7 @@ import { TOAST_KEY_ROUTE_PREVIEW_ERROR } from "@/constants/toasts/toastArchetype
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MINI_MAP_BORDER_RADIUS,
@@ -119,6 +120,7 @@ export function RegionContent({
   onVerticalScrollActiveChange,
 }: RegionContentProps) {
   const { background, text, loadingIndicator } = useColorTheme();
+  const previewMetrics = usePreviewTextMetrics();
   const { isOnline } = useNetworkStatus();
   const isOnlineRef = useRef(isOnline);
   isOnlineRef.current = isOnline;
@@ -421,7 +423,10 @@ export function RegionContent({
                 <View
                   style={[
                     styles.previewsSection,
-                    { paddingBottom: insets.bottom + 16 },
+                    {
+                      paddingBottom: insets.bottom + 16,
+                      gap: previewMetrics.itemGap,
+                    },
                   ]}
                 >
                   {loading && items.length === 0 ? (

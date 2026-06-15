@@ -7,13 +7,43 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
 } from "react-native";
 
-/** Matches prior screen layout (`paddingVertical` 12 + 16px type). */
-export const SEARCH_BAR_HEIGHT = 48;
+export const SEARCH_BAR_FONT_SIZE = 16;
+export const SEARCH_BAR_PADDING_VERTICAL = 12;
+export const SEARCH_BAR_PADDING_HORIZONTAL = 16;
+export const SEARCH_BAR_GAP = 10;
+/** Max accessibility scale applied to search bar typography and padding. */
+export const SEARCH_BAR_MAX_FONT_SCALE = 1.75;
+
+export function getSearchBarMetrics(fontScale = 1) {
+  const scale = Math.min(fontScale, SEARCH_BAR_MAX_FONT_SCALE);
+  const fontSize = SEARCH_BAR_FONT_SIZE * scale;
+  const iconSize = fontSize;
+  const paddingVertical = SEARCH_BAR_PADDING_VERTICAL * scale;
+  const paddingHorizontal = SEARCH_BAR_PADDING_HORIZONTAL * scale;
+  const gap = SEARCH_BAR_GAP * scale;
+  const height = Math.round(paddingVertical * 2 + fontSize);
+  return {
+    fontSize,
+    iconSize,
+    paddingVertical,
+    paddingHorizontal,
+    gap,
+    height,
+  };
+}
+
+export function getSearchBarHeight(fontScale = 1): number {
+  return getSearchBarMetrics(fontScale).height;
+}
+
+/** Estimated height at default Dynamic Type scale (use {@link getSearchBarHeight} when `fontScale` ≠ 1). */
+export const SEARCH_BAR_HEIGHT = getSearchBarHeight(1);
 
 export type SearchBarProps = {
   placeholder: string;
@@ -44,6 +74,11 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
 ) {
   const themeColors = useColorTheme();
   const { searchBar, text } = themeColors;
+  const { fontScale } = useWindowDimensions();
+  const metrics = useMemo(
+    () => getSearchBarMetrics(fontScale),
+    [fontScale],
+  );
 
   const barStyle = useMemo(
     () => [
@@ -51,15 +86,30 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
       {
         backgroundColor: searchBar.background,
         shadowColor: searchBar.shadow,
+        paddingVertical: metrics.paddingVertical,
+        paddingHorizontal: metrics.paddingHorizontal,
+        gap: metrics.gap,
       },
       style,
     ],
-    [searchBar.background, searchBar.shadow, style],
+    [
+      searchBar.background,
+      searchBar.shadow,
+      metrics.paddingVertical,
+      metrics.paddingHorizontal,
+      metrics.gap,
+      style,
+    ],
   );
 
-  const inputStyle = useMemo(
-    () => [styles.input, { color: text.primary }],
-    [text.primary],
+  const textStyle = useMemo(
+    () => [styles.text, { color: text.primary, fontSize: metrics.fontSize }],
+    [text.primary, metrics.fontSize],
+  );
+
+  const placeholderStyle = useMemo(
+    () => [styles.text, { color: text.tertiary, fontSize: metrics.fontSize }],
+    [text.tertiary, metrics.fontSize],
   );
 
   const isPressable = onPress != null;
@@ -72,8 +122,17 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? placeholder}
       >
-        <FontAwesome5 name="search" size={16} color={searchBar.icon} />
-        <Text style={[styles.placeholder, { color: text.tertiary }]}>
+        <FontAwesome5
+          name="search"
+          size={metrics.iconSize}
+          color={searchBar.icon}
+        />
+        <Text
+          allowFontScaling={false}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={placeholderStyle}
+        >
           {placeholder}
         </Text>
       </Pressable>
@@ -82,10 +141,17 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
 
   return (
     <View style={barStyle}>
-      <FontAwesome5 name="search" size={16} color={searchBar.icon} />
+      <FontAwesome5
+        name="search"
+        size={metrics.iconSize}
+        color={searchBar.icon}
+      />
       <TextInput
         ref={ref}
-        style={inputStyle}
+        allowFontScaling={false}
+        multiline={false}
+        numberOfLines={1}
+        style={textStyle}
         placeholder={placeholder}
         placeholderTextColor={text.tertiary}
         value={value}
@@ -103,23 +169,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
     minWidth: 0,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
-  placeholder: {
+  text: {
     flex: 1,
-    fontSize: 16,
-    minWidth: 0,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
     paddingVertical: 0,
     minWidth: 0,
   },

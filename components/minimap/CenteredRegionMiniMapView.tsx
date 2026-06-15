@@ -48,6 +48,7 @@ import {
   type ComponentRef,
 } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
 import Animated from "react-native-reanimated";
 import {
   Camera,
@@ -116,6 +117,7 @@ export function CenteredRegionMiniMapView({
   reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
   const { map } = useColorTheme();
+  const markerMetrics = useRouteMarkerMetrics();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -209,8 +211,9 @@ export function CenteredRegionMiniMapView({
       unclusteredRouteMarkerIconSize(
         shell.expanded ? focusedRouteId : null,
         markerAccentRouteId,
+        markerMetrics.iconSizeScale,
       ),
-    [shell.expanded, focusedRouteId, markerAccentRouteId],
+    [shell.expanded, focusedRouteId, markerAccentRouteId, markerMetrics.iconSizeScale],
   );
 
   const offlineUnclusteredStyle = useMemo(
@@ -219,13 +222,14 @@ export function CenteredRegionMiniMapView({
         map.marker,
         offlineUnclusteredIconImage,
         offlineUnclusteredIconSize,
+        markerMetrics,
       ),
-    [map.marker, offlineUnclusteredIconImage, offlineUnclusteredIconSize],
+    [map.marker, offlineUnclusteredIconImage, offlineUnclusteredIconSize, markerMetrics],
   );
 
   const offlineClusterStyle = useMemo(
-    () => clusterRouteMarkerSymbolStyle(map.marker),
-    [map.marker],
+    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics),
+    [map.marker, markerMetrics],
   );
 
   const {

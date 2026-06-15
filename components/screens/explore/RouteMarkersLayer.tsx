@@ -18,6 +18,7 @@ import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
 import {
   clusterRouteMarkerSymbolStyle,
   unclusteredRouteMarkerSymbolStyle,
@@ -98,6 +99,7 @@ function RouteMarkersLayerContent({
   accentRouteId,
 }: RouteMarkersLayerContentProps) {
   const { map } = useColorTheme();
+  const markerMetrics = useRouteMarkerMetrics();
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
   const data = useMemo(
@@ -114,8 +116,13 @@ function RouteMarkersLayerContent({
   );
 
   const unclusteredIconSize = useMemo(
-    () => unclusteredRouteMarkerIconSize(focusedRouteId, accentRouteId),
-    [focusedRouteId, accentRouteId],
+    () =>
+      unclusteredRouteMarkerIconSize(
+        focusedRouteId,
+        accentRouteId,
+        markerMetrics.iconSizeScale,
+      ),
+    [focusedRouteId, accentRouteId, markerMetrics.iconSizeScale],
   );
 
   const unclusteredStyle = useMemo(
@@ -124,13 +131,14 @@ function RouteMarkersLayerContent({
         map.marker,
         unclusteredIconImage,
         unclusteredIconSize,
+        markerMetrics,
       ),
-    [map.marker, unclusteredIconImage, unclusteredIconSize],
+    [map.marker, unclusteredIconImage, unclusteredIconSize, markerMetrics],
   );
 
   const clusterStyle = useMemo(
-    () => clusterRouteMarkerSymbolStyle(map.marker),
-    [map.marker],
+    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics),
+    [map.marker, markerMetrics],
   );
 
   useEffect(() => {

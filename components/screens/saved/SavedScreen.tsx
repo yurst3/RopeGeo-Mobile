@@ -1,4 +1,4 @@
-import { SearchBar, SEARCH_BAR_HEIGHT } from "@/components/SearchBar";
+import { SearchBar, getSearchBarHeight } from "@/components/SearchBar";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
@@ -8,6 +8,7 @@ import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useToast } from "@/context/ToastContext";
 import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
+import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SavedPagesFilter } from "ropegeo-common/models";
@@ -24,7 +26,9 @@ const HEADER_BUTTON_GAP = 8;
 
 export function SavedScreen() {
   const { background, text } = useColorTheme();
+  const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const { dismiss } = useToast();
   const { savedEntries } = useSavedPages();
   const {
@@ -54,7 +58,7 @@ export function SavedScreen() {
   );
 
   const searchBarTop = insets.top + 8;
-  const searchBarHeight = SEARCH_BAR_HEIGHT;
+  const searchBarHeight = getSearchBarHeight(fontScale);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +109,10 @@ export function SavedScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: searchBarTop + searchBarHeight + 12 },
+          {
+            paddingTop: searchBarTop + searchBarHeight + 12,
+            gap: previewMetrics.itemGap,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
       >

@@ -37,9 +37,15 @@ import { FourWDVeryHighClearanceBadge } from "@/components/badges/vehicle/4WDVer
 import { HighClearanceBadge } from "@/components/badges/vehicle/HighClearanceBadge";
 import { PassengerBadge } from "@/components/badges/vehicle/PassengerBadge";
 import { BadgeButton } from "@/components/buttons/nonstandard/BadgeButton";
+import { BadgeLayoutProvider } from "@/components/badges/Badge";
+import {
+  PAGE_BADGE_CARD_PADDING,
+  PAGE_BADGE_CELL_PADDING,
+  usePageBadgeMetrics,
+} from "@/utils/pageBadgeLayout";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   AcaDifficultyRating,
   AcaRiskSubRating,
@@ -51,10 +57,6 @@ import {
   type OfflineRopewikiPageView,
   type OnlineRopewikiPageView,
 } from "ropegeo-common/models";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const BADGES_GRID_MIN_HEIGHT = 320;
-const CELL_WIDTH = SCREEN_WIDTH / 2;
 
 const TECHNICAL_BADGES: Record<
   AcaTechnicalSubRating,
@@ -234,6 +236,7 @@ function openInfo(
 }
 
 export function PageBadges({ data, routeType }: PageBadgesProps) {
+  const metrics = usePageBadgeMetrics();
   const router = useRouter();
   const pathname = usePathname();
   const infoBasePath = badgeInfoBasePath(pathname ?? "");
@@ -365,40 +368,53 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
   };
 
   return (
-    <View style={[styles.container, { minHeight: BADGES_GRID_MIN_HEIGHT }]}>
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <BadgeItem type="technical" />
+    <BadgeLayoutProvider
+      size={metrics.badgeSize}
+      labelFontSize={metrics.badgeLabelFontSize}
+    >
+      <View
+        style={[
+          styles.container,
+          {
+            width: metrics.screenWidth,
+            minHeight: metrics.gridMinHeight,
+          },
+        ]}
+      >
+        <View style={[styles.row, { minHeight: metrics.rowMinHeight }]}>
+          <View style={styles.cell}>
+            <BadgeItem type="technical" />
+          </View>
+          <View style={styles.cell}>
+            <BadgeItem type="risk" />
+          </View>
         </View>
-        <View style={styles.cell}>
-          <BadgeItem type="risk" />
+        <View style={[styles.row, { minHeight: metrics.rowMinHeight }]}>
+          <View style={styles.cell}>
+            <BadgeItem type="water" />
+          </View>
+          <View style={styles.cell}>
+            <BadgeItem type="permit" />
+          </View>
+        </View>
+        <View style={[styles.row, { minHeight: metrics.rowMinHeight }]}>
+          <View style={styles.cell}>
+            <BadgeItem type="time" />
+          </View>
+          <View style={styles.cell}>
+            <BadgeItem type="shuttle" />
+          </View>
+        </View>
+        <View style={[styles.row, { minHeight: metrics.rowMinHeight }]}>
+          <View style={styles.cell}>
+            <BadgeItem type="routeType" />
+          </View>
+          <View style={styles.cell}>
+            <BadgeItem type="vehicle" />
+          </View>
         </View>
       </View>
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <BadgeItem type="water" />
-        </View>
-        <View style={styles.cell}>
-          <BadgeItem type="permit" />
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <BadgeItem type="time" />
-        </View>
-        <View style={styles.cell}>
-          <BadgeItem type="shuttle" />
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <BadgeItem type="routeType" />
-        </View>
-        <View style={styles.cell}>
-          <BadgeItem type="vehicle" />
-        </View>
-      </View>
-    </View>
+    </BadgeLayoutProvider>
   );
 }
 
@@ -406,18 +422,18 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "column",
     marginTop: 16,
-    width: SCREEN_WIDTH,
-    marginLeft: -20,
+    marginLeft: -PAGE_BADGE_CARD_PADDING,
+    marginRight: -PAGE_BADGE_CARD_PADDING,
   },
   row: {
     flexDirection: "row",
     flex: 1,
     alignItems: "center",
-    minHeight: BADGES_GRID_MIN_HEIGHT / 3,
   },
   cell: {
-    width: CELL_WIDTH,
-    paddingHorizontal: 8,
-    alignItems: "flex-start",
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: PAGE_BADGE_CELL_PADDING,
+    alignItems: "stretch",
   },
 });

@@ -1,21 +1,19 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
+import { BadgeLayoutProvider } from "@/components/badges/Badge";
 import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import {
+  ROUTE_PREVIEW_CARD_BORDER_RADIUS,
+  ROUTE_PREVIEW_CARD_MARGIN_H,
+  ROUTE_PREVIEW_CARD_PADDING,
+  useRoutePreviewMetrics,
+} from "@/utils/routePreviewLayout";
+import {
   ActivityIndicator,
-  Dimensions,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-
-const CARD_BORDER_RADIUS = 12;
-const CARD_PADDING = 12;
-/** Keep in sync with RoutePreview card metrics. */
-const PREVIEW_CARD_MIN_HEIGHT = 140;
-const CARD_MARGIN_H = 16;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN_H * 2;
 
 export type RoutePreviewPlaceholderProps = {
   /** When set, shown instead of the title skeleton bar (loading vs error, like Ropewiki placeholders). */
@@ -26,105 +24,133 @@ export function RoutePreviewPlaceholder({
   errorMessage,
 }: RoutePreviewPlaceholderProps) {
   const themeColors = useColorTheme();
+  const metrics = useRoutePreviewMetrics();
   const { text, image, background, placeholder, loadingIndicator } = themeColors;
   const isError = errorMessage != null && errorMessage !== "";
 
   return (
     <View style={styles.outer}>
-      <View
-        style={[
-          styles.card,
-          { overflow: "hidden", backgroundColor: background },
-        ]}
+      <BadgeLayoutProvider
+        size={metrics.badgeSize}
+        labelFontSize={metrics.badgeLabelFontSize}
+        allowLabelFontScaling={false}
       >
-        <View style={styles.cardContent}>
-          <View
-            style={[
-              styles.imageContainer,
-              styles.placeholderImageSlot,
-              { backgroundColor: image.background },
-            ]}
-          >
-            {!isError ? (
-              <View
-                style={[
-                  styles.imageLoadingOverlay,
-                  { backgroundColor: image.background },
-                ]}
-              >
-                <ActivityIndicator size="small" color={loadingIndicator} />
+        <View
+          style={[
+            styles.card,
+            {
+              width: metrics.cardWidth,
+              backgroundColor: background,
+            },
+          ]}
+        >
+          <View style={styles.cardContent}>
+            <View
+              style={[
+                styles.imageContainer,
+                {
+                  width: metrics.imageWidth,
+                  backgroundColor: image.background,
+                },
+              ]}
+            >
+              {!isError ? (
+                <View
+                  style={[
+                    styles.imageLoadingOverlay,
+                    { backgroundColor: image.background },
+                  ]}
+                >
+                  <ActivityIndicator size="small" color={loadingIndicator} />
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.info}>
+              <View style={[styles.infoStack, { gap: metrics.infoRowGap }]}>
+                <StarRating
+                  rating={0}
+                  count={0}
+                  size={metrics.starRatingSize}
+                  allowFontScaling={false}
+                  placeholderColor
+                  style={styles.starRatingRow}
+                  textStyle={[
+                    styles.starRatingText,
+                    { fontSize: metrics.starRatingFontSize },
+                  ]}
+                />
+                {isError ? (
+                  <Text
+                    style={[styles.errorMessage, { color: text.error }]}
+                    numberOfLines={4}
+                  >
+                    {errorMessage}
+                  </Text>
+                ) : (
+                  <View
+                    style={[
+                      styles.titlePlaceholder,
+                      {
+                        backgroundColor: placeholder,
+                        height:
+                          metrics.titleMaxFontSize +
+                          metrics.titleDescenderPadding,
+                      },
+                    ]}
+                  />
+                )}
+                <View
+                  style={[
+                    styles.locationPlaceholderWrap,
+                    { marginTop: metrics.locationMarginTopAfterTitle },
+                  ]}
+                >
+                  <View style={styles.regionPlaceholderRow}>
+                    <View
+                      style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
+                    />
+                    <Text style={[styles.regionDot, { color: text.tertiary }]}> • </Text>
+                    <View
+                      style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
+                    />
+                  </View>
+                  <View style={styles.regionPlaceholderRow}>
+                    <View
+                      style={[styles.regionBar, { width: "30%", backgroundColor: placeholder }]}
+                    />
+                  </View>
+                </View>
+                <View style={[styles.badgePlaceholderRow, { gap: metrics.badgeGap }]}>
+                  {Array.from({ length: metrics.maxVisibleBadges }, (_, i) => (
+                    <PlaceholderBadge key={i} size={metrics.badgeSize} />
+                  ))}
+                </View>
               </View>
-            ) : null}
-          </View>
-          <View style={[styles.info, styles.infoCentered]}>
-            <StarRating
-              rating={0}
-              count={0}
-              size={14}
-              placeholderColor
-              style={styles.starRatingRow}
-              textStyle={styles.starRatingText}
-            />
-            {isError ? (
-              <Text
-                style={[styles.errorMessage, { color: text.error }]}
-                numberOfLines={4}
-              >
-                {errorMessage}
-              </Text>
-            ) : (
-              <View
-                style={[styles.titlePlaceholder, { backgroundColor: placeholder }]}
-              />
-            )}
-            <View style={styles.regionPlaceholderRow}>
-              <View
-                style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
-              />
-              <Text style={[styles.regionDot, { color: text.tertiary }]}> • </Text>
-              <View
-                style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
-              />
-            </View>
-            <View style={styles.regionPlaceholderRow}>
-              <View
-                style={[styles.regionBar, { width: "30%", backgroundColor: placeholder }]}
-              />
-            </View>
-            <View style={styles.badgePlaceholderRow}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <PlaceholderBadge key={i} size={32} />
-              ))}
             </View>
           </View>
         </View>
-      </View>
+      </BadgeLayoutProvider>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   outer: {
-    paddingHorizontal: CARD_MARGIN_H,
+    paddingHorizontal: ROUTE_PREVIEW_CARD_MARGIN_H,
     marginBottom: 8,
   },
   card: {
-    minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    borderRadius: CARD_BORDER_RADIUS,
+    borderRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
     overflow: "hidden",
   },
   cardContent: {
     flexDirection: "row",
   },
   imageContainer: {
-    width: CARD_WIDTH * 0.35,
     alignSelf: "stretch",
-    borderTopLeftRadius: CARD_BORDER_RADIUS,
-    borderBottomLeftRadius: CARD_BORDER_RADIUS,
+    borderTopLeftRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
+    borderBottomLeftRadius: ROUTE_PREVIEW_CARD_BORDER_RADIUS,
     overflow: "hidden",
-  },
-  placeholderImageSlot: {
-    minHeight: PREVIEW_CARD_MIN_HEIGHT,
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -134,38 +160,39 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    minHeight: PREVIEW_CARD_MIN_HEIGHT,
-    padding: CARD_PADDING,
+    minWidth: 0,
+    paddingTop: ROUTE_PREVIEW_CARD_PADDING,
+    paddingBottom: ROUTE_PREVIEW_CARD_PADDING,
+    paddingHorizontal: ROUTE_PREVIEW_CARD_PADDING,
+    overflow: "hidden",
+  },
+  infoStack: {
+    alignSelf: "stretch",
     justifyContent: "flex-start",
   },
-  infoCentered: {
-    justifyContent: "center",
-  },
   starRatingRow: {
-    marginBottom: 4,
     gap: 2,
   },
   starRatingText: {
     marginLeft: 6,
-    fontSize: 12,
   },
   titlePlaceholder: {
-    height: 16,
     width: "66%",
     alignSelf: "flex-start",
     borderRadius: 4,
-    marginBottom: 8,
   },
   errorMessage: {
     alignSelf: "stretch",
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
+  },
+  locationPlaceholderWrap: {
+    alignSelf: "stretch",
+    gap: 4,
   },
   regionPlaceholderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
   },
   regionBar: {
     height: 10,
@@ -176,9 +203,8 @@ const styles = StyleSheet.create({
   },
   badgePlaceholderRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 6,
+    flexWrap: "nowrap",
+    flexShrink: 0,
     alignItems: "center",
   },
 });

@@ -22,16 +22,25 @@ export const ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 =
   ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * 2 ** -22;
 
 /** Shared `iconSize` expression for route marker SymbolLayers. */
-export const ROUTE_MARKER_ICON_SIZE_INTERPOLATE =
-  [
+export function routeMarkerIconSizeInterpolate(
+  iconSizeScale = 1,
+): SymbolLayerStyle["iconSize"] {
+  const z0 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * iconSizeScale;
+  const z22 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 * iconSizeScale;
+  return [
     "interpolate",
     ["exponential", 2],
     ["zoom"],
     0,
-    ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0,
+    z0,
     22,
-    ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22,
+    z22,
   ] as SymbolLayerStyle["iconSize"];
+}
+
+/** @deprecated Use {@link routeMarkerIconSizeInterpolate}. */
+export const ROUTE_MARKER_ICON_SIZE_INTERPOLATE =
+  routeMarkerIconSizeInterpolate(1);
 
 /** Unclustered selected markers (focused / accent) render this much larger than default. */
 export const SELECTED_ROUTE_MARKER_ICON_SIZE_MULTIPLIER = 1.5;
@@ -45,18 +54,19 @@ export const SELECTED_ROUTE_MARKER_ICON_SIZE_MULTIPLIER = 1.5;
 export function unclusteredRouteMarkerIconSize(
   focusedRouteId: string | null | undefined,
   accentRouteId: string | null | undefined,
+  iconSizeScale = 1,
 ): SymbolLayerStyle["iconSize"] {
   const ids = new Set<string>();
   if (focusedRouteId) ids.add(focusedRouteId);
   if (accentRouteId) ids.add(accentRouteId);
 
-  const z0 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0;
-  const z22 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22;
+  const z0 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * iconSizeScale;
+  const z22 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 * iconSizeScale;
   const m = SELECTED_ROUTE_MARKER_ICON_SIZE_MULTIPLIER;
   const key: ["to-string", ["get", "id"]] = ["to-string", ["get", "id"]];
 
   if (ids.size === 0) {
-    return ROUTE_MARKER_ICON_SIZE_INTERPOLATE;
+    return routeMarkerIconSizeInterpolate(iconSizeScale);
   }
   if (ids.size === 1) {
     const id = [...ids][0];

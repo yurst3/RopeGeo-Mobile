@@ -23,7 +23,6 @@ export const TOAST_KEY_DISTANCE_GPS_TIMEOUT = "error-search-distance-gps-timeout
 export const TOAST_KEY_DEV_NETWORK_IS_CONNECTED = "dev-network-isConnected";
 export const TOAST_KEY_DEV_NETWORK_INTERNET_REACHABLE =
   "dev-network-isInternetReachable";
-
 /**
  * Archetype defaults for exact keys. These values are defaults, not hard rules; callers may
  * override `allowedRoutes`/`durationMs`/variant-dependent fields at creation.

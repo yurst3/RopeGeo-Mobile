@@ -1,16 +1,12 @@
 import { BADGE_BUTTON_KEY } from "@/constants/buttons";
 import type { BadgeButtonColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
 import { Image } from "expo-image";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 const INFO_ICON = require("@/assets/images/icons/buttons/info.png");
-
-/** Fixed width for badge type label so badge position is consistent across cells. */
-export const BADGE_BUTTON_LABEL_WIDTH = 110;
-/** Fixed width for badge (circle + sub-label) so all badges align in the same position. */
-export const BADGE_BUTTON_BADGE_WIDTH = 80;
 
 const INFO_ICON_WRAP_SIZE = 18;
 const INFO_ICON_IMAGE_SIZE = 12;
@@ -33,12 +29,13 @@ export function BadgeButton({
   accessibilityLabel,
 }: BadgeButtonProps) {
   const themeColors = useColorTheme();
+  const { badgeSlotWidth, typeLabelFontSize } = usePageBadgeMetrics();
   const { infoIconBackground, infoIcon } =
     themeColors.button.nonstandard[BADGE_BUTTON_KEY] as BadgeButtonColors;
 
   const content = (
     <View style={styles.row}>
-      <View style={[styles.labelRow, { width: BADGE_BUTTON_LABEL_WIDTH }]}>
+      <View style={styles.labelRow}>
         {onPress != null ? (
           <View style={[styles.infoIconWrap, { backgroundColor: infoIconBackground }]}>
             <Image
@@ -53,12 +50,22 @@ export function BadgeButton({
           </View>
         ) : null}
         <View style={styles.labelTextWrap}>
-          <Text style={[styles.typeLabel, { color: themeColors.text.secondary }]}>
+          <Text
+            style={[
+              styles.typeLabel,
+              {
+                color: themeColors.text.secondary,
+                fontSize: typeLabelFontSize,
+              },
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {badgeTypeLabel}
           </Text>
         </View>
       </View>
-      <View style={[styles.badgeSlot, { width: BADGE_BUTTON_BADGE_WIDTH }]}>
+      <View style={[styles.badgeSlot, { width: badgeSlotWidth }]}>
         <View style={styles.badgeWrap}>{badge}</View>
       </View>
     </View>
@@ -83,6 +90,7 @@ export function BadgeButton({
 const styles = StyleSheet.create({
   pressable: {
     flex: 1,
+    minWidth: 0,
     minHeight: 0,
   },
   pressed: {
@@ -90,19 +98,23 @@ const styles = StyleSheet.create({
   },
   static: {
     flex: 1,
+    minWidth: 0,
     minHeight: 0,
   },
   row: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     flex: 1,
+    minWidth: 0,
     minHeight: 0,
+    gap: 4,
   },
   labelRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    flexShrink: 0,
+    minWidth: 0,
   },
   infoIconWrap: {
     width: INFO_ICON_WRAP_SIZE,
@@ -110,22 +122,22 @@ const styles = StyleSheet.create({
     borderRadius: INFO_ICON_WRAP_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
+    flexShrink: 0,
   },
   labelTextWrap: {
     flex: 1,
     minWidth: 0,
   },
   typeLabel: {
-    fontSize: 13,
     fontWeight: "500",
   },
   badgeSlot: {
     flexShrink: 0,
-    alignSelf: "stretch",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   badgeWrap: {
     maxWidth: "100%",
+    alignItems: "center",
   },
 });

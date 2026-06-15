@@ -39,6 +39,12 @@ import {
   PermitStatus,
   RouteType,
 } from "ropegeo-common/models";
+import {
+  ROUTE_PREVIEW_BADGE_GAP,
+  ROUTE_PREVIEW_MAX_BADGES,
+} from "@/utils/routePreviewLayout";
+
+const MAX_BADGES = ROUTE_PREVIEW_MAX_BADGES;
 
 const TECHNICAL_BADGES: Record<AcaTechnicalSubRating, React.ComponentType> = {
   [AcaTechnicalSubRating.One]: NotTechnicalBadge,
@@ -81,20 +87,20 @@ const PERMIT_BADGES: Record<
   [PermitStatus.Closed]: ClosedBadge,
 };
 
-const MAX_BADGES = 5;
-
 export type BadgeRowProps = {
   difficultyRating: DifficultyRating;
   permit?: PermitStatus | null;
   routeType?: RouteType | null;
-  scale?: number;
+  badgeGap?: number;
+  maxVisibleBadges?: number;
 };
 
 export function BadgeRow({
   difficultyRating,
   permit = null,
   routeType = null,
-  scale = 1,
+  badgeGap = ROUTE_PREVIEW_BADGE_GAP,
+  maxVisibleBadges = MAX_BADGES,
 }: BadgeRowProps) {
   const badges: React.ReactNode[] = [];
   if (routeType === RouteType.Cave) {
@@ -124,15 +130,13 @@ export function BadgeRow({
   if (permit != null && PERMIT_BADGES[permit] != null) {
     badges.push(React.createElement(PERMIT_BADGES[permit], { key: "permit" }));
   }
-  const displayBadges = badges.slice(0, MAX_BADGES);
+  const displayBadges = badges.slice(
+    0,
+    Math.min(MAX_BADGES, Math.max(0, maxVisibleBadges)),
+  );
   if (displayBadges.length === 0) return null;
   return (
-    <View
-      style={[
-        styles.badgeRow,
-        { transform: [{ scale }], transformOrigin: "left center" },
-      ]}
-    >
+    <View style={[styles.badgeRow, { gap: badgeGap }]}>
       {displayBadges}
     </View>
   );
@@ -143,6 +147,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    gap: 8,
+    flexWrap: "nowrap",
   },
 });

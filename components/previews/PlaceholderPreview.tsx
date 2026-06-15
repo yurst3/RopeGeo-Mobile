@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: 12,
     padding: 3,
-    marginBottom: 6,
   },
   imageWrap: {
     position: "relative",
