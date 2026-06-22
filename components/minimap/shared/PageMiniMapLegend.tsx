@@ -1,5 +1,8 @@
 import { parseStrokeColor, parseStrokeWidth } from "@/components/minimap/shared/pageMiniMapSegments";
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedIconSizeScale } from "@/utils/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
 import { LegendFeatureType, LineLegendItem, PolygonLegendItem } from "ropegeo-common/models";
@@ -12,7 +15,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated, {
@@ -29,6 +31,35 @@ const SCROLL_AFTER_EXPAND_MS = EXPAND_MS + 48;
 const EASE = Easing.out(Easing.cubic);
 
 const POINT_MARKER_IMAGE = require("@/assets/images/icons/markers/marker.png");
+const LEGEND_CHEVRON_SIZE = 14;
+const LEGEND_MARKER_WIDTH = 18;
+const LEGEND_MARKER_HEIGHT = 22;
+const LEGEND_MARKER_ICON_SIZE = 18;
+const LEGEND_SWATCH_COLUMN_WIDTH = 28;
+const LEGEND_SWATCH_LINE_WIDTH = 20;
+const LEGEND_SWATCH_POLYGON_WIDTH = 28;
+const LEGEND_SWATCH_POLYGON_HEIGHT = 14;
+/** Column grows at half the rate of global icon scaling so labels keep more width. */
+const LEGEND_SWATCH_COLUMN_SCALE_STRENGTH = 0.5;
+
+function legendSwatchColumnScale(iconScale: number): number {
+  return 1 + (iconScale - 1) * LEGEND_SWATCH_COLUMN_SCALE_STRENGTH;
+}
+
+function legendSwatchMetrics(iconScale: number) {
+  const swatchColumnWidth = Math.round(
+    LEGEND_SWATCH_COLUMN_WIDTH * legendSwatchColumnScale(iconScale),
+  );
+  return {
+    swatchColumnWidth,
+    markerWidth: Math.round(LEGEND_MARKER_WIDTH * iconScale),
+    markerHeight: Math.round(LEGEND_MARKER_HEIGHT * iconScale),
+    markerIconSize: Math.round(LEGEND_MARKER_ICON_SIZE * iconScale),
+    lineWidth: Math.round(LEGEND_SWATCH_LINE_WIDTH * iconScale),
+    polygonWidth: Math.round(LEGEND_SWATCH_POLYGON_WIDTH * iconScale),
+    polygonHeight: Math.round(LEGEND_SWATCH_POLYGON_HEIGHT * iconScale),
+  };
+}
 
 export type PageMiniMapLegendProps = {
   /** Server-provided legend rows (parent only mounts when non-empty). */
@@ -41,7 +72,8 @@ export type PageMiniMapLegendProps = {
    */
   scrollIntoViewEpoch?: number;
   maxHeight: number;
-  maxWidth: number;
+  /** Left edge of the legend panel (typically half the window width). */
+  leftOffset: number;
   /** Distance from the physical bottom of the overlay to the legend (tab bar + safe area + gap). */
   bottomOffset: number;
   rightInset: number;
@@ -52,22 +84,36 @@ export type PageMiniMapLegendProps = {
 function PointMarkerSwatch({
   tintColor,
   imageSource,
+  swatchColumnWidth,
+  markerWidth,
+  markerHeight,
+  markerIconSize,
 }: {
   tintColor: string;
   imageSource: ImageSourcePropType | undefined;
+  swatchColumnWidth: number;
+  markerWidth: number;
+  markerHeight: number;
+  markerIconSize: number;
 }) {
   return (
-    <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
+    <View
+      style={[styles.swatchWrap, { width: swatchColumnWidth }]}
+      accessibilityIgnoresInvertColors
+    >
       {imageSource ? (
         <Image
           source={imageSource}
-          style={[styles.swatchPointMarker, { tintColor }]}
+          style={[
+            styles.swatchPointMarker,
+            { width: markerWidth, height: markerHeight, tintColor },
+          ]}
           accessibilityIgnoresInvertColors
         />
       ) : (
         <FontAwesome5
           name="map-marker-alt"
-          size={18}
+          size={markerIconSize}
           color={tintColor}
           style={styles.swatchPointMarkerIcon}
         />
@@ -81,17 +127,25 @@ function LegendItemSwatch({
   pointMarkerTint,
   pointMarkerImageSource,
   defaultLineStroke,
+  iconScale,
 }: {
   item: LegendItem;
   pointMarkerTint: string;
   pointMarkerImageSource: ImageSourcePropType | undefined;
   defaultLineStroke: string;
+  iconScale: number;
 }) {
+  const swatchMetrics = legendSwatchMetrics(iconScale);
+
   if (item.featureType === LegendFeatureType.Point) {
     return (
       <PointMarkerSwatch
         tintColor={pointMarkerTint}
         imageSource={pointMarkerImageSource}
+        swatchColumnWidth={swatchMetrics.swatchColumnWidth}
+        markerWidth={swatchMetrics.markerWidth}
+        markerHeight={swatchMetrics.markerHeight}
+        markerIconSize={swatchMetrics.markerIconSize}
       />
     );
   }
@@ -106,11 +160,19 @@ function LegendItemSwatch({
         ? parseStrokeColor(G.fillColor, defaultLineStroke)
         : undefined;
     return (
-      <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
+      <View
+        style={[
+          styles.swatchWrap,
+          { width: swatchMetrics.swatchColumnWidth },
+        ]}
+        accessibilityIgnoresInvertColors
+      >
         <View
           style={[
             styles.swatchPolygon,
             {
+              width: swatchMetrics.polygonWidth,
+              height: swatchMetrics.polygonHeight,
               borderColor: stroke,
               backgroundColor: fillColor ?? "rgba(0,0,0,0.06)",
             },
@@ -123,11 +185,18 @@ function LegendItemSwatch({
   const stroke = parseStrokeColor(L.strokeColor, defaultLineStroke);
   const strokeWidth = parseStrokeWidth(L.strokeWidth);
   return (
-    <View style={styles.swatchWrap} accessibilityIgnoresInvertColors>
+    <View
+      style={[
+        styles.swatchWrap,
+        { width: swatchMetrics.swatchColumnWidth },
+      ]}
+      accessibilityIgnoresInvertColors
+    >
       <View
         style={[
           styles.swatchLine,
           {
+            width: swatchMetrics.lineWidth,
             backgroundColor: stroke,
             height: Math.min(10, Math.max(3, strokeWidth)),
           },
@@ -143,13 +212,16 @@ export function PageMiniMapLegend({
   selectedKey,
   scrollIntoViewEpoch = 0,
   maxHeight,
-  maxWidth,
+  leftOffset,
   bottomOffset,
   rightInset,
   onToggleExpanded,
   onSelectLegendId,
 }: PageMiniMapLegendProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const iconScale = useResolvedIconSizeScale();
+  const chevronSize = Math.round(LEGEND_CHEVRON_SIZE * iconScale);
   const { minimap, focusedLineSegment } = themeColors.map;
   const { text, cardHighlight } = themeColors;
   const { bodyBackground, headerBackground, shadow } = minimap.legend;
@@ -159,11 +231,10 @@ export function PageMiniMapLegend({
     () => [
       styles.card,
       {
-        maxWidth,
         shadowColor: shadow,
       },
     ],
-    [maxWidth, shadow],
+    [shadow],
   );
 
   const headerStyle = useMemo(
@@ -177,7 +248,7 @@ export function PageMiniMapLegend({
   );
 
   const headerTitleStyle = useMemo(
-    () => [styles.headerTitle, { color: text.primary }],
+    () => ({ color: text.primary }),
     [text.primary],
   );
 
@@ -186,8 +257,8 @@ export function PageMiniMapLegend({
     [themeColors.separator],
   );
 
-  const rowLabelStyle = useMemo(
-    () => [styles.rowLabel, { color: text.primary }],
+  const rowLabelColorStyle = useMemo(
+    () => ({ color: text.primary }),
     [text.primary],
   );
 
@@ -260,7 +331,10 @@ export function PageMiniMapLegend({
 
   return (
     <View
-      style={[styles.anchor, { bottom: bottomOffset, right: rightInset + 12, maxWidth }]}
+      style={[
+        styles.anchor,
+        { bottom: bottomOffset, left: leftOffset, right: rightInset + 12 },
+      ]}
       pointerEvents="box-none"
     >
       <View style={cardStyle}>
@@ -273,12 +347,27 @@ export function PageMiniMapLegend({
           accessibilityRole="button"
           accessibilityLabel={expanded ? "Collapse map legend" : "Expand map legend"}
         >
-          <Text style={headerTitleStyle}>Map Legend</Text>
-          <FontAwesome5
-            name={expanded ? "chevron-down" : "chevron-up"}
-            size={14}
-            color={minimap.legend.collapseIcon}
-          />
+          <ScalingText
+            size={uiScale.map.text.legendTitle}
+            typography={textStyle.map.legendTitle}
+            numberOfLines={1}
+            measure={{ type: "width" }}
+            containerStyle={styles.headerTitleWrap}
+            style={headerTitleStyle}
+          >
+            Map Legend
+          </ScalingText>
+          <View
+            style={[styles.chevronSlot, { width: chevronSize }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <FontAwesome5
+              name={expanded ? "chevron-down" : "chevron-up"}
+              size={chevronSize}
+              color={minimap.legend.collapseIcon}
+            />
+          </View>
         </Pressable>
         <Animated.View
           style={[animatedBodyStyle, listBodyStyle]}
@@ -308,13 +397,22 @@ export function PageMiniMapLegend({
                     pointMarkerTint={minimap.legend.markerIcon}
                     pointMarkerImageSource={pointMarkerImageSource}
                     defaultLineStroke={focusedLineSegment}
+                    iconScale={iconScale}
                   />
-                  <Text
-                    style={[rowLabelStyle, selected && styles.rowLabelSelected]}
+                  <ScalingText
+                    size={uiScale.map.text.legendItem}
+                    typography={textStyle.map.legendItem}
                     numberOfLines={3}
+                    ellipsizeMode="tail"
+                    measure={{ type: "lineCount", maxLinesAtMaxSize: 3 }}
+                    containerStyle={styles.rowLabelWrap}
+                    style={[
+                      rowLabelColorStyle,
+                      selected && { fontWeight: "600" as const },
+                    ]}
                   >
                     {item.name}
-                  </Text>
+                  </ScalingText>
                 </Pressable>
               );
             })}
@@ -329,16 +427,15 @@ const styles = StyleSheet.create({
   anchor: {
     position: "absolute",
     zIndex: 50,
-    alignSelf: "flex-end",
   },
   card: {
+    width: "100%",
     borderRadius: 12,
     overflow: "hidden",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 4,
     elevation: 12,
-    minWidth: 160,
   },
   header: {
     flexDirection: "row",
@@ -351,9 +448,14 @@ const styles = StyleSheet.create({
   headerPressed: {
     opacity: 0.85,
   },
-  headerTitle: {
-    fontSize: 15,
-    fontWeight: "600",
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  chevronSlot: {
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   row: {
     flexDirection: "row",
@@ -364,33 +466,24 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   swatchWrap: {
-    width: 36,
     alignItems: "center",
     justifyContent: "center",
   },
   swatchLine: {
-    width: 28,
     borderRadius: 2,
   },
   swatchPointMarker: {
-    width: 18,
-    height: 22,
     resizeMode: "contain",
   },
   swatchPointMarkerIcon: {
     marginTop: 1,
   },
   swatchPolygon: {
-    width: 28,
-    height: 14,
     borderRadius: 3,
     borderWidth: 2,
   },
-  rowLabel: {
+  rowLabelWrap: {
     flex: 1,
-    fontSize: 14,
-  },
-  rowLabelSelected: {
-    fontWeight: "600",
+    minWidth: 0,
   },
 });

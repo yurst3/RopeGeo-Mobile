@@ -11,9 +11,7 @@ import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
 import { PageBanner } from "./PageBanner";
 import { PageContent as PageScrollContent } from "./PageContent";
 import { PAGE_SEAM_FLOAT_OFFSET } from "./PageSeamButtons";
-import {
-  TOAST_HORIZONTAL_INSET,
-} from "@/constants/toasts";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import {
   TOAST_KEY_DOWNLOAD_CANCELLED,
   TOAST_KEY_PAGE_SAVED,
@@ -59,11 +57,6 @@ const BANNER_HEIGHT_MAX = SCREEN_HEIGHT;
 const FALLBACK_BANNER_ASPECT_RATIO = SCREEN_WIDTH / STARTING_HEIGHT;
 const CARD_BORDER_RADIUS = 24;
 
-/** Header row: safe-area padding + gap above first circle + circle size + gap before share row. */
-export const HEADER_ROW_TOP = 8;
-const HEADER_CIRCLE_SIZE = 44;
-const HEADER_BUTTON_STACK_GAP = 8;
-
 function ropewikiPageShareUrl(pageId: string, source: PageDataSource): string {
   return `https://mobile.ropegeo.com/explore/${encodeURIComponent(pageId)}/page?source=${encodeURIComponent(source)}`;
 }
@@ -85,6 +78,8 @@ export function RopewikiPageScreenBody({
 }: RopewikiPageScreenBodyProps) {
   const { background } = useColorTheme();
   const insets = useSafeAreaInsets();
+  const headerChrome = useHeaderChromeLayout();
+  const toastChrome = useToastChromeLayout();
   const { showPill, dismiss, upsertPill } = useToast();
   const router = useRouter();
   const { abortJob, enqueuePageDownload, getJobUISnapshot, takeInvalidStoredDownloadPageId } =
@@ -128,7 +123,7 @@ export function RopewikiPageScreenBody({
         subtitle: "Invalid stored download job",
         durationMs,
         allowedRoutes: [savedPageRoute],
-        horizontalInset: TOAST_HORIZONTAL_INSET,
+        horizontalInset: toastChrome.horizontalInset,
       });
     } catch (error) {
       if (!(error instanceof ToastKeyCollisionError)) {
@@ -140,7 +135,7 @@ export function RopewikiPageScreenBody({
         subtitle: "Invalid stored download job",
         durationMs,
         allowedRoutes: [savedPageRoute],
-        horizontalInset: TOAST_HORIZONTAL_INSET,
+        horizontalInset: toastChrome.horizontalInset,
       });
     }
   }, [pageId, pathname, showPill, takeInvalidStoredDownloadPageId, upsertPill]);
@@ -167,7 +162,7 @@ export function RopewikiPageScreenBody({
         message: "Page saved",
         durationMs: savedToastDurationMs,
         allowedRoutes: pageAllowedRoutes,
-        horizontalInset: TOAST_HORIZONTAL_INSET,
+        horizontalInset: toastChrome.horizontalInset,
         onDismissed: () => {
           setHighlightSavedTab(false);
         },
@@ -181,7 +176,7 @@ export function RopewikiPageScreenBody({
         message: "Page saved",
         durationMs: savedToastDurationMs,
         allowedRoutes: pageAllowedRoutes,
-        horizontalInset: TOAST_HORIZONTAL_INSET,
+        horizontalInset: toastChrome.horizontalInset,
         onDismissed: () => {
           setHighlightSavedTab(false);
         },
@@ -204,7 +199,7 @@ export function RopewikiPageScreenBody({
             message: "Download cancelled",
             durationMs: cancelDurationMs,
             allowedRoutes: pageAllowedRoutes,
-            horizontalInset: TOAST_HORIZONTAL_INSET,
+            horizontalInset: toastChrome.horizontalInset,
           });
         } catch (error) {
           if (!(error instanceof ToastKeyCollisionError)) {
@@ -215,7 +210,7 @@ export function RopewikiPageScreenBody({
             message: "Download cancelled",
             durationMs: cancelDurationMs,
             allowedRoutes: pageAllowedRoutes,
-            horizontalInset: TOAST_HORIZONTAL_INSET,
+            horizontalInset: toastChrome.horizontalInset,
           });
         }
       }
@@ -291,7 +286,7 @@ export function RopewikiPageScreenBody({
     downloadUi,
     resetKey: pageId,
     toastVisible: !mapExpanded,
-    horizontalInset: TOAST_HORIZONTAL_INSET,
+    horizontalInset: toastChrome.horizontalInset,
   });
 
   /** Full banner bounds for expand animation (`measureInWindow`). Hit testing uses a clipped overlay. */
@@ -537,15 +532,22 @@ export function RopewikiPageScreenBody({
 
       {!mapExpanded && (
         <>
-          <BackButton onPress={() => router.back()} top={insets.top + HEADER_ROW_TOP} />
-          <SaveButton saved={saved} onPress={onSavePress} top={insets.top + HEADER_ROW_TOP} />
+          <BackButton
+            onPress={() => router.back()}
+            top={insets.top + headerChrome.rowTopInset}
+          />
+          <SaveButton
+            saved={saved}
+            onPress={onSavePress}
+            top={insets.top + headerChrome.rowTopInset}
+          />
           <ShareButton
             onPress={onSharePress}
             top={
               insets.top +
-              HEADER_ROW_TOP +
-              HEADER_CIRCLE_SIZE +
-              HEADER_BUTTON_STACK_GAP
+              headerChrome.rowTopInset +
+              headerChrome.buttonSize +
+              headerChrome.gap
             }
           />
         </>

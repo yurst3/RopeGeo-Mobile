@@ -45,8 +45,8 @@ export type RoutesState = {
   reload?: () => void;
 };
 
-/** Exported for minimaps that render clustered route markers with the same layout as this layer. */
-export const CLUSTER_RADIUS = 50;
+/** @deprecated Use {@link ROUTE_MARKER_DESIGN_CLUSTER_RADIUS} from routeMarkerLayout. */
+export { ROUTE_MARKER_DESIGN_CLUSTER_RADIUS as CLUSTER_RADIUS } from "@/utils/routeMarkerLayout";
 
 /** Zoom when focusing a route from a marker tap — matches `ExploreScreen` default map zoom (12.1). */
 export const ROUTE_MARKER_CAMERA_ZOOM = 12.1;
@@ -218,7 +218,7 @@ function RouteMarkersLayerContent({
       id="routes-source"
       shape={data}
       cluster
-      clusterRadius={CLUSTER_RADIUS}
+      clusterRadius={markerMetrics.clusterRadius}
       onPress={handlePress}
     >
       <SymbolLayer

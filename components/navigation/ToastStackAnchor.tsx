@@ -1,16 +1,18 @@
-import { STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP } from "@/components/minimap/shared/fullScreenMapLayout";
+import { useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import { routePathFromSegments } from "@/constants/toasts/helpers";
 import { useToast } from "@/context/ToastContext";
 import { usePathname, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-/** Matches ropewiki header row / back button inset for compact chrome. */
-const ROPEWIKI_HEADER_ROW_TOP = 8;
-
-export function computeToastStackAnchorY(pathname: string, insetsTop: number): number {
-  const stacked = insetsTop + STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP;
-  const compact = insetsTop + ROPEWIKI_HEADER_ROW_TOP;
+export function computeToastStackAnchorY(
+  pathname: string,
+  insetsTop: number,
+  stackedOffsetBelowSafeTop: number,
+  compactHeaderRowTop: number,
+): number {
+  const stacked = insetsTop + stackedOffsetBelowSafeTop;
+  const compact = insetsTop + compactHeaderRowTop;
   if (pathname.includes("/page")) return compact;
   if (pathname.includes("/region")) return compact;
   return stacked;
@@ -24,15 +26,25 @@ export function ToastStackAnchor(): null {
   const segments = useSegments();
   const segmentPath = routePathFromSegments(segments);
   const insets = useSafeAreaInsets();
+  const toastChrome = useToastChromeLayout();
   const { setToastStackTopPosition, dismissUnallowedToasts } = useToast();
 
   useEffect(() => {
-    setToastStackTopPosition(computeToastStackAnchorY(pathname, insets.top));
+    setToastStackTopPosition(
+      computeToastStackAnchorY(
+        pathname,
+        insets.top,
+        toastChrome.stackedOffsetBelowSafeTop,
+        toastChrome.compactHeaderRowTop,
+      ),
+    );
     dismissUnallowedToasts(segmentPath);
   }, [
     pathname,
     segmentPath,
     insets.top,
+    toastChrome.stackedOffsetBelowSafeTop,
+    toastChrome.compactHeaderRowTop,
     setToastStackTopPosition,
     dismissUnallowedToasts,
   ]);

@@ -2,11 +2,11 @@ import { ActionToast } from "@/components/toast/ActionToast";
 import { ProgressToast } from "@/components/toast/ProgressToast";
 import { Toast } from "@/components/toast/Toast";
 import type { ToastStyle } from "@/constants/colors/types";
-import { STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP } from "@/components/minimap/shared/fullScreenMapLayout";
+import { resolveStackedToastBaseOffsetBelowSafeTop, resolveToastHorizontalInset } from "@/utils/buttonChromeLayout";
+import { useText } from "@/context/TextContext";
 import {
   DOWNLOAD_TOAST_FADE_OUT_MS,
   SAVED_TOAST_FADE_OUT_MS,
-  TOAST_HORIZONTAL_INSET,
   TOAST_STACK_GAP,
   TOAST_STACK_ROW_HEIGHT_ACTION,
   TOAST_STACK_ROW_HEIGHT_PILL_SINGLE,
@@ -30,7 +30,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { StyleSheet, View, type ImageSourcePropType } from "react-native";
+import { StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function withMultipleSuffix(text: string, multiple: number): string {
@@ -524,7 +524,18 @@ type ToastProviderProps = { children: ReactNode };
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const insets = useSafeAreaInsets();
-  const defaultStackAnchorY = insets.top + STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP;
+  const { uiScale } = useText();
+  const { fontScale } = useWindowDimensions();
+  const defaultHorizontalInset = useMemo(
+    () => resolveToastHorizontalInset(uiScale, fontScale),
+    [uiScale, fontScale],
+  );
+  const defaultStackAnchorY = useMemo(
+    () =>
+      insets.top +
+      resolveStackedToastBaseOffsetBelowSafeTop(uiScale, fontScale),
+    [insets.top, uiScale, fontScale],
+  );
   const [toastStackAnchorY, setToastStackAnchorY] = useState<number | null>(null);
   const stackAnchorY = toastStackAnchorY ?? defaultStackAnchorY;
   const [toasts, setToasts] = useState<ToastModel[]>([]);
@@ -647,7 +658,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
         throw new ToastKeyCollisionError(opts.key);
       }
       const replacedExiting = existing?.exiting === true;
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)
@@ -711,7 +722,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
         throw new ToastKeyCollisionError(opts.key);
       }
       const replacedExiting = existing?.exiting === true;
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)
@@ -772,7 +783,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const upsertActionToast = useCallback(
     (opts: ShowActionToastOptions): ToastKey => {
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)
@@ -864,7 +875,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const upsertPill = useCallback(
     (opts: ShowPillToastOptions): ToastKey => {
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)
@@ -934,7 +945,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
         throw new ToastKeyCollisionError(opts.key);
       }
       const replacedExiting = existing?.exiting === true;
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)
@@ -994,7 +1005,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const upsertProgress = useCallback(
     (opts: ShowProgressToastOptions): ToastKey => {
-      const horizontalInset = opts.horizontalInset ?? TOAST_HORIZONTAL_INSET;
+      const horizontalInset = opts.horizontalInset ?? defaultHorizontalInset;
       const durationMs =
         opts.durationMs === undefined
           ? resolveDefaultDurationMs(opts.key)

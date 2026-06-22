@@ -1,6 +1,6 @@
 import { FilterBottomSheet, type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import {
   TOAST_KEY_SEARCH_ERROR,
   TOAST_KEY_SEARCH_NO_RESULTS,
@@ -11,6 +11,8 @@ import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMore
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
 import { getSearchBarHeight } from "@/components/SearchBar";
 import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
@@ -20,7 +22,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -67,13 +68,16 @@ export function SearchScreenResults({
   onDismissKeyboard,
 }: SearchScreenResultsProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const isFocused = useIsFocused();
   const { upsertPill, dismiss } = useToast();
-  const searchBarTop = insets.top + 8;
-  const searchBarHeight = getSearchBarHeight(fontScale);
+  const headerChrome = useHeaderChromeLayout();
+  const toastChrome = useToastChromeLayout();
+  const searchBarTop = insets.top + headerChrome.rowTopInset;
+  const searchBarHeight = getSearchBarHeight(fontScale, uiScale);
   const scrollYRef = useRef(0);
   const layoutHRef = useRef(0);
   const contentHRef = useRef(0);
@@ -168,7 +172,7 @@ export function SearchScreenResults({
       key: TOAST_KEY_SEARCH_ERROR,
       message,
       durationMs: null,
-      horizontalInset: TOAST_HORIZONTAL_INSET,
+      horizontalInset: toastChrome.horizontalInset,
     });
   }, [showErrorSkeletons, isOnline, isNoNetworkSoft, errors, dismiss, upsertPill]);
 
@@ -181,7 +185,7 @@ export function SearchScreenResults({
       key: TOAST_KEY_SEARCH_NO_RESULTS,
       message: "No results. Try another term or change filters.",
       durationMs: null,
-      horizontalInset: TOAST_HORIZONTAL_INSET,
+      horizontalInset: toastChrome.horizontalInset,
     });
   }, [showNoResultsOnly, dismiss, upsertPill]);
 
@@ -196,9 +200,13 @@ export function SearchScreenResults({
               size="large"
               color={themeColors.loadingIndicator}
             />
-            <Text style={[styles.locationWaitText, { color: themeColors.text.secondary }]}>
+            <ConstantText
+              size={uiScale.toast.text.message}
+              typography={textStyle.toast.message}
+              style={[styles.locationWaitText, { color: themeColors.text.secondary }]}
+            >
               Getting your location…
-            </Text>
+            </ConstantText>
           </View>
         ) : (
           <>
@@ -227,12 +235,19 @@ export function SearchScreenResults({
               >
                 {showLoadingSkeletons
                   ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
-                      <PlaceholderPreview key={`sk-${i}`} />
+                      <PlaceholderPreview
+                        key={`sk-${i}`}
+                        showAkaLine={i % 2 === 0}
+                      />
                     ))
                   : null}
                 {showErrorSkeletons
                   ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
-                      <PlaceholderPreview key={`err-${i}`} error />
+                      <PlaceholderPreview
+                        key={`err-${i}`}
+                        error
+                        showAkaLine={i % 2 === 0}
+                      />
                     ))
                   : null}
                 {showResultsList
@@ -250,7 +265,12 @@ export function SearchScreenResults({
                       ) : null,
                     )
                   : null}
-                {loadingNextPage ? <PlaceholderPreview key="load-more-footer" /> : null}
+                {loadingNextPage ? (
+                  <PlaceholderPreview
+                    key="load-more-footer"
+                    showAkaLine={items.length % 2 === 0}
+                  />
+                ) : null}
                 {showOfflineLoadMoreBlocked || showErroredLoadMoreBlocked ? (
                   <OfflineLoadMoreBlockedFooter />
                 ) : null}
@@ -293,7 +313,6 @@ const styles = StyleSheet.create({
   },
   locationWaitText: {
     marginTop: 12,
-    fontSize: 16,
     textAlign: "center",
   },
 });

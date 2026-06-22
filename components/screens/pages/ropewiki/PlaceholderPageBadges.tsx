@@ -3,6 +3,7 @@ import { BadgeLayoutProvider } from "@/components/badges/Badge";
 import {
   PAGE_BADGE_CARD_PADDING,
   PAGE_BADGE_CELL_PADDING,
+  PAGE_BADGE_ROW_GAP,
   usePageBadgeMetrics,
 } from "@/utils/pageBadgeLayout";
 import { StyleSheet, View } from "react-native";
@@ -15,6 +16,7 @@ export function PlaceholderPageBadges() {
     <BadgeLayoutProvider
       size={metrics.badgeSize}
       labelFontSize={metrics.badgeLabelFontSize}
+      labelMaxWidth={metrics.badgeSlotWidth}
     >
       <View
         style={[
@@ -65,6 +67,7 @@ export function PlaceholderPageBadges() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "column",
+    gap: PAGE_BADGE_ROW_GAP,
     marginTop: 16,
     marginLeft: -PAGE_BADGE_CARD_PADDING,
     marginRight: -PAGE_BADGE_CARD_PADDING,
@@ -79,5 +82,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingHorizontal: PAGE_BADGE_CELL_PADDING,
     alignItems: "stretch",
+    overflow: "hidden",
   },
 });

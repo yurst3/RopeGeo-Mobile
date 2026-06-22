@@ -1,17 +1,18 @@
 /**
  * Shared layout constants for full-screen map UIs (Explore, region/page map screens).
- * Matches ExploreScreen header row height and floating map control positions.
+ * Base sizes at medium profile — multiply by resolved button `background` scale in layout code
+ * (see {@link resolveHeaderChromeLayout} and {@link resolveMapButtonChromeLayout}).
  */
 export const HEADER_BUTTON_SIZE = 44;
-/** Gap between search bar and filter (Explore) and related header spacing. */
+/** Base gap between search bar and filter (Explore) and related header spacing. */
 export const HEADER_BUTTON_GAP = 8;
-/** Left/right header chrome width (explore: search side / filter slot). */
+/** Base left/right header chrome width (explore: search side / filter slot). */
 export const HEADER_SIDE_SLOT_WIDTH = HEADER_BUTTON_SIZE + HEADER_BUTTON_GAP;
 
-/** Distance from safe-area top to the expanded minimap header row (back / title / header actions). */
+/** Base distance from safe-area top to the expanded minimap header row. */
 export const MAP_HEADER_ROW_TOP_INSET = 8;
 
-/** Top offset for the first stacked map control when a header-row action sits above the stack. */
+/** Base top offset for the first stacked map control when a header-row action sits above the stack. */
 export const MAP_BUTTON_TOP_OFFSET = MAP_HEADER_ROW_TOP_INSET + HEADER_BUTTON_SIZE + 8;
 export const MAP_BUTTON_SIZE = 48;
 export const MAP_BUTTON_GAP = 8;
@@ -34,10 +35,7 @@ export function expandedMiniMapButtonStackTop(
   );
 }
 
-/**
- * Distance from safe-area top to the first global stacked toast anchor on full-screen map UIs
- * (Explore search row starts at `insets.top + 8`; this clears search + filter chrome).
- */
+/** Design baseline for stacked toast anchor (use {@link resolveStackedToastBaseOffsetBelowSafeTop}). */
 export const STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP = 56 + 8;
 
 export function boundsPaddingForFullScreenMap(insets: {

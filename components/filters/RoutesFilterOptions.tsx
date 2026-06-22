@@ -1,12 +1,20 @@
+import { ConstantText } from "@/components/text/ConstantText";
+import { ScalingText } from "@/components/text/ScalingText";
 import type { ComponentType } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { UnknownBadge } from "@/components/badges/UnknownBadge";
+import {
+  BadgeLayoutProvider,
+} from "@/components/badges/Badge";
 import { CanyonBadge } from "@/components/badges/routeType/CanyonBadge";
 import { CaveBadge } from "@/components/badges/routeType/CaveBadge";
 import { PoiBadge } from "@/components/badges/routeType/PoiBadge";
 import { RouteFilter, RouteType } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
+import { FilterCheckbox } from "./FilterCheckbox";
+import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
 import { useFilterTheme } from "./useFilterTheme";
+import { useText } from "@/context/TextContext";
 
 const ROUTE_TYPE_ORDER: RouteType[] = [
   RouteType.Canyon,
@@ -40,8 +48,9 @@ export function RoutesFilterOptions({
   filter,
   onChange,
 }: RoutesFilterOptionsProps) {
-  const { filter: filterColors, sectionLabel, bodyText, text } = useFilterTheme();
-  const { checkbox } = filterColors;
+  const { sectionLabel, text } = useFilterTheme();
+  const { uiScale, style: textStyle } = useText();
+  const checkboxMetrics = useFilterCheckboxMetrics();
 
   const patch = (fn: (r: RouteFilter) => void) => {
     const r = cloneFilter(filter);
@@ -75,49 +84,59 @@ export function RoutesFilterOptions({
   return (
     <>
       <View>
-        <Text style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}>
+        <ConstantText
+          size={uiScale.filter.text.sectionTitle}
+          typography={textStyle.filter.sectionTitle}
+          style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}
+        >
           Route types
-        </Text>
-        <View style={styles.routeTypeGrid}>
-          {ALL_ROUTE_TYPES.map((t) => {
+        </ConstantText>
+        {ALL_ROUTE_TYPES.map((t) => {
             const checked =
               filter.routeTypes === null || routeTypeSelection().has(t);
             const Badge = ROUTE_TYPE_FILTER_BADGES[t];
             return (
-              <View key={t} style={styles.routeTypeCell}>
-                <Pressable
-                  style={styles.checkboxRow}
-                  onPress={() => toggleRouteType(t)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked }}
+              <Pressable
+                key={t}
+                style={[
+                  styles.checkboxRow,
+                  { minHeight: checkboxMetrics.routeTypeBadgeSize },
+                ]}
+                onPress={() => toggleRouteType(t)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+              >
+                <FilterCheckbox checked={checked} />
+                <ScalingText
+                  size={uiScale.filter.buttons.checkbox.text!}
+                  typography={textStyle.filter.optionLabel}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  measure={{ type: "width", widthSafetyMargin: 2 }}
+                  containerStyle={styles.routeTypeLabelText}
+                  style={{ color: text.primary }}
                 >
-                  <View
-                    style={[
-                      styles.checkboxBox,
-                      { borderColor: checkbox.uncheckedOutline },
-                      checked && {
-                        borderColor: checkbox.checkedOutline,
-                        backgroundColor: checkbox.checkedFill,
-                      },
-                    ]}
+                  {t}
+                </ScalingText>
+                <View
+                  style={[
+                    styles.badgeThumbWrap,
+                    {
+                      width: checkboxMetrics.routeTypeBadgeSize,
+                      height: checkboxMetrics.routeTypeBadgeSize,
+                    },
+                  ]}
+                >
+                  <BadgeLayoutProvider
+                    size={checkboxMetrics.routeTypeBadgeSize}
+                    labelFontSize={checkboxMetrics.routeTypeBadgeLabelFontSize}
                   >
-                    {checked ? (
-                      <Text style={[styles.checkboxMark, { color: text.link }]}>
-                        ✓
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.routeTypeLabelRow}>
-                    <Text style={[styles.checkboxLabel, bodyText]}>{t}</Text>
-                    <View style={styles.badgeThumbWrap}>
-                      <Badge />
-                    </View>
-                  </View>
-                </Pressable>
-              </View>
+                    <Badge />
+                  </BadgeLayoutProvider>
+                </View>
+              </Pressable>
             );
           })}
-        </View>
       </View>
 
       <View style={styles.groupSpacer} />
@@ -141,42 +160,22 @@ const styles = StyleSheet.create({
   sectionLabelFirst: {
     marginTop: 12,
   },
-  routeTypeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -6,
-  },
-  routeTypeCell: {
-    width: "50%",
-    paddingHorizontal: 6,
-  },
-  routeTypeLabelRow: {
+  routeTypeLabelText: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "nowrap",
+    flexShrink: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    marginRight: 8,
   },
   badgeThumbWrap: {
-    transform: [{ scale: 0.75 }],
-    marginLeft: -4,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
+    minWidth: 0,
+    paddingVertical: 8,
   },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    marginRight: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxMark: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  checkboxLabel: {},
 });

@@ -1,7 +1,10 @@
+import { ConstantText } from "@/components/text/ConstantText";
 import { RopewikiRegionScreen } from "@/components/screens/regions/ropewiki/RopewikiRegionScreen";
+import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { useLocalSearchParams } from "expo-router";
 import { PageDataSource } from "ropegeo-common/models";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const VALID_SOURCES = new Set<string>(Object.values(PageDataSource));
 
@@ -25,6 +28,8 @@ function parseSavedPageId(
 }
 
 export default function RegionRoute() {
+  const { text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const params = useLocalSearchParams<{
     id: string;
     source: string;
@@ -46,7 +51,13 @@ export default function RegionRoute() {
   if (regionId == null || regionId === "") {
     return (
       <View style={styles.error}>
-        <Text style={styles.errorText}>Missing id.</Text>
+        <ConstantText
+          size={uiScale.toast.text.message}
+          typography={textStyle.toast.message}
+          style={[styles.errorText, { color: text.secondary }]}
+        >
+          Missing id.
+        </ConstantText>
       </View>
     );
   }
@@ -54,11 +65,15 @@ export default function RegionRoute() {
   if (!isPageDataSource(source)) {
     return (
       <View style={styles.error}>
-        <Text style={styles.errorText}>
+        <ConstantText
+          size={uiScale.toast.text.message}
+          typography={textStyle.toast.message}
+          style={[styles.errorText, { color: text.secondary }]}
+        >
           {source == null || source === ""
             ? "Missing source."
             : `Invalid source: ${source}`}
-        </Text>
+        </ConstantText>
       </View>
     );
   }
@@ -80,7 +95,13 @@ export default function RegionRoute() {
 
   return (
     <View style={styles.error}>
-      <Text style={styles.errorText}>Unknown source: {source}</Text>
+      <ConstantText
+        size={uiScale.toast.text.message}
+        typography={textStyle.toast.message}
+        style={[styles.errorText, { color: text.secondary }]}
+      >
+        Unknown source: {source}
+      </ConstantText>
     </View>
   );
 }
@@ -93,8 +114,6 @@ const styles = {
     padding: 24,
   },
   errorText: {
-    fontSize: 16,
-    color: "#6b7280",
     textAlign: "center" as const,
   },
 };

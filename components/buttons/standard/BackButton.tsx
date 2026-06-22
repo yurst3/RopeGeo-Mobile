@@ -8,6 +8,13 @@ import {
   STANDARD_BUTTON_SIZE,
 } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
+
+const BASE_ICON_SIZE = 20;
 
 
 /**
@@ -27,10 +34,16 @@ export function BackButton({
 }) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[BACK_BUTTON_KEY];
+  const { uiScale } = useText();
+  const buttonSpec = uiScale.common.buttons.back;
+  const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
+  const profileIconScale = useResolvedButtonIconScale(buttonSpec);
+  const buttonSize = Math.round(size * backgroundScale);
+  const iconSize = Math.round(BASE_ICON_SIZE * profileIconScale);
   return (
     <Button
       onPress={onPress}
-      size={size}
+      size={buttonSize}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
       iconColor={buttonColors.icon}
@@ -43,7 +56,7 @@ export function BackButton({
     >
       <FontAwesome5
         name="arrow-left"
-        size={20}
+        size={iconSize}
         color={buttonColors.icon}
       />
     </Button>

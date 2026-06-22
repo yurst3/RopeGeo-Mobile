@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import {
@@ -25,6 +24,9 @@ import {
   WaterMinMax,
   type DifficultyFilterOptions as PersistedDifficultyOptions,
 } from "ropegeo-common/models";
+import { ConstantText } from "@/components/text/ConstantText";
+import { ScalingText } from "@/components/text/ScalingText";
+import { useText } from "@/context/TextContext";
 import { fullRangeAcaDifficultyFilterOptions } from "@/lib/defaultAcaDifficultyFilterOptions";
 import { AcaDiscreteRangeSlider } from "./AcaDiscreteRangeSlider";
 import {
@@ -92,10 +94,11 @@ export function DifficultyFilterOptions({
     background,
     filter,
     sectionLabel,
-    bodyText,
     hintText,
+    text,
   } = useFilterTheme();
   const { dropdown, noteText } = filter;
+  const { uiScale, style: textStyle } = useText();
 
   const selectedType: DifficultyRatingSystem | null = useMemo(() => {
     if (options == null) return null;
@@ -137,9 +140,13 @@ export function DifficultyFilterOptions({
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionLabel, sectionLabel]}>
+      <ConstantText
+        size={uiScale.filter.text.sectionTitle}
+        typography={textStyle.filter.sectionTitle}
+        style={[styles.sectionLabel, sectionLabel]}
+      >
         Difficulty Rating System
-      </Text>
+      </ConstantText>
       <Pressable
         style={[
           styles.dropdownTrigger,
@@ -153,12 +160,16 @@ export function DifficultyFilterOptions({
         accessibilityLabel="Difficulty rating system"
       >
         <View style={styles.dropdownTriggerMain}>
-          <Text
-            style={[styles.dropdownTriggerText, bodyText]}
+          <ScalingText
+            size={uiScale.filter.buttons.checkbox.text!}
+            typography={textStyle.filter.optionLabel}
             numberOfLines={2}
+            measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+            style={[styles.dropdownTriggerText, { color: text.primary }]}
+            containerStyle={styles.dropdownTriggerText}
           >
             {dropdownSummary}
-          </Text>
+          </ScalingText>
           {selectedType === DifficultyRatingSystem.ACA ? (
             <Image
               source={ACA_ICON}
@@ -167,7 +178,13 @@ export function DifficultyFilterOptions({
             />
           ) : null}
         </View>
-        <Text style={[styles.dropdownChevron, hintText]}>▼</Text>
+        <ConstantText
+          size={uiScale.filter.buttons.radio.subtext!}
+          typography={textStyle.filter.optionSublabel}
+          style={hintText}
+        >
+          ▼
+        </ConstantText>
       </Pressable>
 
       <Modal
@@ -187,15 +204,25 @@ export function DifficultyFilterOptions({
               { backgroundColor: dropdown.modalBackground },
             ]}
           >
-            <Text style={[styles.modalTitle, bodyText]}>
+            <ConstantText
+              size={uiScale.filter.text.sectionTitle}
+              typography={textStyle.filter.sectionTitle}
+              style={[styles.modalTitle, { color: text.primary }]}
+            >
               Difficulty Rating System
-            </Text>
+            </ConstantText>
             <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
               <Pressable
                 style={styles.modalRow}
                 onPress={() => selectType(null)}
               >
-                <Text style={[styles.modalRowText, bodyText]}>All</Text>
+                <ConstantText
+                  size={uiScale.filter.buttons.checkbox.text!}
+                  typography={textStyle.filter.optionLabel}
+                  style={{ color: text.primary }}
+                >
+                  All
+                </ConstantText>
               </Pressable>
               {DIFFICULTY_TYPES.map((t) => (
                 <Pressable
@@ -203,9 +230,13 @@ export function DifficultyFilterOptions({
                   style={styles.modalRow}
                   onPress={() => selectType(t)}
                 >
-                  <Text style={[styles.modalRowText, bodyText]}>
+                  <ConstantText
+                    size={uiScale.filter.buttons.checkbox.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={[styles.modalRowText, { color: text.primary }]}
+                  >
                     {difficultyTypeLabel(t)}
-                  </Text>
+                  </ConstantText>
                   {t === DifficultyRatingSystem.ACA ? (
                     <Image
                       source={ACA_ICON}
@@ -295,11 +326,15 @@ export function DifficultyFilterOptions({
                 )
               }
             />
-            <Text style={[styles.effectiveRiskNote, { color: noteText }]}>
+            <ConstantText
+              size={uiScale.filter.text.note}
+              typography={textStyle.filter.note}
+              style={[styles.effectiveRiskNote, { color: noteText }]}
+            >
               The ACA rating system uses &quot;additional risk&quot; to denote elevated risk factors above the norm.
               &quot;Effective risk&quot; takes into account the technical rating
               and additional risk rating to reflect the true expected risk of a route.
-            </Text>
+            </ConstantText>
           </View>
         </View>
       ) : null}
@@ -337,11 +372,8 @@ const styles = StyleSheet.create({
   },
   dropdownTriggerText: {
     flex: 1,
-    fontSize: 16,
   },
-  dropdownChevron: {
-    fontSize: 12,
-  },
+  dropdownChevron: {},
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -356,8 +388,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
@@ -373,14 +403,11 @@ const styles = StyleSheet.create({
   },
   modalRowText: {
     flex: 1,
-    fontSize: 16,
   },
   acaBlock: {
     marginTop: 20,
   },
   effectiveRiskNote: {
     marginTop: 6,
-    fontSize: 12,
-    lineHeight: 16,
   },
 });

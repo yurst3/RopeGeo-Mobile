@@ -3,6 +3,8 @@ import { REMOVE_DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
 const REMOVE_BUTTON_SIZE = 40;
 const REMOVE_ICON_SIZE = 20;
@@ -21,6 +23,12 @@ export type RemoveDownloadButtonProps = {
 export function RemoveDownloadButton({ onPress, style }: RemoveDownloadButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[REMOVE_DOWNLOAD_BUTTON_KEY];
+  const { uiScale } = useText();
+  const { size, iconScale } = useResolvedButtonDimensions(
+    uiScale.pageScreen.buttons.removeDownload,
+    REMOVE_BUTTON_SIZE,
+    REMOVE_ICON_SCALE,
+  );
 
   return (
     <Button
@@ -29,8 +37,8 @@ export function RemoveDownloadButton({ onPress, style }: RemoveDownloadButtonPro
       shadowColor={themeColors.button.shadowColor}
       icon={REMOVE_ICON}
       iconColor={buttonColors.icon}
-      size={REMOVE_BUTTON_SIZE}
-      iconScale={REMOVE_ICON_SCALE}
+      size={size}
+      iconScale={iconScale}
       style={style}
       accessibilityLabel="Remove offline download"
     />

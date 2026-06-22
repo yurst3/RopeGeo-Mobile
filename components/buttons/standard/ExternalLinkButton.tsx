@@ -5,6 +5,10 @@ import * as WebBrowser from "expo-web-browser";
 import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedButtonDimensions } from "@/utils/resolvers";
+
+const EXTERNAL_LINK_ICON_DESIGN_SCALE = 28 / (MAP_BUTTON_SIZE * 0.5);
 
 
 export type ExternalLinkButtonProps = {
@@ -23,6 +27,12 @@ export function ExternalLinkButton({
 }: ExternalLinkButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[EXTERNAL_LINK_BUTTON_KEY];
+  const { uiScale } = useText();
+  const { size, iconScale } = useResolvedButtonDimensions(
+    uiScale.common.buttons.externalLink,
+    MAP_BUTTON_SIZE,
+    EXTERNAL_LINK_ICON_DESIGN_SCALE,
+  );
   const handlePress = async () => {
     if (disabled) return;
     try {
@@ -40,8 +50,8 @@ export function ExternalLinkButton({
       shadowColor={themeColors.button.shadowColor}
       borderColor={buttonColors.border}
       icon={icon}
-      iconScale={28 / (MAP_BUTTON_SIZE * 0.5)}
-      size={MAP_BUTTON_SIZE}
+      iconScale={iconScale}
+      size={size}
       accessibilityLabel={accessibilityLabel}
     />
   );

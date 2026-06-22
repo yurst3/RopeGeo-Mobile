@@ -1,6 +1,8 @@
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 export type RappelCountValue = { min: number; max: number } | number | null;
 
@@ -48,7 +50,8 @@ export function RappelInfoRow({
   jumps,
   technicalRating,
 }: RappelInfoRowProps) {
-  const { text, separator } = useColorTheme();
+  const { text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
 
   if (!shouldShowRow({ rappelCount, longestRappel, jumps, technicalRating })) {
     return null;
@@ -72,23 +75,67 @@ export function RappelInfoRow({
       <View style={styles.separator} />
       <View style={rowStyle}>
         <View style={columnStyle}>
-          <Text style={[styles.value, { color: text.primary }]}>
+          <ScalingText
+            size={uiScale.pageScreen.text.stat}
+            typography={textStyle.pageScreen.stat}
+            numberOfLines={1}
+            measure={{ type: "width" }}
+            style={[styles.value, { color: text.primary }]}
+          >
             {formatRappelCount(rappelCount)}
-          </Text>
-          <Text style={[styles.label, { color: text.secondary }]}>Number of Rappels</Text>
+          </ScalingText>
+          <ScalingText
+            size={uiScale.pageScreen.text.statLabel}
+            typography={textStyle.pageScreen.statLabel}
+            numberOfLines={2}
+            measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+            style={[styles.label, { color: text.secondary }]}
+          >
+            Number of Rappels
+          </ScalingText>
         </View>
         {showLongest && (
           <View style={columnStyle}>
-            <Text style={[styles.value, { color: text.primary }]}>
+            <ScalingText
+              size={uiScale.pageScreen.text.stat}
+              typography={textStyle.pageScreen.stat}
+              numberOfLines={1}
+              measure={{ type: "width" }}
+              style={[styles.value, { color: text.primary }]}
+            >
               {formatLongestRappel(longestRappel)}
-            </Text>
-            <Text style={[styles.label, { color: text.secondary }]}>Longest Rappel</Text>
+            </ScalingText>
+            <ScalingText
+              size={uiScale.pageScreen.text.statLabel}
+              typography={textStyle.pageScreen.statLabel}
+              numberOfLines={2}
+              measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+              style={[styles.label, { color: text.secondary }]}
+            >
+              Longest Rappel
+            </ScalingText>
           </View>
         )}
         {showJumps && (
           <View style={columnStyle}>
-            <Text style={[styles.value, { color: text.primary }]}>{jumps}</Text>
-            <Text style={[styles.label, { color: text.secondary }]}>Jumps</Text>
+            <ScalingText
+              size={uiScale.pageScreen.text.stat}
+              typography={textStyle.pageScreen.stat}
+              numberOfLines={1}
+              measure={{ type: "width" }}
+              style={[styles.value, { color: text.primary }]}
+            >
+              {String(jumps)}
+            </ScalingText>
+            <ScalingText
+              size={uiScale.pageScreen.text.statLabel}
+              typography={textStyle.pageScreen.statLabel}
+              numberOfLines={1}
+              measure={{ type: "width" }}
+              style={[styles.label, { color: text.secondary }]}
+            >
+              Jumps
+            </ScalingText>
           </View>
         )}
       </View>
@@ -118,13 +165,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   value: {
-    fontSize: 20,
-    fontWeight: "700",
     marginBottom: 2,
     textAlign: "center",
   },
   label: {
-    fontSize: 13,
     textAlign: "center",
   },
 });

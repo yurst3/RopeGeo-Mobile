@@ -2,13 +2,14 @@ import { useEffect, useRef } from "react";
 import {
   Animated,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { ScalingText } from "@/components/text/ScalingText";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import {
   DOWNLOAD_TOAST_FADE_IN_MS,
   DOWNLOAD_TOAST_FADE_OUT_MS,
@@ -57,6 +58,7 @@ export function ProgressToast({
 }: ProgressToastProps) {
   const { background, text, filledTrack, unfilledTrack } =
     useColorTheme().toast[style];
+  const { uiScale, style: textStyle } = useText();
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -143,9 +145,16 @@ export function ProgressToast({
       <Animated.View style={[styles.opacityShell, { opacity }]}>
         {kind === "progress" ? (
           <View style={[styles.inner, { backgroundColor: background }]}>
-            <Text style={[styles.title, { color: text }]} numberOfLines={4}>
+            <ScalingText
+              size={uiScale.toast.text.message}
+              typography={textStyle.toast.message}
+              numberOfLines={4}
+              ellipsizeMode="tail"
+              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
+              style={[styles.title, { color: text }]}
+            >
               {title}
-            </Text>
+            </ScalingText>
             <View style={[styles.track, { backgroundColor: unfilledTrack }]}>
               <View
                 style={[
@@ -161,9 +170,16 @@ export function ProgressToast({
         ) : null}
         {kind === "success" || kind === "error" ? (
           <View style={[styles.inner, { backgroundColor: background }]}>
-            <Text style={[styles.title, { color: text }]} numberOfLines={4}>
+            <ScalingText
+              size={uiScale.toast.text.message}
+              typography={textStyle.toast.message}
+              numberOfLines={4}
+              ellipsizeMode="tail"
+              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
+              style={[styles.title, { color: text }]}
+            >
               {title}
-            </Text>
+            </ScalingText>
           </View>
         ) : null}
       </Animated.View>
@@ -188,8 +204,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   title: {
-    fontSize: 15,
-    fontWeight: "600",
     textAlign: "center",
   },
   track: {

@@ -15,26 +15,20 @@ export function useFilterTheme() {
       cardHighlight,
       filter,
       sectionLabel: {
-        fontSize: 14,
-        fontWeight: "600" as const,
         color: text.secondary,
       } satisfies TextStyle,
       bodyText: {
-        fontSize: 15,
         color: text.primary,
       } satisfies TextStyle,
       hintText: {
-        fontSize: 13,
         color: text.tertiary,
       } satisfies TextStyle,
       switchLabel: {
-        fontSize: 15,
         color: text.primary,
         flex: 1,
         marginRight: 12,
       } satisfies TextStyle,
       switchLabelMuted: {
-        fontSize: 15,
         color: text.tertiary,
         flex: 1,
         marginRight: 12,

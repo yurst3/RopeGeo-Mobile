@@ -1,6 +1,8 @@
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { useLocalSearchParams } from "expo-router";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
 
 import { RopewikiPageScreen } from "./ropewiki/RopewikiPageScreen";
@@ -17,6 +19,7 @@ function isPageDataSource(value: unknown): value is PageDataSource {
  */
 export default function PageRouteScreen() {
   const { text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const params = useLocalSearchParams<{
     id: string;
     source: string;
@@ -36,11 +39,15 @@ export default function PageRouteScreen() {
   if (!isPageDataSource(source)) {
     return (
       <View style={styles.error}>
-        <Text style={[styles.errorText, { color: text.error }]}>
+        <ConstantText
+          size={uiScale.toast.text.message}
+          typography={textStyle.toast.message}
+          style={[styles.errorText, { color: text.error }]}
+        >
           {source == null || source === ""
             ? "Missing source."
             : `Invalid source: ${source}`}
-        </Text>
+        </ConstantText>
       </View>
     );
   }
@@ -65,7 +72,6 @@ const styles = {
     padding: 24,
   },
   errorText: {
-    fontSize: 16,
     textAlign: "center" as const,
   },
 };

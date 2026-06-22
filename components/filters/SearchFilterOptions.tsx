@@ -1,10 +1,22 @@
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedScalingBounds,
+  useResolvedTypography,
+  useTextMeasureKey,
+} from "@/utils/resolvers";
+import {
+  computeScalingTextFontSizeFromWidth,
+  measureUnconstrainedTextWidth,
+} from "@/utils/scalingText";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
+  type LayoutChangeEvent,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import {
@@ -14,6 +26,8 @@ import {
 } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
 import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
+import { ScaledFilterSwitch } from "./ScaledFilterSwitch";
+import { useFilterRadioMetrics } from "./useFilterRadioMetrics";
 import { useFilterTheme } from "./useFilterTheme";
 
 const SEARCH_ORDERS: SearchOrder[] = ["similarity", "quality", "distance"];
@@ -23,6 +37,146 @@ const ORDER_LABELS: Record<SearchOrder, string> = {
   quality: "Quality",
   distance: "Distance",
 };
+
+/** Longest search-order label; used to size all three columns consistently. */
+const SEARCH_ORDER_MEASURE_LABEL = ORDER_LABELS.similarity;
+
+const UNCONSTRAINED_MEASURE_WIDTH = 10000;
+
+type SearchOrderRadioGroupProps = {
+  selectedOrder: SearchOrder;
+  canDistance: boolean;
+  onSelectOrder: (order: SearchOrder) => void;
+  radioButton: {
+    uncheckedOutline: string;
+    checkedFill: string;
+  };
+  text: {
+    primary: string;
+    tertiary: string;
+  };
+};
+
+function SearchOrderRadioGroup({
+  selectedOrder,
+  canDistance,
+  onSelectOrder,
+  radioButton,
+  text,
+}: SearchOrderRadioGroupProps) {
+  const { uiScale, style: textStyle } = useText();
+  const radioButtonSpec = uiScale.filter.buttons.radio;
+  const typographyStyle = useResolvedTypography(textStyle.filter.optionLabel);
+  const { maxFontSize, minFontSize } = useResolvedScalingBounds(
+    radioButtonSpec.text!,
+  );
+  const measureKey = useTextMeasureKey();
+  const radioMetrics = useFilterRadioMetrics();
+
+  const [slotWidth, setSlotWidth] = useState(0);
+  const [textWidthAtMax, setTextWidthAtMax] = useState(0);
+
+  useLayoutEffect(() => {
+    setTextWidthAtMax(0);
+  }, [measureKey]);
+
+  const fontSize = useMemo(
+    () =>
+      computeScalingTextFontSizeFromWidth(slotWidth, textWidthAtMax, {
+        maxFontSize,
+        minFontSize,
+        widthSafetyMargin: 2,
+      }),
+    [slotWidth, textWidthAtMax, maxFontSize, minFontSize],
+  );
+
+  const onLabelSlotLayout = useCallback((event: LayoutChangeEvent) => {
+    const width = event.nativeEvent.layout.width;
+    if (width > 0) {
+      setSlotWidth(width);
+    }
+  }, []);
+
+  return (
+    <View style={styles.radioGroup}>
+      <View style={styles.searchOrderMeasureLayer} pointerEvents="none">
+        <Text
+          key={measureKey}
+          allowFontScaling={false}
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={[typographyStyle, { fontSize: maxFontSize }]}
+          onTextLayout={(event) => {
+            const width = measureUnconstrainedTextWidth(event.nativeEvent.lines);
+            if (width > 0) {
+              setTextWidthAtMax(width);
+            }
+          }}
+        >
+          {SEARCH_ORDER_MEASURE_LABEL}
+        </Text>
+      </View>
+      {SEARCH_ORDERS.map((order) => {
+        const selected = selectedOrder === order;
+        const disabled = order === "distance" && !canDistance;
+        return (
+          <Pressable
+            key={order}
+            style={styles.radioOption}
+            onPress={() => onSelectOrder(order)}
+            disabled={disabled}
+            accessibilityRole="radio"
+            accessibilityState={{ selected, disabled }}
+          >
+            <View
+              style={[
+                styles.radioOuter,
+                {
+                  width: radioMetrics.outerSize,
+                  height: radioMetrics.outerSize,
+                  borderRadius: radioMetrics.outerRadius,
+                  borderWidth: radioMetrics.borderWidth,
+                  marginRight: radioMetrics.marginRight,
+                  borderColor: radioButton.uncheckedOutline,
+                },
+                disabled && styles.radioOuterDisabled,
+                selected && { borderColor: radioButton.checkedFill },
+              ]}
+            >
+              {selected ? (
+                <View
+                  style={[
+                    styles.radioInner,
+                    {
+                      width: radioMetrics.innerSize,
+                      height: radioMetrics.innerSize,
+                      borderRadius: radioMetrics.innerRadius,
+                      backgroundColor: radioButton.checkedFill,
+                    },
+                  ]}
+                />
+              ) : null}
+            </View>
+            <View style={styles.radioLabelWrap} onLayout={onLabelSlotLayout}>
+              <Text
+                allowFontScaling={false}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[
+                  typographyStyle,
+                  styles.radioLabelText,
+                  { fontSize, color: disabled ? text.tertiary : text.primary },
+                ]}
+              >
+                {ORDER_LABELS[order]}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export type SearchFilterOptionsProps = {
   filter: SearchFilter;
@@ -44,13 +198,13 @@ export function SearchFilterOptions({
     filter: filterColors,
     sectionLabel,
     hintText,
-    bodyText,
     switchLabel,
     switchLabelMuted,
     disableSection,
     switchProps,
     text,
   } = useFilterTheme();
+  const { uiScale, style: textStyle } = useText();
   const { radioButton, slider, noteText } = filterColors;
 
   const patch = (fn: (s: SearchFilter) => void) => {
@@ -100,56 +254,28 @@ export function SearchFilterOptions({
   return (
     <>
       <View>
-        <Text style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}>
+        <ConstantText
+          size={uiScale.filter.text.sectionTitle}
+          typography={textStyle.filter.sectionTitle}
+          style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}
+        >
           Search Order
-        </Text>
-        <View style={styles.radioGroup}>
-          {SEARCH_ORDERS.map((order) => {
-            const selected = filter.order === order;
-            const disabled = order === "distance" && !canDistance;
-            return (
-              <Pressable
-                key={order}
-                style={styles.radioOption}
-                onPress={() => setOrder(order)}
-                disabled={disabled}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled }}
-              >
-                <View
-                  style={[
-                    styles.radioOuter,
-                    { borderColor: radioButton.uncheckedOutline },
-                    disabled && styles.radioOuterDisabled,
-                    selected && { borderColor: radioButton.checkedFill },
-                  ]}
-                >
-                  {selected ? (
-                    <View
-                      style={[
-                        styles.radioInner,
-                        { backgroundColor: radioButton.checkedFill },
-                      ]}
-                    />
-                  ) : null}
-                </View>
-                <Text
-                  style={[
-                    styles.radioLabel,
-                    bodyText,
-                    disabled && { color: text.tertiary },
-                  ]}
-                >
-                  {ORDER_LABELS[order]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        </ConstantText>
+        <SearchOrderRadioGroup
+          selectedOrder={filter.order}
+          canDistance={canDistance}
+          onSelectOrder={setOrder}
+          radioButton={radioButton}
+          text={text}
+        />
         {!canDistance ? (
-          <Text style={[styles.hint, hintText]}>
+          <ConstantText
+            size={uiScale.filter.buttons.radio.subtext!}
+            typography={textStyle.filter.optionSublabel}
+            style={hintText}
+          >
             Enable location to use distance ranking.
-          </Text>
+          </ConstantText>
         ) : null}
       </View>
 
@@ -157,14 +283,24 @@ export function SearchFilterOptions({
 
       <View>
         {includeResultsInvalid ? (
-          <Text style={[styles.includeGroupWarning, { color: noteText }]}>
+          <ConstantText
+            size={uiScale.filter.text.note}
+            typography={textStyle.filter.note}
+            style={[styles.includeGroupWarning, { color: noteText }]}
+          >
             Must include either page or region results
-          </Text>
+          </ConstantText>
         ) : null}
         <View style={styles.includeSwitchGroup}>
           <View style={[styles.switchRow, styles.switchRowIncludePages]}>
-            <Text style={switchLabel}>Include Page Results</Text>
-            <Switch
+            <ConstantText
+              size={uiScale.filter.buttons.switch.text!}
+              typography={textStyle.filter.optionLabel}
+              style={switchLabel}
+            >
+              Include Page Results
+            </ConstantText>
+            <ScaledFilterSwitch
               value={filter.includePages}
               onValueChange={(v) => patch((s) => s.setIncludePages(v))}
               {...switchProps}
@@ -174,31 +310,51 @@ export function SearchFilterOptions({
             <View style={disabledBandStyle}>
               <View style={styles.switchBlockDisabledInner}>
                 <View style={styles.switchRow}>
-                  <Text style={switchLabelMuted}>Include Region Results</Text>
-                  <Switch
+                  <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabelMuted}
+                  >
+                    Include Region Results
+                  </ConstantText>
+                  <ScaledFilterSwitch
                     value={filter.includeRegions}
                     onValueChange={(v) => patch((s) => s.setIncludeRegions(v))}
                     disabled
                     {...switchProps}
                   />
                 </View>
-                <Text style={[styles.switchDisabledReason, { color: noteText }]}>
+                <ConstantText
+                  size={uiScale.filter.text.note}
+                  typography={textStyle.filter.note}
+                  style={[styles.switchDisabledReason, { color: noteText }]}
+                >
                   No region results when order is &quot;Distance&quot;
-                </Text>
+                </ConstantText>
                 <View
                   style={[styles.switchRow, styles.switchRowInMergedGreyBand]}
                 >
-                  <Text style={switchLabelMuted}>Match Page Aka Names</Text>
-                  <Switch
+                  <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabelMuted}
+                  >
+                    Match Page Aka Names
+                  </ConstantText>
+                  <ScaledFilterSwitch
                     value={filter.includeAka}
                     onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
                     disabled
                     {...switchProps}
                   />
                 </View>
-                <Text style={[styles.switchDisabledReason, { color: noteText }]}>
+                <ConstantText
+                  size={uiScale.filter.text.note}
+                  typography={textStyle.filter.note}
+                  style={[styles.switchDisabledReason, { color: noteText }]}
+                >
                   {akaDisabledReason}
-                </Text>
+                </ConstantText>
               </View>
             </View>
           ) : (
@@ -207,8 +363,14 @@ export function SearchFilterOptions({
                 <View style={disabledBandStyle}>
                   <View style={styles.switchBlockDisabledInner}>
                     <View style={styles.switchRow}>
-                      <Text style={switchLabelMuted}>Include Region Results</Text>
-                      <Switch
+                      <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabelMuted}
+                  >
+                    Include Region Results
+                  </ConstantText>
+                      <ScaledFilterSwitch
                         value={filter.includeRegions}
                         onValueChange={(v) =>
                           patch((s) => s.setIncludeRegions(v))
@@ -217,17 +379,27 @@ export function SearchFilterOptions({
                         {...switchProps}
                       />
                     </View>
-                    <Text style={[styles.switchDisabledReason, { color: noteText }]}>
+                    <ConstantText
+                      size={uiScale.filter.text.note}
+                      typography={textStyle.filter.note}
+                      style={[styles.switchDisabledReason, { color: noteText }]}
+                    >
                       No region results when order is &quot;Distance&quot;
-                    </Text>
+                    </ConstantText>
                   </View>
                 </View>
               ) : (
                 <View
                   style={[styles.switchRow, styles.includeSwitchSpacingBelow]}
                 >
-                  <Text style={switchLabel}>Include Region Results</Text>
-                  <Switch
+                  <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabel}
+                  >
+                    Include Region Results
+                  </ConstantText>
+                  <ScaledFilterSwitch
                     value={filter.includeRegions}
                     onValueChange={(v) => patch((s) => s.setIncludeRegions(v))}
                     {...switchProps}
@@ -238,23 +410,39 @@ export function SearchFilterOptions({
                 <View style={disabledBandStyle}>
                   <View style={styles.switchBlockDisabledInner}>
                     <View style={styles.switchRow}>
-                      <Text style={switchLabelMuted}>Match Page Aka Names</Text>
-                      <Switch
+                      <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabelMuted}
+                  >
+                    Match Page Aka Names
+                  </ConstantText>
+                      <ScaledFilterSwitch
                         value={filter.includeAka}
                         onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
                         disabled={akaDisabled}
                         {...switchProps}
                       />
                     </View>
-                    <Text style={[styles.switchDisabledReason, { color: noteText }]}>
+                    <ConstantText
+                      size={uiScale.filter.text.note}
+                      typography={textStyle.filter.note}
+                      style={[styles.switchDisabledReason, { color: noteText }]}
+                    >
                       {akaDisabledReason}
-                    </Text>
+                    </ConstantText>
                   </View>
                 </View>
               ) : (
                 <View style={styles.switchRow}>
-                  <Text style={switchLabel}>Match Page Aka Names</Text>
-                  <Switch
+                  <ConstantText
+                    size={uiScale.filter.buttons.switch.text!}
+                    typography={textStyle.filter.optionLabel}
+                    style={switchLabel}
+                  >
+                    Match Page Aka Names
+                  </ConstantText>
+                  <ScaledFilterSwitch
                     value={filter.includeAka}
                     onValueChange={(v) => patch((s) => s.setIncludeAka(v))}
                     {...switchProps}
@@ -269,7 +457,13 @@ export function SearchFilterOptions({
       <View style={styles.groupSpacer} />
 
       <View>
-        <Text style={[styles.sectionLabel, sectionLabel]}>Name Similarity</Text>
+        <ConstantText
+          size={uiScale.filter.text.sectionTitle}
+          typography={textStyle.filter.sectionTitle}
+          style={[styles.sectionLabel, sectionLabel]}
+        >
+          Name Similarity
+        </ConstantText>
         <View style={styles.sliderBlock}>
           <Slider
             style={styles.slider}
@@ -282,10 +476,23 @@ export function SearchFilterOptions({
             maximumTrackTintColor={slider.unfilledBar}
             thumbTintColor={slider.thumb}
           />
-          <Text style={[styles.sliderValue, { color: text.secondary }]}>
+          <ConstantText
+            size={uiScale.filter.buttons.checkbox.text!}
+            typography={textStyle.filter.revertButton}
+            style={[styles.sliderValue, { color: text.secondary }]}
+          >
             {filter.similarityThreshold.toFixed(1)}
-          </Text>
+          </ConstantText>
         </View>
+        <ConstantText
+          size={uiScale.filter.text.note}
+          typography={textStyle.filter.note}
+          style={[styles.similarityNote, { color: noteText }]}
+        >
+          Similarity is how closely the search results should match the search bar
+          input. A higher value means a stricter match with less results and a
+          lower value means a looser match with more results.
+        </ConstantText>
       </View>
 
       <View style={styles.groupSpacer} />
@@ -312,9 +519,6 @@ const styles = StyleSheet.create({
   },
   hint: { marginBottom: 0, marginTop: 4 },
   includeGroupWarning: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "500",
     marginBottom: 10,
   },
   includeSwitchGroup: {},
@@ -329,38 +533,42 @@ const styles = StyleSheet.create({
   },
   radioGroup: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
-    justifyContent: "space-between",
+  },
+  searchOrderMeasureLayer: {
+    position: "absolute",
+    opacity: 0,
+    left: 0,
+    top: 0,
+    width: UNCONSTRAINED_MEASURE_WIDTH,
+    maxHeight: 1,
+    overflow: "hidden",
   },
   radioOption: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    minWidth: 0,
+    overflow: "hidden",
     paddingVertical: 6,
-    flexGrow: 1,
-    flexBasis: 0,
-    minWidth: 72,
   },
   radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    marginRight: 8,
+    flexShrink: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   radioOuterDisabled: {
     opacity: 0.4,
   },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  radioInner: {},
+  radioLabelWrap: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
   },
-  radioLabel: {
-    flexShrink: 1,
+  radioLabelText: {
+    width: "100%",
   },
   switchBlockDisabled: {
     marginHorizontal: -FILTER_SHEET_HORIZONTAL_INSET,
@@ -375,8 +583,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   switchDisabledReason: {
-    fontSize: 11,
-    lineHeight: 15,
     marginTop: 10,
     textAlign: "right",
   },
@@ -387,9 +593,10 @@ const styles = StyleSheet.create({
   },
   slider: { flex: 1, height: 40 },
   sliderValue: {
-    fontSize: 15,
-    fontWeight: "600",
     minWidth: 36,
     textAlign: "right",
+  },
+  similarityNote: {
+    marginTop: 8,
   },
 });

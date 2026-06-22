@@ -8,24 +8,24 @@ import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useToast } from "@/context/ToastContext";
 import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
 import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SavedPagesFilter } from "ropegeo-common/models";
-
-const HEADER_BUTTON_SIZE = 44;
-const HEADER_BUTTON_GAP = 8;
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 
 export function SavedScreen() {
   const { background, text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
@@ -57,8 +57,9 @@ export function SavedScreen() {
     [savedEntries, persistedSavedFilter, nameInput],
   );
 
-  const searchBarTop = insets.top + 8;
-  const searchBarHeight = getSearchBarHeight(fontScale);
+  const headerChrome = useHeaderChromeLayout();
+  const searchBarTop = insets.top + headerChrome.rowTopInset;
+  const searchBarHeight = getSearchBarHeight(fontScale, uiScale);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,7 +88,11 @@ export function SavedScreen() {
         <View
           style={[
             styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
+            {
+              width: headerChrome.buttonSize,
+              height: headerChrome.buttonWrapHeight,
+              marginRight: headerChrome.gap,
+            },
           ]}
         />
         <SearchBar
@@ -99,7 +104,11 @@ export function SavedScreen() {
         <View
           style={[
             styles.headerButtonWrap,
-            { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
+            {
+              width: headerChrome.buttonSize,
+              height: headerChrome.buttonWrapHeight,
+              marginLeft: headerChrome.gap,
+            },
           ]}
         >
           <FilterButton persisted={savedPagesPersisted} onPress={openFilterSheet} />
@@ -117,11 +126,15 @@ export function SavedScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {filtered.length === 0 ? (
-          <Text style={[styles.emptyText, { color: text.secondary }]}>
+          <ConstantText
+            size={uiScale.toast.text.message}
+            typography={textStyle.toast.message}
+            style={[styles.emptyText, { color: text.secondary }]}
+          >
             {savedEntries.length === 0
               ? "No saved pages yet."
               : "No pages match your search."}
-          </Text>
+          </ConstantText>
         ) : (
           filtered.map((entry) => (
             <PagePreview
@@ -176,7 +189,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -192,7 +204,6 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   emptyText: {
-    fontSize: 16,
     textAlign: "center",
     marginTop: 24,
   },

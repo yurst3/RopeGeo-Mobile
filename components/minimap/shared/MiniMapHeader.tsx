@@ -1,18 +1,26 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { BackButton } from "@/components/buttons/standard/BackButton";
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import {
-  HEADER_BUTTON_GAP,
-  HEADER_BUTTON_SIZE,
-  HEADER_SIDE_SLOT_WIDTH,
-} from "./fullScreenMapLayout";
+import { useText } from "@/context/TextContext";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 
 /** Wraps one control in the expanded minimap header row (mirrors the back-button slot). */
 export function MiniMapHeaderSideSlot({ children }: { children: ReactNode }) {
+  const headerChrome = useHeaderChromeLayout();
   return (
-    <View style={[styles.headerButtonWrap, styles.headerSideSlot, { width: HEADER_SIDE_SLOT_WIDTH }]}>
+    <View
+      style={[
+        styles.headerButtonWrap,
+        styles.headerSideSlot,
+        {
+          width: headerChrome.sideSlotWidth,
+          height: headerChrome.buttonWrapHeight,
+        },
+      ]}
+    >
       {children}
     </View>
   );
@@ -20,7 +28,12 @@ export function MiniMapHeaderSideSlot({ children }: { children: ReactNode }) {
 
 /** Groups multiple header-side controls (e.g. fit-bounds + filter). */
 export function MiniMapHeaderSideSlots({ children }: { children: ReactNode }) {
-  return <View style={styles.headerSideSlotsRow}>{children}</View>;
+  const headerChrome = useHeaderChromeLayout();
+  return (
+    <View style={[styles.headerSideSlotsRow, { gap: headerChrome.gap }]}>
+      {children}
+    </View>
+  );
 }
 
 export function MiniMapHeader({
@@ -35,6 +48,8 @@ export function MiniMapHeader({
   top: number;
 }) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const headerChrome = useHeaderChromeLayout();
   const { minimap } = themeColors.map;
   const { text } = themeColors;
 
@@ -50,21 +65,37 @@ export function MiniMapHeader({
   );
 
   const titleTextStyle = useMemo(
-    () => [styles.titleText, { color: text.primary }],
+    () => [{ color: text.primary, textAlign: "center" as const }],
     [text.primary],
   );
 
   return (
     <View style={[styles.headerRow, { top }]} pointerEvents="box-none">
-      <View style={[styles.headerButtonWrap, { width: HEADER_SIDE_SLOT_WIDTH }]}>
+      <View
+        style={[
+          styles.headerButtonWrap,
+          {
+            width: headerChrome.sideSlotWidth,
+            height: headerChrome.buttonWrapHeight,
+          },
+        ]}
+      >
         <BackButton onPress={onBack} />
       </View>
       <View style={titleBarStyle}>
-        <Text style={titleTextStyle} numberOfLines={1}>
+        <ScalingText
+          size={uiScale.map.text.title}
+          typography={textStyle.map.title}
+          numberOfLines={1}
+          measure={{ type: "width" }}
+          style={titleTextStyle}
+        >
           {title}
-        </Text>
+        </ScalingText>
       </View>
-      {rightSlot ?? <View style={{ width: HEADER_SIDE_SLOT_WIDTH }} />}
+      {rightSlot ?? (
+        <View style={{ width: headerChrome.sideSlotWidth }} />
+      )}
     </View>
   );
 }
@@ -79,7 +110,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "flex-start",
   },
@@ -89,7 +119,6 @@ const styles = StyleSheet.create({
   headerSideSlotsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: HEADER_BUTTON_GAP,
   },
   titleBar: {
     flex: 1,
@@ -103,10 +132,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
-  },
-  titleText: {
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
   },
 });

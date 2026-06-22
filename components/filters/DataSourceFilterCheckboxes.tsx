@@ -1,6 +1,10 @@
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
+import { FilterCheckbox } from "./FilterCheckbox";
+import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
 import { useFilterTheme } from "./useFilterTheme";
 
 const SOURCE_DISPLAY: Record<PageDataSource, string> = {
@@ -25,8 +29,11 @@ export function DataSourceFilterCheckboxes({
   onChange,
   title = "Data sources",
 }: DataSourceFilterCheckboxesProps) {
-  const { filter, sectionLabel, bodyText, text } = useFilterTheme();
-  const { checkbox } = filter;
+  const { sectionLabel, text, themeColors } = useFilterTheme();
+  const { uiScale, style: textStyle } = useText();
+  const checkboxMetrics = useFilterCheckboxMetrics();
+  const sourceIconBackground = themeColors.preview.page.sourceIconBackground;
+  const sourceIconShadowColor = themeColors.button.shadowColor;
 
   const selection = (): Set<PageDataSource> => {
     if (value === null) {
@@ -56,7 +63,13 @@ export function DataSourceFilterCheckboxes({
 
   return (
     <View>
-      <Text style={[styles.sectionLabel, sectionLabel]}>{title}</Text>
+      <ConstantText
+        size={uiScale.filter.text.sectionTitle}
+        typography={textStyle.filter.sectionTitle}
+        style={[styles.sectionLabel, sectionLabel]}
+      >
+        {title}
+      </ConstantText>
       {ALL_SOURCES.map((source) => {
         const checked = singleSourceLock || selection().has(source);
         return (
@@ -68,31 +81,36 @@ export function DataSourceFilterCheckboxes({
             accessibilityRole="checkbox"
             accessibilityState={{ checked, disabled: singleSourceLock }}
           >
-            <View
-              style={[
-                styles.checkboxBox,
-                { borderColor: checkbox.uncheckedOutline },
-                checked && {
-                  borderColor: checkbox.checkedOutline,
-                  backgroundColor: checkbox.checkedFill,
-                },
-              ]}
-            >
-              {checked ? (
-                <Text style={[styles.checkboxMark, { color: text.link }]}>
-                  ✓
-                </Text>
-              ) : null}
-            </View>
+            <FilterCheckbox checked={checked} />
             <View style={styles.checkboxLabelRow}>
-              <Text style={[styles.checkboxLabel, bodyText]}>
+              <ConstantText
+                size={uiScale.filter.buttons.checkbox.text!}
+                typography={textStyle.filter.optionLabel}
+                style={{ color: text.primary }}
+              >
                 {SOURCE_DISPLAY[source]}
-              </Text>
-              <Image
-                source={SOURCE_ICONS[source]}
-                style={styles.sourceIcon}
-                contentFit="contain"
-              />
+              </ConstantText>
+              <View
+                style={[
+                  styles.sourceIconCircle,
+                  {
+                    backgroundColor: sourceIconBackground,
+                    shadowColor: sourceIconShadowColor,
+                    width: checkboxMetrics.sourceIconCircleSize,
+                    height: checkboxMetrics.sourceIconCircleSize,
+                    borderRadius: checkboxMetrics.sourceIconCircleSize / 2,
+                  },
+                ]}
+              >
+                <Image
+                  source={SOURCE_ICONS[source]}
+                  style={{
+                    width: checkboxMetrics.sourceIconInnerSize,
+                    height: checkboxMetrics.sourceIconInnerSize,
+                  }}
+                  contentFit="contain"
+                />
+              </View>
             </View>
           </Pressable>
         );
@@ -111,19 +129,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
   },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    marginRight: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxMark: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
   checkboxLabelRow: {
     flex: 1,
     flexDirection: "row",
@@ -131,8 +136,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkboxLabel: {},
-  sourceIcon: {
-    width: 30,
-    height: 30,
+  sourceIconCircle: {
+    justifyContent: "center",
+    alignItems: "center",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });

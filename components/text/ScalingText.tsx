@@ -1,3 +1,10 @@
+import type { ScalingTextSizeSpec } from "@/constants/uiScale/types";
+import type { TypographySpec } from "@/constants/text/style/types";
+import {
+  useResolvedScalingBounds,
+  useResolvedTypography,
+  useTextMeasureKey,
+} from "@/utils/resolvers";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -36,16 +43,14 @@ export type ScalingTextMeasure =
 
 export type ScalingTextProps = {
   children: string;
-  maxFontSize: number;
-  minFontSize: number;
+  size: ScalingTextSizeSpec;
+  typography: TypographySpec;
   numberOfLines: number;
   ellipsizeMode?: "clip" | "head" | "middle" | "tail";
   style?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   measureTextStyle?: StyleProp<TextStyle>;
   measure: ScalingTextMeasure;
-  /** Bumps hidden remeasurement when layout inputs change (e.g. fontScale). */
-  measureKey?: string | number;
   hideWhenEmpty?: boolean;
   /** Custom visible label; `children` is still used for measurement. */
   renderLabel?: (fontSize: number) => ReactNode;
@@ -55,19 +60,22 @@ export type ScalingTextProps = {
 
 export function ScalingText({
   children,
-  maxFontSize,
-  minFontSize,
+  size,
+  typography,
   numberOfLines,
   ellipsizeMode = "clip",
   style,
   containerStyle,
   measureTextStyle,
   measure,
-  measureKey,
   hideWhenEmpty = false,
   renderLabel,
   onFontSizeChange,
 }: ScalingTextProps) {
+  const { maxFontSize, minFontSize } = useResolvedScalingBounds(size);
+  const typographyStyle = useResolvedTypography(typography);
+  const measureKey = useTextMeasureKey();
+
   const [containerWidth, setContainerWidth] = useState(0);
   const [widthAtMax, setWidthAtMax] = useState(0);
   const [lineCountAtMax, setLineCountAtMax] = useState(0);
@@ -128,6 +136,16 @@ export function ScalingText({
   const showMeasure =
     measure.type === "width" || (measure.type === "lineCount" && measureWidth > 0);
 
+  const measureStyle = useMemo(
+    () => [typographyStyle, measureTextStyle, { fontSize: maxFontSize }],
+    [typographyStyle, measureTextStyle, maxFontSize],
+  );
+
+  const visibleStyle = useMemo(
+    () => [typographyStyle, style, { fontSize }],
+    [typographyStyle, style, fontSize],
+  );
+
   if (hideWhenEmpty && children === "") {
     return null;
   }
@@ -148,14 +166,11 @@ export function ScalingText({
           pointerEvents="none"
         >
           <Text
-            key={`${children}-${measureKey ?? ""}`}
+            key={`${children}-${measureKey}`}
             allowFontScaling={false}
             accessible={false}
             importantForAccessibility="no-hide-descendants"
-            style={[
-              measureTextStyle,
-              { fontSize: maxFontSize },
-            ]}
+            style={measureStyle}
             onTextLayout={(event) => {
               const lines = event.nativeEvent.lines;
               if (measure.type === "width") {
@@ -176,7 +191,7 @@ export function ScalingText({
           allowFontScaling={false}
           numberOfLines={numberOfLines}
           ellipsizeMode={ellipsizeMode}
-          style={[style, { fontSize }]}
+          style={[visibleStyle, styles.visibleText]}
         >
           {children}
         </Text>
@@ -188,6 +203,10 @@ export function ScalingText({
 const styles = StyleSheet.create({
   container: {
     alignSelf: "stretch",
+  },
+  visibleText: {
+    alignSelf: "stretch",
+    width: "100%",
   },
   unconstrainedMeasureWrap: {
     position: "absolute",

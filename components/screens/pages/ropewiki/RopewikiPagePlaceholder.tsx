@@ -2,14 +2,15 @@ import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { PlaceholderPageBadges } from "@/components/screens/pages/ropewiki/PlaceholderPageBadges";
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import {
   ActivityIndicator,
   Dimensions,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
 } from "react-native";
@@ -58,6 +59,7 @@ export function RopewikiPagePlaceholder({
 }: RopewikiPagePlaceholderProps) {
   const { background, placeholder, image, text, loadingIndicator } =
     useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const seamTop = HALF_HEIGHT - CARD_BORDER_RADIUS - SEAM_FLOAT_OFFSET;
@@ -78,9 +80,13 @@ export function RopewikiPagePlaceholder({
               style={[styles.missingImage, { tintColor: image.missingIcon }]}
               contentFit="contain"
             />
-            <Text style={[styles.errorTitle, { color: text.error }]}>
+            <ConstantText
+              size={uiScale.toast.text.message}
+              typography={textStyle.toast.message}
+              style={[styles.errorTitle, { color: text.error }]}
+            >
               {errorMessage}
-            </Text>
+            </ConstantText>
           </>
         ) : (
           <ActivityIndicator size="large" color={loadingIndicator} />
@@ -139,8 +145,6 @@ const styles = StyleSheet.create({
     height: 56,
   },
   errorTitle: {
-    fontSize: 17,
-    fontWeight: "600",
     textAlign: "center",
     paddingHorizontal: 24,
   },

@@ -9,8 +9,8 @@ import {
   type RoutesState,
 } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 import {
-  MAP_HEADER_ROW_TOP_INSET,
   routePreviewDockedPaddingBottom,
 } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -81,6 +81,7 @@ export function RegionMiniMapView({
   reloadRegisterRef,
 }: RegionMiniMapViewProps) {
   const shell = useMiniMapShell();
+  const headerChrome = useHeaderChromeLayout();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
   const apiBounds = regionMiniMap.bounds;
@@ -290,7 +291,7 @@ export function RegionMiniMapView({
   ]);
 
   const { insets } = shell;
-  const headerTop = insets.top + MAP_HEADER_ROW_TOP_INSET;
+  const headerTop = insets.top + headerChrome.rowTopInset;
 
   return (
     <>

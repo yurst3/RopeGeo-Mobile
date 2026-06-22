@@ -1,7 +1,9 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
 import { BadgeLayoutProvider } from "@/components/badges/Badge";
+import { ConstantText } from "@/components/text/ConstantText";
 import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import {
   ROUTE_PREVIEW_CARD_BORDER_RADIUS,
   ROUTE_PREVIEW_CARD_MARGIN_H,
@@ -11,7 +13,6 @@ import {
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -25,6 +26,7 @@ export function RoutePreviewPlaceholder({
 }: RoutePreviewPlaceholderProps) {
   const themeColors = useColorTheme();
   const metrics = useRoutePreviewMetrics();
+  const { uiScale, style } = useText();
   const { text, image, background, placeholder, loadingIndicator } = themeColors;
   const isError = errorMessage != null && errorMessage !== "";
 
@@ -80,21 +82,21 @@ export function RoutePreviewPlaceholder({
                   ]}
                 />
                 {isError ? (
-                  <Text
+                  <ConstantText
+                    size={uiScale.toast.text.message}
+                    typography={style.toast.message}
                     style={[styles.errorMessage, { color: text.error }]}
                     numberOfLines={4}
                   >
                     {errorMessage}
-                  </Text>
+                  </ConstantText>
                 ) : (
                   <View
                     style={[
                       styles.titlePlaceholder,
                       {
                         backgroundColor: placeholder,
-                        height:
-                          metrics.titleMaxFontSize +
-                          metrics.titleDescenderPadding,
+                        height: metrics.titleCapHeight,
                       },
                     ]}
                   />
@@ -109,7 +111,13 @@ export function RoutePreviewPlaceholder({
                     <View
                       style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
                     />
-                    <Text style={[styles.regionDot, { color: text.tertiary }]}> • </Text>
+                    <ConstantText
+                      size={uiScale.preview.text.other}
+                      typography={style.preview.other}
+                      style={[styles.regionDot, { color: text.tertiary }]}
+                    >
+                      {" • "}
+                    </ConstantText>
                     <View
                       style={[styles.regionBar, { width: "40%", backgroundColor: placeholder }]}
                     />
@@ -183,8 +191,6 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     alignSelf: "stretch",
-    fontSize: 15,
-    fontWeight: "600",
   },
   locationPlaceholderWrap: {
     alignSelf: "stretch",
@@ -198,9 +204,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 4,
   },
-  regionDot: {
-    fontSize: 10,
-  },
+  regionDot: {},
   badgePlaceholderRow: {
     flexDirection: "row",
     flexWrap: "nowrap",

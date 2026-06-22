@@ -5,7 +5,14 @@ import { Animated, StyleSheet } from "react-native";
 
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
+
+const BASE_ICON_SIZE = 22;
 
 
 const FADE_DURATION = 150;
@@ -27,6 +34,12 @@ export function ResetCameraToPositionButton({
 }: ResetCameraToPositionButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[RESET_CAMERA_TO_POSITION_BUTTON_KEY];
+  const { uiScale } = useText();
+  const buttonSpec = uiScale.map.buttons.resetCameraToPosition;
+  const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
+  const profileIconScale = useResolvedButtonIconScale(buttonSpec);
+  const buttonSize = Math.round(MAP_BUTTON_SIZE * backgroundScale);
+  const iconSize = Math.round(BASE_ICON_SIZE * profileIconScale);
   const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {
@@ -43,10 +56,10 @@ export function ResetCameraToPositionButton({
       onPress={onPress}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
-      size={MAP_BUTTON_SIZE}
+      size={buttonSize}
       accessibilityLabel={accessibilityLabel}
     >
-      <FontAwesome name="location-arrow" size={22} color={buttonColors.icon} />
+      <FontAwesome name="location-arrow" size={iconSize} color={buttonColors.icon} />
     </Button>
   );
 

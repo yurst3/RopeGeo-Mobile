@@ -1,5 +1,11 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedConstantSize,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
 import {
   isCenteredRegionMiniMapType,
@@ -27,7 +33,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated from "react-native-reanimated";
@@ -118,6 +123,9 @@ export function PageContent({
   onRemoveDownloadPress,
 }: PageContentProps) {
   const { background, text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const starRatingLabelStyle = useResolvedTypography(textStyle.pageScreen.starRating);
+  const starRatingFontSize = useResolvedConstantSize(uiScale.pageScreen.text.starRating);
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
   const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
@@ -263,12 +271,28 @@ export function PageContent({
               },
             ]}
           >
-            <Text style={[styles.title, { color: text.primary }]}>{data.name}</Text>
+            <ConstantText
+              size={uiScale.pageScreen.text.title}
+              typography={textStyle.pageScreen.title}
+              style={[styles.title, { color: text.primary }]}
+            >
+              {data.name}
+            </ConstantText>
             {data.aka != null && data.aka.length > 0 ? (
-              <Text style={[styles.aka, { color: text.secondary }]}>
-                <Text style={styles.akaLabel}>AKA: </Text>
+              <ConstantText
+                size={uiScale.pageScreen.text.akaNames}
+                typography={textStyle.pageScreen.akaNames}
+                style={[styles.aka, { color: text.secondary }]}
+              >
+                <ConstantText
+                  size={uiScale.pageScreen.text.akaNames}
+                  typography={textStyle.pageScreen.akaNames}
+                  style={{ fontWeight: "700" }}
+                >
+                  AKA:{" "}
+                </ConstantText>
                 {data.aka.join(", ")}
-              </Text>
+              </ConstantText>
             ) : null}
             <RegionLinks
               source={PageDataSource.Ropewiki}
@@ -281,7 +305,12 @@ export function PageContent({
               rating={rating}
               count={ratingCount}
               style={styles.starRatingRow}
-              textStyle={styles.starRatingText}
+              allowFontScaling={false}
+              textStyle={[
+                styles.starRatingText,
+                starRatingLabelStyle,
+                { color: text.secondary, fontSize: starRatingFontSize },
+              ]}
             />
             <RappelInfoRow
               rappelCount={rappelCount}
@@ -352,9 +381,13 @@ export function PageContent({
                 />
               ))}
             {data.latestRevisionDate != null ? (
-              <Text style={[styles.lastUpdated, { color: text.secondary }]}>
+              <ConstantText
+                size={uiScale.pageScreen.text.metaData}
+                typography={textStyle.pageScreen.metaData}
+                style={[styles.lastUpdated, { color: text.secondary }]}
+              >
                 {formatLastUpdated(data.latestRevisionDate)}
-              </Text>
+              </ConstantText>
             ) : null}
           </View>
         </View>
@@ -403,17 +436,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
     marginBottom: 6,
   },
   aka: {
-    fontSize: 14,
     marginBottom: 4,
     marginLeft: 8,
-  },
-  akaLabel: {
-    fontWeight: "700",
   },
   regionsAfterAka: {
     marginTop: 4,
@@ -423,7 +450,6 @@ const styles = StyleSheet.create({
   },
   starRatingText: {
     marginLeft: 6,
-    fontSize: 12,
   },
   miniMapWrap: {
     marginTop: 16,
@@ -440,7 +466,6 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     marginTop: 24,
-    fontSize: 12,
     textAlign: "right",
   },
 });

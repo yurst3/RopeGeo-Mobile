@@ -8,9 +8,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -104,6 +105,7 @@ export function FilterBottomSheet({
   mode,
 }: FilterBottomSheetProps) {
   const { background, text, placeholder, filter, separator } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(400);
 
@@ -195,9 +197,13 @@ export function FilterBottomSheet({
           <GestureDetector gesture={pan}>
             <View style={styles.grabArea}>
               <View style={[styles.grabPill, { backgroundColor: placeholder }]} />
-              <Text style={[styles.sheetTitle, { color: text.primary }]}>
+              <ConstantText
+                size={uiScale.filter.text.title}
+                typography={textStyle.filter.title}
+                style={[styles.sheetTitle, { color: text.primary }]}
+              >
                 {titleForMode(mode)}
-              </Text>
+              </ConstantText>
             </View>
           </GestureDetector>
             <KeyboardAvoidingView
@@ -240,26 +246,24 @@ export function FilterBottomSheet({
               >
                 {mode.kind === "region-route" ? (
                   <Pressable style={styles.secondaryBtn} onPress={mode.onReset}>
-                    <Text
-                      style={[
-                        styles.secondaryBtnText,
-                        { color: filter.revertText },
-                      ]}
+                    <ConstantText
+                      size={uiScale.filter.buttons.revert.text!}
+                      typography={textStyle.filter.revertButton}
+                      style={{ color: filter.revertText }}
                     >
                       Reset
-                    </Text>
+                    </ConstantText>
                   </Pressable>
                 ) : null}
                 {showRevert ? (
                   <Pressable style={styles.secondaryBtn} onPress={handleRevert}>
-                    <Text
-                      style={[
-                        styles.secondaryBtnText,
-                        { color: filter.revertText },
-                      ]}
+                    <ConstantText
+                      size={uiScale.filter.buttons.revert.text!}
+                      typography={textStyle.filter.revertButton}
+                      style={{ color: filter.revertText }}
                     >
                       Revert to defaults
-                    </Text>
+                    </ConstantText>
                   </Pressable>
                 ) : null}
               </View>
@@ -375,8 +379,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sheetTitle: {
-    fontSize: 18,
-    fontWeight: "600",
     alignSelf: "flex-start",
   },
   scrollPad: {
@@ -393,5 +395,4 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  secondaryBtnText: { fontSize: 15, fontWeight: "500" },
 });

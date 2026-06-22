@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-
-const SIDE_SLOT_WIDTH = 52; /* 44px button + 8px breathing room, aligned with app headers */
+import { useText } from "@/context/TextContext";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 
 export type ExpandedImageSectionImagePosition = {
   /** 1-based index for display, e.g. `1` in `(1/6)`. */
@@ -37,6 +38,8 @@ export function ExpandedImageHeader({
   top,
 }: ExpandedImageHeaderProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const headerChrome = useHeaderChromeLayout();
   const trimmedSubtitle = sectionSubtitle?.trim() ?? "";
   const showSubtitle = trimmedSubtitle.length > 0;
   const trimmedLink = externalLinkUrl?.trim() ?? "";
@@ -48,7 +51,16 @@ export function ExpandedImageHeader({
 
   return (
     <View style={[styles.row, { top }]} pointerEvents="box-none">
-      <View style={[styles.sideSlot, styles.sideSlotStart, { width: SIDE_SLOT_WIDTH }]}>
+      <View
+        style={[
+          styles.sideSlot,
+          styles.sideSlotStart,
+          {
+            width: headerChrome.sideSlotWidth,
+            height: headerChrome.buttonWrapHeight,
+          },
+        ]}
+      >
         <BackButton onPress={onBack} />
       </View>
       <View style={styles.titleSlot} pointerEvents="none">
@@ -58,23 +70,36 @@ export function ExpandedImageHeader({
             { backgroundColor: themeColors.image.textBackground },
           ]}
         >
-          <Text
+          <ConstantText
+            size={uiScale.pageScreen.text.title}
+            typography={textStyle.pageScreen.title}
             style={[styles.pageTitle, { color: themeColors.image.text }]}
             numberOfLines={showSubtitle ? 2 : 1}
           >
             {pageTitle}
-          </Text>
+          </ConstantText>
           {showSubtitle ? (
-            <Text
+            <ConstantText
+              size={uiScale.map.text.title}
+              typography={textStyle.map.title}
               style={[styles.sectionSubtitle, { color: themeColors.image.text }]}
               numberOfLines={2}
             >
               {sectionLine}
-            </Text>
+            </ConstantText>
           ) : null}
         </View>
       </View>
-      <View style={[styles.sideSlot, styles.sideSlotEnd, { width: SIDE_SLOT_WIDTH }]}>
+      <View
+        style={[
+          styles.sideSlot,
+          styles.sideSlotEnd,
+          {
+            width: headerChrome.sideSlotWidth,
+            height: headerChrome.buttonWrapHeight,
+          },
+        ]}
+      >
         {showExternalLink ? (
           <ExternalLinkButton
             icon={require("@/assets/images/icons/ropewiki.png")}
@@ -97,7 +122,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sideSlot: {
-    height: 44,
     justifyContent: "center",
   },
   sideSlotStart: {
@@ -121,14 +145,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pageTitle: {
-    fontSize: 20,
-    fontWeight: "700",
     textAlign: "center",
   },
   sectionSubtitle: {
     marginTop: 2,
-    fontSize: 15,
-    fontWeight: "500",
     textAlign: "center",
   },
 });

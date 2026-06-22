@@ -25,7 +25,7 @@ import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanima
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import {
   TOAST_KEY_REGION_ERROR,
   TOAST_KEY_ROUTES_ERROR,
@@ -47,9 +47,6 @@ const HERO_SWIPE_TRIGGER_DX = 40;
 const TAP_MAX_DISPLACEMENT = 10;
 const TAP_MAX_DURATION_MS = 300;
 
-/** Matches {@link RopewikiPageScreen} header row / back button inset. */
-const HEADER_ROW_TOP = 8;
-
 function RegionScreenBody({
   data,
   regionId,
@@ -63,6 +60,8 @@ function RegionScreenBody({
 }) {
   const { background } = useColorTheme();
   const insets = useSafeAreaInsets();
+  const headerChrome = useHeaderChromeLayout();
+  const toastChrome = useToastChromeLayout();
   const isFocused = useIsFocused();
   const scrollY = useSharedValue(0);
   const paddingTopSv = useSharedValue(STARTING_HEIGHT);
@@ -90,7 +89,7 @@ function RegionScreenBody({
   });
   useRoutesProgressToast(regionRoutesState, {
     resetKey: regionId,
-    horizontalInset: TOAST_HORIZONTAL_INSET,
+    horizontalInset: toastChrome.horizontalInset,
     surfaceActive: isFocused,
   });
 
@@ -271,7 +270,7 @@ function RegionScreenBody({
       {!mapExpanded && (
         <BackButton
           onPress={onBackPress}
-          top={insets.top + HEADER_ROW_TOP}
+          top={insets.top + headerChrome.rowTopInset}
         />
       )}
       {expandedModalVisible && expandedAnchorRect != null && expandedPages.length > 0 ? (
@@ -354,8 +353,9 @@ export function RopewikiRegionScreen({
   savedPageId,
 }: RopewikiRegionScreenProps) {
   const insets = useSafeAreaInsets();
+  const headerChrome = useHeaderChromeLayout();
   const { isOnline } = useNetworkStatus();
-  const backTop = insets.top + HEADER_ROW_TOP;
+  const backTop = insets.top + headerChrome.rowTopInset;
   const router = useRouter();
   const handleBack = useCallback(() => {
     void (async () => {

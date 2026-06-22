@@ -1,0 +1,105 @@
+---
+description: Typography — text/font/style constants, TextProvider, ConstantText/ScalingText; avoid hardcoded font sizes and weights
+globs: Mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Typography
+
+For **size and scale tokens**, see [ui-scale.mdc](Mobile/.cursor/rules/ui-scale.mdc).
+
+## Source of truth
+
+| Dimension | Location | Profiled? |
+|-----------|----------|-----------|
+| **Typeface** | `text/font/types.ts`, `text/font/profiles/*`, `FONT_PROFILES` | Yes (`Auto`, `Roboto`, …) |
+| **Style** | `text/style/index.ts`, `TEXT_STYLE` | No — fixed per role |
+
+- **`TextProvider`** ([`context/TextContext.tsx`](Mobile/context/TextContext.tsx)) exposes the active UI scale + font profile pair and fixed `TEXT_STYLE`.
+- **Colors** stay in [`useColorTheme()`](Mobile/context/ColorThemeContext.tsx) — never in text/style constants.
+
+## Role categories
+
+Shared keys between `style` and font profiles (via `fontSlot`):
+
+`preview`, `betaSection`, `pageScreen`, `filter`, `map`, `button`, `toast`, `regionScreen`, `infoScreen`
+
+## Using text in components
+
+Always pass **`size` + `typography`** together into `ConstantText` / `ScalingText` / `ScalingTextGroup`. Read `size` from `useText().uiScale` and `typography` from `useText().style`.
+
+### Constant text
+
+```tsx
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
+import { useColorTheme } from "@/context/ColorThemeContext";
+
+export function ExampleTitle() {
+  const { uiScale, style } = useText();
+  const { text } = useColorTheme();
+  return (
+    <ConstantText
+      size={uiScale.pageScreen.text.title}
+      typography={style.pageScreen.title}
+      style={{ color: text.primary }}
+    >
+      Title
+    </ConstantText>
+  );
+}
+```
+
+### Scaling text
+
+```tsx
+import { ScalingText } from "@/components/text/ScalingText";
+import { useText } from "@/context/TextContext";
+
+export function ExampleLabel({ label }: { label: string }) {
+  const { uiScale, style } = useText();
+  return (
+    <ScalingText
+      size={uiScale.filter.buttons.checkbox.text!}
+      typography={style.filter.optionLabel}
+      numberOfLines={1}
+      measure={{ type: "width" }}
+    >
+      {label}
+    </ScalingText>
+  );
+}
+```
+
+### Non-`Text` APIs (Mapbox, `TextInput`, HTML)
+
+Use uiScale resolvers for pixel sizes; typography still from `style`. See ui-scale rule.
+
+Always set `allowFontScaling={false}` on token-driven text.
+
+## Do's
+
+- Read tokens from `useText()` (`uiScale`, `style`, `font`).
+- Pass **`size` + `typography`** together.
+- Apply **colors** from `useColorTheme()` via the `style` prop.
+- Add new typography to `text/style/types.ts` and `text/style/index.ts`; add matching size tokens per ui-scale rule.
+
+## Don'ts
+
+- Do not hardcode `fontSize`, `fontWeight`, or `fontFamily` in component StyleSheets.
+- Do not put colors in text/style constants.
+- Do not use raw `Text` for app copy unless rendering HTML or a one-off nested span inside `renderLabel`.
+
+## Adding a font profile
+
+1. Add `FontProfileKey` in `constants/text/font/types.ts`.
+2. Create `constants/text/font/profiles/<name>.ts`.
+3. Register in `FONT_PROFILES`.
+4. Load fonts via `expo-font` when switching profiles.
+
+## Adding typography for a new role
+
+1. Extend the category type in `text/style/types.ts`.
+2. Add `TypographySpec` entry in `text/style/index.ts`.
+3. Add matching size tokens in uiScale (see ui-scale rule).
+4. Wire the component with `ConstantText` or `ScalingText`.

@@ -44,6 +44,36 @@ export function computeScalingTextFontSizeFromWidth(
   return Math.max(minFontSize, Math.min(maxFontSize, scaled));
 }
 
+/** Scale font when combined segment widths at max size exceed the container. */
+export function computeScalingTextFontSizeFromCombinedWidth(
+  containerWidth: number,
+  segmentWidthsAtMax: number[],
+  {
+    maxFontSize,
+    minFontSize,
+    widthSafetyMargin = 0,
+    gap = 0,
+  }: {
+    maxFontSize: number;
+    minFontSize: number;
+    widthSafetyMargin?: number;
+    gap?: number;
+  },
+): number {
+  const segmentCount = segmentWidthsAtMax.length;
+  if (segmentCount === 0) {
+    return maxFontSize;
+  }
+  const totalGap = segmentCount > 1 ? gap * (segmentCount - 1) : 0;
+  const combinedWidthAtMax =
+    segmentWidthsAtMax.reduce((sum, width) => sum + width, 0) + totalGap;
+  return computeScalingTextFontSizeFromWidth(
+    containerWidth,
+    combinedWidthAtMax,
+    { maxFontSize, minFontSize, widthSafetyMargin },
+  );
+}
+
 /** Scale font when measured line count at max size exceeds the allowed lines. */
 export function computeScalingTextFontSizeFromLineCount(
   lineCountAtMax: number,

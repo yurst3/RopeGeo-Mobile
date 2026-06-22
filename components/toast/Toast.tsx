@@ -2,14 +2,15 @@ import { useEffect, useRef } from "react";
 import {
   Animated,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { ScalingText } from "@/components/text/ScalingText";
 import type { ThemeColors, ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import {
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
@@ -65,6 +66,7 @@ export function Toast({
   wrapStyle,
 }: ToastProps) {
   const { toast } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -144,13 +146,27 @@ export function Toast({
     >
       <Animated.View style={[styles.opacityShell, { opacity }]}>
         <View style={[styles.inner, palette.inner]}>
-          <Text style={[styles.message, palette.primary]} numberOfLines={3}>
+          <ScalingText
+            size={uiScale.toast.text.message}
+            typography={textStyle.toast.message}
+            numberOfLines={3}
+            ellipsizeMode="tail"
+            measure={{ type: "lineCount", maxLinesAtMaxSize: 3 }}
+            style={[styles.message, palette.primary]}
+          >
             {message}
-          </Text>
+          </ScalingText>
           {subtitle != null && subtitle !== "" ? (
-            <Text style={[styles.subtitle, palette.secondary]} numberOfLines={4}>
+            <ScalingText
+              size={uiScale.toast.text.subtitle}
+              typography={textStyle.toast.subtitle}
+              numberOfLines={4}
+              ellipsizeMode="tail"
+              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
+              style={[styles.subtitle, palette.secondary]}
+            >
               {subtitle}
-            </Text>
+            </ScalingText>
           ) : null}
         </View>
       </Animated.View>
@@ -176,13 +192,9 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   message: {
-    fontSize: 15,
-    fontWeight: "600",
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
-    fontWeight: "500",
     textAlign: "center",
     marginTop: 4,
   },

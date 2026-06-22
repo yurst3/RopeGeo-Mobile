@@ -4,13 +4,18 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  Text,
   type ImageSourcePropType,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { ScalingText } from "@/components/text/ScalingText";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
 import {
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
@@ -51,6 +56,11 @@ export function ActionToast({
   wrapStyle,
 }: ActionToastProps) {
   const { background, text, icon: iconColor } = useColorTheme().toast[style];
+  const { uiScale, style: textStyle } = useText();
+  const actionSpec = uiScale.toast.buttons.action;
+  const backgroundScale = useResolvedButtonBackgroundScale(actionSpec);
+  const profileIconScale = useResolvedButtonIconScale(actionSpec);
+  const iconSize = Math.round(22 * profileIconScale);
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
@@ -134,13 +144,27 @@ export function ActionToast({
           onPress={() => onPressRef.current()}
           style={({ pressed }) => [
             styles.inner,
-            { backgroundColor: background, opacity: pressed ? 0.92 : 1 },
+            {
+              backgroundColor: background,
+              opacity: pressed ? 0.92 : 1,
+              paddingVertical: 10 * backgroundScale,
+              paddingHorizontal: 18 * backgroundScale,
+              gap: 10 * backgroundScale,
+            },
           ]}
         >
-          <Text style={[styles.message, { color: text }]} numberOfLines={2}>
+          <ScalingText
+            size={uiScale.toast.text.message}
+            typography={textStyle.toast.message}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+            containerStyle={styles.messageWrap}
+            style={[styles.message, { color: text }]}
+          >
             {message}
-          </Text>
-          <Image source={icon} style={[styles.icon, { tintColor: iconColor }]} />
+          </ScalingText>
+          <Image source={icon} style={[styles.icon, { width: iconSize, height: iconSize, tintColor: iconColor }]} />
         </Pressable>
       </Animated.View>
     </Animated.View>
@@ -161,24 +185,19 @@ const styles = StyleSheet.create({
   inner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
     borderRadius: 999,
     maxWidth: "100%",
     alignSelf: "center",
   },
   icon: {
-    width: 22,
-    height: 22,
     flexShrink: 0,
     resizeMode: "contain",
   },
-  message: {
+  messageWrap: {
     flexGrow: 0,
     flexShrink: 1,
-    fontSize: 15,
-    fontWeight: "600",
+  },
+  message: {
     textAlign: "left",
   },
 });

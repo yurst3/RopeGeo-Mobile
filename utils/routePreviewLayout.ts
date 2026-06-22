@@ -2,14 +2,12 @@ import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
 
 import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
-import {
-  computeScalingTextFontSizeFromLineCount,
-  computeScalingTextFontSizeFromWidth,
-  computeScalingTextMinFontSize,
-} from "@/utils/scalingText";
+import type { UiScaleProfile } from "@/constants/uiScale/types";
+import { useText } from "@/context/TextContext";
+import { resolveGlobalIconSizeScale, resolveScalingBounds } from "@/utils/resolvers";
 import {
   computeStarRatingMetrics,
-  STAR_RATING_MAX_FONT_SCALE,
+  resolveStarRatingIconBounds,
 } from "@/utils/starRatingLayout";
 
 export const ROUTE_PREVIEW_CARD_MARGIN_H = 16;
@@ -22,21 +20,9 @@ export const ROUTE_PREVIEW_DEFAULT_BADGE_SCALE = 0.65;
 /** Reserve space for sub-badge overhang on the trailing badge. */
 export const ROUTE_PREVIEW_BADGE_WIDTH_SAFETY_MARGIN = 4;
 
-const DESIGN_BADGE_LABEL_FONT_SIZE = 11;
-/** Max accessibility scale applied to the preview star row (stars + label). */
-export const ROUTE_PREVIEW_STAR_RATING_MAX_FONT_SCALE =
-  STAR_RATING_MAX_FONT_SCALE;
 /** Badges that must fit horizontally when font scale is at its preview maximum. */
 export const ROUTE_PREVIEW_BADGE_MIN_VISIBLE_AT_MAX_SCALE = 3;
 
-export const ROUTE_PREVIEW_TITLE_MAX_FONT_SIZE = 16;
-/** @deprecated Use {@link ROUTE_PREVIEW_TITLE_MAX_FONT_SIZE}. */
-export const ROUTE_PREVIEW_TITLE_FONT_SIZE = ROUTE_PREVIEW_TITLE_MAX_FONT_SIZE;
-/** Min/max ratio at fontScale 1; used as a floor when shrink range exceeds device scale. */
-export const ROUTE_PREVIEW_TITLE_SHRINK_RATIO = 0.75;
-/** Shrink range as a fraction of max at fontScale 1: (max − min) / max. */
-const ROUTE_PREVIEW_TITLE_SHRINK_RANGE_RATIO =
-  1 - ROUTE_PREVIEW_TITLE_SHRINK_RATIO;
 /** Reserve space so native layout does not exceed the clipped container. */
 export const ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN = 4;
 /** Extra space below the title for descenders (e.g. y, g). */
@@ -44,14 +30,8 @@ export const ROUTE_PREVIEW_TITLE_DESCENDER_PADDING = 2;
 /** Vertical gap between all rows in the preview info column. */
 export const ROUTE_PREVIEW_INFO_ROW_GAP = 4;
 
-export const ROUTE_PREVIEW_LOCATION_FONT_SIZE = 12;
-/** Min/max ratio at fontScale 1; used as a floor when shrink range exceeds device scale. */
-const ROUTE_PREVIEW_LOCATION_SHRINK_RATIO = 8 / 12;
-/** Shrink range as a fraction of max at fontScale 1: (max − min) / max. */
-const ROUTE_PREVIEW_LOCATION_SHRINK_RANGE_RATIO =
-  1 - ROUTE_PREVIEW_LOCATION_SHRINK_RATIO;
-export const ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN = 4;
 export const ROUTE_PREVIEW_LOCATION_MAX_LINES = 2;
+export const ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN = 4;
 
 export type RoutePreviewMetrics = {
   screenWidth: number;
@@ -62,36 +42,16 @@ export type RoutePreviewMetrics = {
   badgeSize: number;
   badgeGap: number;
   badgeLabelFontSize: number;
-  /** Max badges that fit in the info column without horizontal clipping. */
   maxVisibleBadges: number;
-  titleMaxFontSize: number;
-  titleMinFontSize: number;
+  titleCapHeight: number;
   titleDescenderPadding: number;
   titleWidthSafetyMargin: number;
-  locationMaxFontSize: number;
-  locationMinFontSize: number;
-  locationWidthSafetyMargin: number;
-  /** Negative margin so title descender padding + {@link ROUTE_PREVIEW_INFO_ROW_GAP} = visual row gap. */
   locationMarginTopAfterTitle: number;
+  locationWidthSafetyMargin: number;
   starRatingSize: number;
   starRatingFontSize: number;
   infoRowGap: number;
 };
-
-/**
- * @deprecated Use {@link computeScalingTextMinFontSize}.
- */
-export function computeRoutePreviewMinFontSize(
-  maxFontSize: number,
-  fontScale: number,
-  shrinkRangeRatio: number,
-): number {
-  return computeScalingTextMinFontSize(
-    maxFontSize,
-    fontScale,
-    shrinkRangeRatio,
-  );
-}
 
 function computeLegacyBadgeSize(infoContentWidth: number): number {
   const badgesNeeded =
@@ -126,8 +86,8 @@ export function countRoutePreviewBadgesThatFit(
   return fit;
 }
 
-/** Highest font scale where at least `minVisible` badges fit in the info column. */
-export function computeRoutePreviewBadgeMaxFontScale(
+/** Highest badge scale where at least `minVisible` badges fit in the info column. */
+export function computeRoutePreviewBadgeMaxLayoutScale(
   infoContentWidth: number,
   minVisible = ROUTE_PREVIEW_BADGE_MIN_VISIBLE_AT_MAX_SCALE,
 ): number {
@@ -168,9 +128,13 @@ export function computeRoutePreviewBadgeMaxFontScale(
   return lo;
 }
 
+/** @deprecated Use {@link computeRoutePreviewBadgeMaxLayoutScale}. */
+export const computeRoutePreviewBadgeMaxFontScale =
+  computeRoutePreviewBadgeMaxLayoutScale;
+
 function computeRoutePreviewBadgeLayout(
   infoContentWidth: number,
-  fontScale: number,
+  iconScale: number,
 ): {
   badgeSize: number;
   badgeGap: number;
@@ -178,9 +142,10 @@ function computeRoutePreviewBadgeLayout(
 } {
   const designBadgeSize =
     DEFAULT_BADGE_SIZE * ROUTE_PREVIEW_DEFAULT_BADGE_SCALE;
-  const maxFontScale = computeRoutePreviewBadgeMaxFontScale(infoContentWidth);
-  const scaledFontScale = Math.min(fontScale, maxFontScale);
-  let badgeSize = Math.round(designBadgeSize * scaledFontScale);
+  const maxLayoutScale =
+    computeRoutePreviewBadgeMaxLayoutScale(infoContentWidth);
+  const effectiveScale = Math.min(iconScale, maxLayoutScale);
+  let badgeSize = Math.round(designBadgeSize * effectiveScale);
   let badgeGap = Math.max(
     4,
     Math.round(ROUTE_PREVIEW_BADGE_GAP * (badgeSize / designBadgeSize)),
@@ -189,7 +154,7 @@ function computeRoutePreviewBadgeLayout(
     Math.max(
       0,
       infoContentWidth -
-        ROUTE_PREVIEW_BADGE_WIDTH_SAFETY_MARGIN * scaledFontScale,
+        ROUTE_PREVIEW_BADGE_WIDTH_SAFETY_MARGIN * effectiveScale,
     ),
     badgeSize,
     badgeGap,
@@ -197,7 +162,7 @@ function computeRoutePreviewBadgeLayout(
   );
 
   if (maxVisibleBadges < ROUTE_PREVIEW_MAX_BADGES) {
-    if (fontScale <= 1) {
+    if (iconScale <= 1) {
       badgeSize = computeLegacyBadgeSize(infoContentWidth);
       const badgeScale = badgeSize / DEFAULT_BADGE_SIZE;
       badgeGap = Math.max(
@@ -217,38 +182,44 @@ function computeRoutePreviewBadgeLayout(
 export function getRoutePreviewMetrics(
   screenWidth: number,
   fontScale = 1,
+  sizeProfile: UiScaleProfile,
 ): RoutePreviewMetrics {
+  const { global, preview, pageScreen } = sizeProfile;
+  const iconScale = resolveGlobalIconSizeScale(global, fontScale);
   const cardWidth = screenWidth - ROUTE_PREVIEW_CARD_MARGIN_H * 2;
   const imageWidth = cardWidth * ROUTE_PREVIEW_IMAGE_WIDTH_RATIO;
   const infoContentWidth =
     cardWidth - imageWidth - ROUTE_PREVIEW_CARD_PADDING * 2;
   const { badgeSize, badgeGap, maxVisibleBadges } =
-    computeRoutePreviewBadgeLayout(infoContentWidth, fontScale);
+    computeRoutePreviewBadgeLayout(infoContentWidth, iconScale);
+  const badgeLabelBase = resolveScalingBounds(
+    pageScreen.text.badgeLabel,
+    global,
+    fontScale,
+  ).maxFontSize;
   const badgeLabelFontSize = Math.max(
     10,
-    Math.round(DESIGN_BADGE_LABEL_FONT_SIZE * (badgeSize / DEFAULT_BADGE_SIZE)),
+    Math.round(badgeLabelBase * (badgeSize / DEFAULT_BADGE_SIZE)),
   );
-  const titleMaxFontSize = ROUTE_PREVIEW_TITLE_MAX_FONT_SIZE * fontScale;
-  const titleMinFontSize = computeScalingTextMinFontSize(
-    titleMaxFontSize,
+  const titleBounds = resolveScalingBounds(
+    preview.text.title,
+    global,
     fontScale,
-    ROUTE_PREVIEW_TITLE_SHRINK_RANGE_RATIO,
   );
   const titleDescenderPadding =
     ROUTE_PREVIEW_TITLE_DESCENDER_PADDING * fontScale;
   const titleWidthSafetyMargin =
     ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN * fontScale;
-  const locationMaxFontSize = ROUTE_PREVIEW_LOCATION_FONT_SIZE * fontScale;
-  const locationMinFontSize = computeScalingTextMinFontSize(
-    locationMaxFontSize,
-    fontScale,
-    ROUTE_PREVIEW_LOCATION_SHRINK_RANGE_RATIO,
-  );
   const locationWidthSafetyMargin =
     ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN * fontScale;
   const locationMarginTopAfterTitle = -titleDescenderPadding;
+  const starRatingBounds = resolveStarRatingIconBounds(
+    preview.text.starRating,
+    global,
+    fontScale,
+  );
   const { size: starRatingSize, fontSize: starRatingFontSize } =
-    computeStarRatingMetrics(infoContentWidth, fontScale);
+    computeStarRatingMetrics(infoContentWidth, starRatingBounds);
   const infoRowGap = ROUTE_PREVIEW_INFO_ROW_GAP * fontScale;
 
   return {
@@ -261,14 +232,11 @@ export function getRoutePreviewMetrics(
     badgeGap,
     badgeLabelFontSize,
     maxVisibleBadges,
-    titleMaxFontSize,
-    titleMinFontSize,
+    titleCapHeight: titleBounds.maxFontSize + titleDescenderPadding,
     titleDescenderPadding,
     titleWidthSafetyMargin,
-    locationMaxFontSize,
-    locationMinFontSize,
-    locationWidthSafetyMargin,
     locationMarginTopAfterTitle,
+    locationWidthSafetyMargin,
     starRatingSize,
     starRatingFontSize,
     infoRowGap,
@@ -276,44 +244,10 @@ export function getRoutePreviewMetrics(
 }
 
 export function useRoutePreviewMetrics(): RoutePreviewMetrics {
+  const { uiScale } = useText();
   const { width, fontScale } = useWindowDimensions();
   return useMemo(
-    () => getRoutePreviewMetrics(width, fontScale),
-    [width, fontScale],
+    () => getRoutePreviewMetrics(width, fontScale, uiScale),
+    [width, fontScale, uiScale],
   );
-}
-
-/** @deprecated Use {@link computeScalingTextFontSizeFromWidth}. */
-export function computeRoutePreviewTitleFontSize(
-  containerWidth: number,
-  fullTextWidthAtMax: number,
-  options: {
-    maxFontSize: number;
-    minFontSize: number;
-    widthSafetyMargin: number;
-  },
-): number {
-  return computeScalingTextFontSizeFromWidth(
-    containerWidth,
-    fullTextWidthAtMax,
-    options,
-  );
-}
-
-/** @deprecated Use {@link computeScalingTextFontSizeFromLineCount}. */
-export function computeRoutePreviewLocationFontSize(
-  lineCountAtMax: number,
-  {
-    maxFontSize,
-    minFontSize,
-  }: {
-    maxFontSize: number;
-    minFontSize: number;
-  },
-): number {
-  return computeScalingTextFontSizeFromLineCount(lineCountAtMax, {
-    maxFontSize,
-    minFontSize,
-    maxLinesAtMaxSize: ROUTE_PREVIEW_LOCATION_MAX_LINES,
-  });
 }

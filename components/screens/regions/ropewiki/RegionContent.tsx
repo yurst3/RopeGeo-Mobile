@@ -1,5 +1,7 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { MiniMap } from "@/components/minimap/MiniMap";
 import type { RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
@@ -29,7 +31,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated, {
@@ -120,6 +121,7 @@ export function RegionContent({
   onVerticalScrollActiveChange,
 }: RegionContentProps) {
   const { background, text, loadingIndicator } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const previewMetrics = usePreviewTextMetrics();
   const { isOnline } = useNetworkStatus();
   const isOnlineRef = useRef(isOnline);
@@ -377,16 +379,24 @@ export function RegionContent({
                     },
                   ]}
                 >
-                  <Text style={[styles.title, { color: text.primary }]}>
+                  <ConstantText
+                    size={uiScale.regionScreen.text.title}
+                    typography={textStyle.regionScreen.title}
+                    style={[styles.title, { color: text.primary }]}
+                  >
                     {region.name}
-                  </Text>
+                  </ConstantText>
                   <RegionLinks
                     source={PageDataSource.Ropewiki}
                     regions={regions}
                   />
-                  <Text style={[styles.counts, { color: text.secondary }]}>
+                  <ConstantText
+                    size={uiScale.regionScreen.text.previewCount}
+                    typography={textStyle.regionScreen.previewCount}
+                    style={[styles.counts, { color: text.secondary }]}
+                  >
                     {countsText}
-                  </Text>
+                  </ConstantText>
                   {region.overview != null ? (
                     <BetaSection section={region.overview} pageTitle={region.name} />
                   ) : null}
@@ -511,13 +521,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
     marginBottom: 6,
   },
-  counts: {
-    fontSize: 16,
-  },
+  counts: {},
   miniMapWrap: {
     marginTop: 16,
     width: "100%",

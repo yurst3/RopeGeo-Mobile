@@ -1,8 +1,11 @@
 import { StyleSheet } from "react-native";
 
-import { ScalingText } from "@/components/ScalingText";
+import { ScalingText } from "@/components/text/ScalingText";
+import { useText } from "@/context/TextContext";
 import {
   ROUTE_PREVIEW_LOCATION_MAX_LINES,
+  ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN,
+  ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN,
   useRoutePreviewMetrics,
 } from "@/utils/routePreviewLayout";
 
@@ -14,19 +17,18 @@ export function RoutePreviewTitle({
   color: string;
 }) {
   const metrics = useRoutePreviewMetrics();
+  const { uiScale, style } = useText();
 
   return (
     <ScalingText
-      maxFontSize={metrics.titleMaxFontSize}
-      minFontSize={metrics.titleMinFontSize}
+      size={uiScale.preview.text.title}
+      typography={style.preview.title}
       numberOfLines={1}
       ellipsizeMode="clip"
-      measureKey={metrics.fontScale}
       measure={{
         type: "width",
         widthSafetyMargin: metrics.titleWidthSafetyMargin,
       }}
-      measureTextStyle={styles.titleMeasure}
       style={[
         styles.title,
         {
@@ -48,20 +50,20 @@ export function RoutePreviewLocation({
   color: string;
 }) {
   const metrics = useRoutePreviewMetrics();
+  const { uiScale, style } = useText();
 
   return (
     <ScalingText
-      maxFontSize={metrics.locationMaxFontSize}
-      minFontSize={metrics.locationMinFontSize}
+      size={uiScale.preview.text.locationHierarchy}
+      typography={style.preview.locationHierarchy}
       numberOfLines={ROUTE_PREVIEW_LOCATION_MAX_LINES}
       ellipsizeMode="tail"
       hideWhenEmpty
-      measureKey={metrics.fontScale}
       containerStyle={{ marginTop: metrics.locationMarginTopAfterTitle }}
       measure={{
         type: "lineCount",
         maxLinesAtMaxSize: ROUTE_PREVIEW_LOCATION_MAX_LINES,
-        widthSafetyMargin: metrics.locationWidthSafetyMargin,
+        widthSafetyMargin: ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN,
       }}
       style={[styles.location, { color }]}
     >
@@ -71,12 +73,7 @@ export function RoutePreviewLocation({
 }
 
 const styles = StyleSheet.create({
-  titleMeasure: {
-    fontWeight: "600",
-  },
-  title: {
-    fontWeight: "600",
-  },
+  title: {},
   location: {
     alignSelf: "stretch",
   },

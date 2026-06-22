@@ -90,6 +90,5 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     marginLeft: 8,
-    fontSize: 13,
   },
 });

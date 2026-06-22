@@ -5,13 +5,8 @@ import {
 } from "ropegeo-common/components";
 import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
 import { RopewikiPagePlaceholder } from "./RopewikiPagePlaceholder";
-import {
-  HEADER_ROW_TOP,
-  RopewikiPageScreenBody,
-} from "./RopewikiPageScreenBody";
-import {
-  TOAST_HORIZONTAL_INSET,
-} from "@/constants/toasts";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { RopewikiPageScreenBody } from "./RopewikiPageScreenBody";
 import {
   TOAST_KEY_NETWORK_OFFLINE,
   TOAST_KEY_PAGE_ERROR,
@@ -81,6 +76,8 @@ export function RopewikiPageScreen({
   source,
 }: RopewikiPageScreenProps) {
   const insets = useSafeAreaInsets();
+  const headerChrome = useHeaderChromeLayout();
+  const toastChrome = useToastChromeLayout();
   const pathname = usePathname();
   const { isOnline } = useNetworkStatus();
   const { upsertPill, dismiss } = useToast();
@@ -169,7 +166,7 @@ export function RopewikiPageScreen({
               message: "Couldn't open saved page",
               subtitle: subtitle !== "" ? subtitle : undefined,
               durationMs: null,
-              horizontalInset: TOAST_HORIZONTAL_INSET,
+              horizontalInset: toastChrome.horizontalInset,
               allowedRoutes: [pathname],
             });
           } catch (toastErr) {
@@ -181,7 +178,7 @@ export function RopewikiPageScreen({
               message: "Couldn't open saved page",
               subtitle: subtitle !== "" ? subtitle : undefined,
               durationMs: null,
-              horizontalInset: TOAST_HORIZONTAL_INSET,
+              horizontalInset: toastChrome.horizontalInset,
               allowedRoutes: [pathname],
             });
           }
@@ -195,7 +192,7 @@ export function RopewikiPageScreen({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- savedEntry, pathname, upsertPill
   }, [pageId, downloadedPath, replaceSaved, pathname, upsertPill]);
 
-  const backTop = insets.top + HEADER_ROW_TOP;
+  const backTop = insets.top + headerChrome.rowTopInset;
 
   const loaderOfflineData: RopewikiPageView | null | undefined = (() => {
     if (!shouldUseOffline || offlineReadFailedTryOnline) {

@@ -1,12 +1,15 @@
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 
 /** Shown at the end of a list when offline but more pages exist on the server. */
 export function OfflineLoadMoreBlockedFooter() {
   const { text: themeText } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
 
   return (
     <View style={styles.wrap}>
@@ -16,9 +19,13 @@ export function OfflineLoadMoreBlockedFooter() {
         contentFit="contain"
         accessibilityLabel="Missing image"
       />
-      <Text style={[styles.text, { color: themeText.error }]}>
+      <ConstantText
+        size={uiScale.toast.text.message}
+        typography={textStyle.toast.message}
+        style={[styles.text, { color: themeText.error }]}
+      >
         Unable to load more data
-      </Text>
+      </ConstantText>
     </View>
   );
 }
@@ -35,7 +42,6 @@ const styles = StyleSheet.create({
   },
   text: {
     marginTop: 8,
-    fontSize: 14,
     textAlign: "center",
   },
 });

@@ -1,17 +1,12 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import {
-  HEADER_BUTTON_GAP,
-  HEADER_SIDE_SLOT_WIDTH,
-  MAP_BUTTON_SIZE,
-} from "@/components/minimap/shared/fullScreenMapLayout";
+import { useExploreHeaderLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { useSavedFilters } from "@/context/SavedFiltersContext";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
 import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
 import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toasts/toastArchetypes";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
@@ -39,10 +34,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const DEFAULT_CURRENT_POSITION: [number, number] = [-109.5508, 38.5733];
 const DEFAULT_ZOOM = 12.1;
 
-const SEARCH_BAR_SIDE_WIDTH = HEADER_SIDE_SLOT_WIDTH;
-/** Keeps the search field clear of the top-right `ButtonStack` (widest stacked control + gap). */
-const SEARCH_BAR_RIGHT_CLEARANCE = MAP_BUTTON_SIZE + HEADER_BUTTON_GAP;
-
 function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
   // `reload` is intentionally ignored — stable ref from ropegeo-common; explore retry uses a ref.
   if (
@@ -68,6 +59,8 @@ function isSameRoutesState(prev: RoutesState, next: RoutesState): boolean {
 
 export function ExploreScreen() {
   const insets = useSafeAreaInsets();
+  const exploreHeader = useExploreHeaderLayout();
+  const toastChrome = useToastChromeLayout();
   const router = useRouter();
   const isFocused = useIsFocused();
   const { isOnline } = useNetworkStatus();
@@ -130,7 +123,7 @@ export function ExploreScreen() {
 
   useRoutesProgressToast(routesState, {
     resetKey: exploreRoutesKey,
-    horizontalInset: TOAST_HORIZONTAL_INSET,
+    horizontalInset: toastChrome.horizontalInset,
     surfaceActive: isFocused,
   });
 
@@ -256,10 +249,16 @@ export function ExploreScreen() {
     <>
       <View style={styles.container}>
         <View
-          style={[styles.searchBarRow, { top: insets.top + 8 }]}
+          style={[
+            styles.searchBarRow,
+            {
+              top: insets.top + exploreHeader.rowTopInset,
+              paddingRight: exploreHeader.searchBarRightClearance,
+            },
+          ]}
           pointerEvents="box-none"
         >
-          <View style={styles.searchBarSpacer} />
+          <View style={[styles.searchBarSpacer, { width: exploreHeader.sideSlotWidth }]} />
           <SearchBar
             style={styles.searchBarFlex}
             placeholder="Search"
@@ -352,7 +351,7 @@ export function ExploreScreen() {
             }
           }}
         />
-        <ButtonStack top={insets.top + 8}>
+        <ButtonStack top={insets.top + exploreHeader.rowTopInset}>
           <ButtonStack.Slot id="filter" visible animateLayout={false}>
             <FilterButton
               persisted={explorePersisted}
@@ -426,11 +425,8 @@ const styles = StyleSheet.create({
     zIndex: 3,
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: SEARCH_BAR_RIGHT_CLEARANCE,
   },
-  searchBarSpacer: {
-    width: SEARCH_BAR_SIDE_WIDTH,
-  },
+  searchBarSpacer: {},
   searchBarFlex: {
     flex: 1,
     minWidth: 0,

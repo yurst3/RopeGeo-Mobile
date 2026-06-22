@@ -3,12 +3,18 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import RenderHtml from "react-native-render-html";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
+  ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
+import {
+  useResolvedConstantSize,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 
 const HORIZONTAL_INSET = 16;
 const CAPTION_PILL_PADDING_H = 12;
@@ -51,15 +57,19 @@ export function ExpandedImageCaption({
   maxHeight,
 }: ExpandedImageCaptionProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
+  const captionTypography = useResolvedTypography(textStyle.betaSection.caption);
   const captionTagsStyles = useMemo(
     () =>
       buildRopewikiHtmlTagsStyles({
         link: themeColors.text.link,
         secondary: themeColors.text.secondary,
         captionColor: themeColors.image.text,
-        captionFontSize: 15,
+        captionFontSize,
+        bodyFontSize: captionFontSize,
       }),
-    [themeColors.image.text, themeColors.text],
+    [themeColors.image.text, themeColors.text, captionFontSize],
   );
   const contentWidth = Math.max(0, stageWidth - HORIZONTAL_INSET * 2);
   const pillInnerWidth = Math.max(
@@ -98,13 +108,17 @@ export function ExpandedImageCaption({
               baseUrl: ROPEWIKI_ORIGIN,
             }}
             baseStyle={{
-              ...styles.htmlBase,
+              fontFamily: captionTypography.fontFamily,
+              fontWeight: captionTypography.fontWeight,
+              fontSize: captionFontSize,
+              textAlign: "center",
               color: themeColors.image.text,
             }}
             tagsStyles={captionTagsStyles}
             customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
+            defaultTextProps={ROPEWIKI_HTML_DEFAULT_TEXT_PROPS}
           />
         </View>
       </ScrollView>
@@ -132,10 +146,5 @@ const styles = StyleSheet.create({
     paddingVertical: CAPTION_PILL_PADDING_V,
     paddingHorizontal: CAPTION_PILL_PADDING_H,
     borderRadius: CAPTION_PILL_RADIUS,
-  },
-  htmlBase: {
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
   },
 });

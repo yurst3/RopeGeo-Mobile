@@ -1,6 +1,10 @@
-import { Button } from "@/components/buttons/Button";
+import { Button, STANDARD_BUTTON_SIZE } from "@/components/buttons/Button";
 import { FILTER_BUTTON_KEY } from "@/constants/buttons";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedButtonDimensions } from "@/utils/resolvers";
+
+const FILTER_ICON_DESIGN_SCALE = 1.2;
 
 
 export function FilterButton({
@@ -13,9 +17,16 @@ export function FilterButton({
 }) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[FILTER_BUTTON_KEY];
+  const { uiScale } = useText();
+  const { size, iconScale } = useResolvedButtonDimensions(
+    uiScale.common.buttons.filter,
+    STANDARD_BUTTON_SIZE,
+    FILTER_ICON_DESIGN_SCALE,
+  );
   return (
     <Button
       onPress={onPress}
+      size={size}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
       icon={
@@ -26,7 +37,7 @@ export function FilterButton({
       iconColor={buttonColors.icon}
       iconColorHighlight={buttonColors.iconHighlight}
       highlighted={persisted}
-      iconScale={1.2}
+      iconScale={iconScale}
       accessibilityLabel="Filter"
     />
   );

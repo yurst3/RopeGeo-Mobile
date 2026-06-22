@@ -38,6 +38,7 @@ import {
   type ExpandedImageSectionImagePosition,
 } from "./ExpandedImageHeader";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "./types";
 import {
   anchorRectToExpandLayout,
@@ -99,6 +100,7 @@ export function ExpandedImageModal({
 }: ExpandedImageModalProps) {
   const themeColors = useColorTheme();
   const insets = useSafeAreaInsets();
+  const headerChrome = useHeaderChromeLayout();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const pageWidth = windowWidth;
   const slideStride = pageWidth + GALLERY_INTER_SLIDE_GAP;
@@ -521,7 +523,7 @@ export function ExpandedImageModal({
               sectionImagePosition={headerSectionImagePosition ?? undefined}
               onBack={collapseModal}
               externalLinkUrl={activeExternalLinkUrl}
-              top={insets.top + 8}
+              top={insets.top + headerChrome.rowTopInset}
             />
           </Animated.View>
         </View>

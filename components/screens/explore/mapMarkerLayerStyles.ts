@@ -60,17 +60,19 @@ export function clusterRouteMarkerSymbolStyle(
 /** Vector-tile point labels on page minimaps (smaller type than route markers). */
 export function pagePointLabelSymbolStyle(
   marker: MarkerColors,
+  markerMetrics: RouteMarkerMetrics,
 ): SymbolLayerStyle {
   return {
     textField: ["coalesce", ["get", "name"], " "],
-    textSize: 11,
+    textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,
-    textHaloWidth: 1.2,
-    textOffset: [0, 2.1],
+    textHaloWidth: markerMetrics.textHaloWidth,
+    textOffset: [0, markerMetrics.pageMiniMapTextOffsetY],
     textAnchor: "top",
-    textAllowOverlap: true,
-    textIgnorePlacement: true,
+    textPadding: markerMetrics.textPadding,
+    textAllowOverlap: false,
+    textIgnorePlacement: false,
     textMaxWidth: 8,
   };
 }

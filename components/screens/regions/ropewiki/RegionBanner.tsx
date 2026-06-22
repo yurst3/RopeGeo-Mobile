@@ -6,8 +6,10 @@ import {
   RopewikiRegionImagesParams,
   RopewikiRegionImageView,
 } from "ropegeo-common/models";
-import { TOAST_HORIZONTAL_INSET } from "@/constants/toasts";
+import { ConstantText } from "@/components/text/ConstantText";
+import { useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { useToast } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -30,7 +32,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated from "react-native-reanimated";
@@ -117,7 +118,9 @@ function RegionBannerCarousel({
   controlRef,
 }: RegionBannerCarouselProps) {
   const { image, loadingIndicator } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const { upsertPill, dismiss } = useToast();
+  const toastChrome = useToastChromeLayout();
   const pathname = usePathname();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [loadedIndices, setLoadedIndices] = useState<Set<number>>(() => new Set());
@@ -139,7 +142,7 @@ function RegionBannerCarousel({
         subtitle: subtitle === "" ? undefined : subtitle,
         durationMs: null,
         allowedRoutes: [pathname],
-        horizontalInset: TOAST_HORIZONTAL_INSET,
+        horizontalInset: toastChrome.horizontalInset,
       });
     } else {
       dismiss(bannerImagesErrorToastKey);
@@ -479,9 +482,13 @@ function RegionBannerCarousel({
                 style={[styles.bannerNoImageIcon, { tintColor: image.missingIcon }]}
                 contentFit="contain"
               />
-              <Text style={[styles.missingImageText, { color: image.missingText }]}>
+              <ConstantText
+                size={uiScale.pageScreen.text.metaData}
+                typography={textStyle.map.markerTooltip}
+                style={[styles.missingImageText, { color: image.missingText }]}
+              >
                 Missing Image
-              </Text>
+              </ConstantText>
             </View>
           )}
         </View>
@@ -694,8 +701,6 @@ const styles = StyleSheet.create({
   },
   missingImageText: {
     marginTop: 8,
-    fontSize: 13,
-    fontWeight: "600",
   },
   imageLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,

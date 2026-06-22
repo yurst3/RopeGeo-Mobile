@@ -1,4 +1,4 @@
-/** Horizontal inset so toasts clear header circle buttons (16 + 44 + 8). */
+/** Design baseline horizontal inset (use {@link resolveToastHorizontalInset}). */
 export const TOAST_HORIZONTAL_INSET = 16 + 44 + 8;
 
 export const SAVED_TOAST_DURATION_MS = 2000;

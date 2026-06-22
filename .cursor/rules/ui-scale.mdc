@@ -1,0 +1,94 @@
+---
+description: UI scale — uiScale profiles, ButtonScaleSpec, resolvers; base px in components, multipliers in profiles
+globs: Mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# UI scale
+
+For **typography** (weight, font slot), see [text-typography.mdc](Mobile/.cursor/rules/text-typography.mdc).
+
+## Source of truth
+
+| What | Location |
+|------|----------|
+| Types | [`constants/uiScale/types.ts`](Mobile/constants/uiScale/types.ts) |
+| Profiles | [`constants/uiScale/profiles/*.ts`](Mobile/constants/uiScale/profiles/) |
+| Registry | [`constants/uiScale/index.ts`](Mobile/constants/uiScale/index.ts) → `UI_SCALE_PROFILES` |
+| Resolvers | [`utils/resolvers/resolveUiScale.ts`](Mobile/utils/resolvers/resolveUiScale.ts), hooks in [`useResolvedUiScale.ts`](Mobile/utils/resolvers/useResolvedUiScale.ts) |
+
+## Profile organization
+
+```
+global
+common       → { buttons }     // back, share, save, filter, externalLink
+preview      → { text, icon, buttons }
+pageScreen   → { text, buttons }
+map          → { text, buttons }
+filter       → { text, icon, buttons }
+betaSection  → { text, buttons }
+tabs         → { buttons }       // tabBar (icon + text)
+toast        → { text, buttons }
+regionScreen → { text }
+infoScreen   → { text }
+```
+
+**Placement rules:**
+
+- **`text`** — non-button copy (titles, labels, notes, marker labels).
+- **`icon`** — standalone icons not tied to a named button component.
+- **`buttons`** — one entry per **named button component** in **lowerCamelCase**; each button appears **once** in the profile.
+- **`common.buttons`** — buttons reused across screen contexts.
+- **Base pixel sizes live in components**; profiles hold multipliers/specs only.
+
+## Scale spec types
+
+| Spec | Properties | Resolves to |
+|------|------------|-------------|
+| **`ConstantTextSizeSpec`** | `default`, `floor?`, `ceiling?`, `accessibilityScaling?` | Fixed px font size |
+| **`ScalingTextSizeSpec`** | `default`, `floor?`, `ceiling?`, `computeFloorFromAccessibilityScaling?`, … | `{ maxFontSize, minFontSize }` |
+| **`IconScaleSpec`** | `scale`, `accessibilityScalingStrength?` | Multiplier on base icon px |
+| **`ButtonScaleSpec`** | `background?`, `icon?`, `text?`, `selectable?` | Independent bg / icon / text / control scales |
+
+**`ButtonScaleSpec` semantics:**
+
+- `background` — pill/circle/hit-target shell and padding (`IconScaleSpec`; follows accessibility scaling when enabled).
+- `icon` — glyph inside the button, or trailing row icons on filter checkbox rows (route-type badges, source logos).
+- `text` — label on the button (`ConstantTextSizeSpec` or `ScalingTextSizeSpec`).
+- `subtext` — secondary copy paired with the control (hints, chevrons).
+- `selectable` — checkbox, radio, switch chrome (`IconScaleSpec`).
+
+**Circular button pattern:**
+
+```typescript
+const { size, iconScale } = useResolvedButtonDimensions(
+  uiScale.common.buttons.back,
+  STANDARD_BUTTON_SIZE,
+  designIconScale, // optional component-local ratio
+);
+```
+
+## Accessibility scaling
+
+1. **`UiScaleGlobal.accessibilityScaling`** — profile-wide (`Auto` on; `Small`/`Medium`/`Large` off).
+2. **Per-token override** — `accessibilityScaling?` on any text/icon spec.
+3. **Text (constant)** — `defaultStep * clamp(deviceFontScale)` then `floor`/`ceiling`.
+4. **Text (scaling)** — max from constant path; min from `floor` or `computedFloorConstant * fontScale`.
+5. **Icons** — `scale * (1 + (clampedFontScale - 1) * strength)` when global accessibility is on.
+6. **Button background** — resolved via `IconScaleSpec` (same accessibility behavior as icons).
+7. Always `allowFontScaling={false}` on token-driven text.
+
+## Extending scale definitions
+
+**New UI scale profile:** copy a profile file, adjust values, register in `UI_SCALE_PROFILES`.
+
+**New token under existing category:** extend type in `types.ts`, add inline values to **all four** profiles, wire via resolver hooks.
+
+**New button token:** lowerCamelCase name matching component; use `common.buttons` only when shared across contexts; populate only the `ButtonScaleSpec` fields the button uses.
+
+## Do's / Don'ts
+
+- Use resolvers / `useResolved*` hooks; multiply **component base px** by resolved scales.
+- Decouple button background, icon, text, and selectable — never derive icon size from text fontSize.
+- Do not hardcode profile-dependent px in StyleSheets.
+- Do not use helper functions inside profile definitions — inline objects only.

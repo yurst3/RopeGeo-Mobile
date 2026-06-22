@@ -1,4 +1,9 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedConstantSize,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 import { useMemo } from "react";
 import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";
 
@@ -20,15 +25,8 @@ const layout = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-  },
   subtitle: {
-    fontSize: 15,
     marginBottom: 24,
-    lineHeight: 22,
   },
   cClassNote: {
     marginBottom: 20,
@@ -54,13 +52,7 @@ const layout = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  body: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
   minimumFor: {
-    fontSize: 14,
-    fontWeight: "600",
     marginBottom: 4,
   },
 });
@@ -84,6 +76,24 @@ export type InfoScreenStyles = {
 
 export function useInfoScreenStyles(): InfoScreenStyles {
   const { background, cardHighlight, text } = useColorTheme();
+  const { uiScale, style } = useText();
+
+  const titleSize = useResolvedConstantSize(uiScale.infoScreen.text.title);
+  const titleTypography = useResolvedTypography(style.infoScreen.title);
+  const descriptionSize = useResolvedConstantSize(uiScale.infoScreen.text.description);
+  const descriptionTypography = useResolvedTypography(style.infoScreen.description);
+  const badgeDescriptionSize = useResolvedConstantSize(
+    uiScale.infoScreen.text.badgeDescription,
+  );
+  const badgeDescriptionTypography = useResolvedTypography(
+    style.infoScreen.badgeDescription,
+  );
+  const badgeDescriptionHeaderSize = useResolvedConstantSize(
+    uiScale.infoScreen.text.badgeDescriptionHeader,
+  );
+  const badgeDescriptionHeaderTypography = useResolvedTypography(
+    style.infoScreen.badgeDescriptionHeader,
+  );
 
   return useMemo(
     () => ({
@@ -91,10 +101,23 @@ export function useInfoScreenStyles(): InfoScreenStyles {
       scroll: { ...layout.scroll, backgroundColor: background },
       content: layout.content,
       titleRow: layout.titleRow,
-      title: { ...layout.title, color: text.primary },
-      subtitle: { ...layout.subtitle, color: text.secondary },
+      title: {
+        ...titleTypography,
+        fontSize: titleSize,
+        color: text.primary,
+      },
+      subtitle: {
+        ...descriptionTypography,
+        fontSize: descriptionSize,
+        color: text.secondary,
+        ...layout.subtitle,
+      },
       cClassNote: layout.cClassNote,
-      cClassNoteText: { ...layout.subtitle, color: text.secondary },
+      cClassNoteText: {
+        ...descriptionTypography,
+        fontSize: descriptionSize,
+        color: text.secondary,
+      },
       row: layout.row,
       rowHighlighted: {
         ...layout.row,
@@ -103,9 +126,31 @@ export function useInfoScreenStyles(): InfoScreenStyles {
       },
       badgeWrap: layout.badgeWrap,
       descriptionWrap: layout.descriptionWrap,
-      body: { ...layout.body, color: text.secondary },
-      minimumFor: { ...layout.minimumFor, color: text.primary },
+      body: {
+        ...badgeDescriptionTypography,
+        fontSize: badgeDescriptionSize,
+        color: text.secondary,
+      },
+      minimumFor: {
+        ...badgeDescriptionHeaderTypography,
+        fontSize: badgeDescriptionHeaderSize,
+        color: text.primary,
+        ...layout.minimumFor,
+      },
     }),
-    [background, cardHighlight, text.primary, text.secondary],
+    [
+      background,
+      badgeDescriptionHeaderSize,
+      badgeDescriptionHeaderTypography,
+      badgeDescriptionSize,
+      badgeDescriptionTypography,
+      cardHighlight,
+      descriptionSize,
+      descriptionTypography,
+      text.primary,
+      text.secondary,
+      titleSize,
+      titleTypography,
+    ],
   );
 }

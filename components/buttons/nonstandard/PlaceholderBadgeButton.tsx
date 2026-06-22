@@ -1,23 +1,39 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
-const INFO_ICON_WRAP_SIZE = 18;
+const DESIGN_INFO_ICON_WRAP_SIZE = 18;
 
 /** Skeleton page badge grid cell matching {@link BadgeButton} layout. */
 export function PlaceholderBadgeButton() {
   const themeColors = useColorTheme();
-  const { badgeSize, badgeSlotWidth, typeLabelFontSize } = usePageBadgeMetrics();
+  const {
+    badgeSize,
+    badgeSlotWidth,
+    typeLabelCapHeight,
+    iconSizeScale,
+  } = usePageBadgeMetrics();
+
+  const infoIconWrapSize = useMemo(
+    () => Math.round(DESIGN_INFO_ICON_WRAP_SIZE * iconSizeScale),
+    [iconSizeScale],
+  );
 
   return (
     <View style={styles.static}>
       <View style={styles.row}>
-        <View style={styles.labelRow}>
+        <View style={[styles.labelRow, { minHeight: badgeSize }]}>
           <View
             style={[
               styles.infoIconWrap,
-              { backgroundColor: themeColors.placeholder },
+              {
+                backgroundColor: themeColors.placeholder,
+                width: infoIconWrapSize,
+                height: infoIconWrapSize,
+                borderRadius: infoIconWrapSize / 2,
+              },
             ]}
           />
           <View style={styles.labelTextWrap}>
@@ -26,7 +42,7 @@ export function PlaceholderBadgeButton() {
                 styles.typeLabelPlaceholder,
                 {
                   backgroundColor: themeColors.placeholder,
-                  height: typeLabelFontSize,
+                  height: typeLabelCapHeight * 2,
                 },
               ]}
             />
@@ -50,7 +66,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     flex: 1,
     minWidth: 0,
     minHeight: 0,
@@ -64,14 +80,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   infoIconWrap: {
-    width: INFO_ICON_WRAP_SIZE,
-    height: INFO_ICON_WRAP_SIZE,
-    borderRadius: INFO_ICON_WRAP_SIZE / 2,
     flexShrink: 0,
   },
   labelTextWrap: {
     flex: 1,
     minWidth: 0,
+    justifyContent: "center",
   },
   typeLabelPlaceholder: {
     width: "88%",
@@ -80,7 +94,7 @@ const styles = StyleSheet.create({
   badgeSlot: {
     flexShrink: 0,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
   badgeWrap: {
     maxWidth: "100%",

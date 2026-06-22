@@ -1,17 +1,31 @@
+import { ExploreTabBarIcon } from "@/components/navigation/ExploreTabBarIcon";
 import { SavedTabBarIcon } from "@/components/navigation/SavedTabBarIcon";
 import { useTabFocusToastScreenListeners } from "@/components/navigation/useTabFocusToastScreenListeners";
 import { SavedTabHighlightProvider } from "@/context/SavedTabHighlightContext";
 import { ShareSheetDimmerOverlay } from "@/context/ShareSheetDimmerContext";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedButtonConstantTextSize,
+  useResolvedButtonIconScale,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 import { Tabs, router } from "expo-router";
-import { FontAwesome } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 const EXPLORE_TAB_HREF = "/(tabs)/explore" as const;
+const TAB_BAR_ICON_BASE_SIZE = 26;
 
 export default function TabsLayout() {
   const { tabBar } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const tabLabelFontSize =
+    useResolvedButtonConstantTextSize(uiScale.tabs.buttons.tabBar) ?? 10;
+  const tabIconSize = Math.round(
+    TAB_BAR_ICON_BASE_SIZE * useResolvedButtonIconScale(uiScale.tabs.buttons.tabBar),
+  );
+  const tabLabelTypography = useResolvedTypography(textStyle.button.tabLabel);
   const tabFocusToastListeners = useTabFocusToastScreenListeners();
 
   const screenOptions = useMemo(
@@ -23,8 +37,12 @@ export default function TabsLayout() {
         backgroundColor: tabBar.background,
         borderTopColor: tabBar.background,
       },
+      tabBarLabelStyle: {
+        ...tabLabelTypography,
+        fontSize: tabLabelFontSize,
+      },
     }),
-    [tabBar],
+    [tabBar, tabLabelFontSize, tabLabelTypography, tabIconSize],
   );
 
   return (
@@ -47,12 +65,8 @@ export default function TabsLayout() {
             })}
             options={{
               title: "explore",
-              tabBarIcon: ({ size, focused }) => (
-                <FontAwesome
-                  name={focused ? "map" : "map-o"}
-                  size={size}
-                  color={focused ? tabBar.iconFocused : tabBar.iconUnfocused}
-                />
+              tabBarIcon: ({ focused }) => (
+                <ExploreTabBarIcon size={tabIconSize} focused={focused} />
               ),
             }}
           />
@@ -60,8 +74,8 @@ export default function TabsLayout() {
             name="saved"
             options={{
               title: "saved",
-              tabBarIcon: ({ size, focused }) => (
-                <SavedTabBarIcon size={size} focused={focused} />
+              tabBarIcon: ({ focused }) => (
+                <SavedTabBarIcon size={tabIconSize} focused={focused} />
               ),
             }}
           />

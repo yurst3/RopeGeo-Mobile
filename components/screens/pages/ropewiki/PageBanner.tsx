@@ -1,10 +1,11 @@
+import { ConstantText } from "@/components/text/ConstantText";
+import { useText } from "@/context/TextContext";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import React from "react";
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
   View,
   type ViewStyle,
 } from "react-native";
@@ -35,6 +36,7 @@ export function PageBanner({
   onBannerImageLoadEnd,
 }: PageBannerProps) {
   const { image, loadingIndicator } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
 
   return (
     <Animated.View pointerEvents="none" style={[styles.bannerWrap, imageFrameStyle]}>
@@ -78,9 +80,13 @@ export function PageBanner({
             contentFit="contain"
           />
           {hasBannerImageObject ? (
-            <Text style={[styles.missingImageText, { color: image.missingText }]}>
+            <ConstantText
+              size={uiScale.pageScreen.text.metaData}
+              typography={textStyle.map.markerTooltip}
+              style={[styles.missingImageText, { color: image.missingText }]}
+            >
               Missing Image
-            </Text>
+            </ConstantText>
           ) : null}
         </View>
       )}
@@ -113,8 +119,6 @@ const styles = StyleSheet.create({
   },
   missingImageText: {
     marginTop: 8,
-    fontSize: 13,
-    fontWeight: "600",
   },
   bannerLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -1,6 +1,8 @@
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { Image } from "expo-image";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { minimapStyles } from "./shared/minimapShared";
 
 export type PlaceholderMiniMapProps = {
@@ -14,6 +16,7 @@ export type PlaceholderMiniMapProps = {
  */
 export function PlaceholderMiniMap({ errorMessage }: PlaceholderMiniMapProps) {
   const { image, text, loadingIndicator } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const isError = errorMessage != null && errorMessage !== "";
 
   return (
@@ -31,7 +34,13 @@ export function PlaceholderMiniMap({ errorMessage }: PlaceholderMiniMapProps) {
             style={[styles.missingImage, { tintColor: image.missingIcon }]}
             contentFit="contain"
           />
-          <Text style={[styles.errorText, { color: text.error }]}>{errorMessage}</Text>
+          <ConstantText
+            size={uiScale.toast.text.message}
+            typography={textStyle.toast.message}
+            style={[styles.errorText, { color: text.error }]}
+          >
+            {errorMessage}
+          </ConstantText>
         </>
       ) : (
         <ActivityIndicator size="small" color={loadingIndicator} />
@@ -51,8 +60,6 @@ const styles = StyleSheet.create({
     height: 48,
   },
   errorText: {
-    fontSize: 13,
-    fontWeight: "600",
     textAlign: "center",
     paddingHorizontal: 12,
   },

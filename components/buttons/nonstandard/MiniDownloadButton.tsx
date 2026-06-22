@@ -1,6 +1,11 @@
 import { MINI_DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import type { MiniDownloadButtonColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -33,6 +38,14 @@ export function MiniDownloadButton({
   const colors = useColorTheme().button.nonstandard[
     MINI_DOWNLOAD_BUTTON_KEY
   ] as MiniDownloadButtonColors;
+  const { uiScale } = useText();
+  const buttonSpec = uiScale.preview.buttons.download;
+  const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
+  const profileIconScale = useResolvedButtonIconScale(buttonSpec);
+  const hitSize = Math.round(HIT_SIZE * backgroundScale);
+  const progressSize = Math.round(PROGRESS_SIZE * profileIconScale);
+  const progressStroke = PROGRESS_STROKE * profileIconScale;
+  const iconSize = Math.round(18 * profileIconScale);
   const {
     background,
     downloadCompleteBackground,
@@ -44,7 +57,7 @@ export function MiniDownloadButton({
   } = colors;
 
   const progress01 = Math.max(0, Math.min(1, downloadPhaseProgress));
-  const progressRadius = (PROGRESS_SIZE - PROGRESS_STROKE) / 2;
+  const progressRadius = (progressSize - progressStroke) / 2;
   const progressCircumference = 2 * Math.PI * progressRadius;
   const progressOffset = progressCircumference * (1 - progress01);
 
@@ -66,7 +79,13 @@ export function MiniDownloadButton({
         disabled={downloading}
         style={({ pressed }) => [
           styles.hit,
-          { backgroundColor: hitBackground, shadowColor },
+          {
+            backgroundColor: hitBackground,
+            shadowColor,
+            width: hitSize,
+            height: hitSize,
+            borderRadius: hitSize / 2,
+          },
           pressed && !isDownloaded && !downloading && styles.hitPressed,
         ]}
         accessibilityLabel={
@@ -84,18 +103,18 @@ export function MiniDownloadButton({
         accessibilityRole="button"
       >
         {showProgress ? (
-          <Svg width={PROGRESS_SIZE} height={PROGRESS_SIZE}>
+          <Svg width={progressSize} height={progressSize}>
             <Circle
-              cx={PROGRESS_SIZE / 2}
-              cy={PROGRESS_SIZE / 2}
+              cx={progressSize / 2}
+              cy={progressSize / 2}
               r={progressRadius}
               stroke={inProgressBackground}
               strokeWidth={PROGRESS_STROKE}
               fill="none"
             />
             <Circle
-              cx={PROGRESS_SIZE / 2}
-              cy={PROGRESS_SIZE / 2}
+              cx={progressSize / 2}
+              cy={progressSize / 2}
               r={progressRadius}
               stroke={inProgressSolid}
               strokeWidth={PROGRESS_STROKE}
@@ -103,7 +122,7 @@ export function MiniDownloadButton({
               strokeDasharray={progressCircumference}
               strokeDashoffset={progressOffset}
               strokeLinecap="round"
-              transform={`rotate(-90 ${PROGRESS_SIZE / 2} ${PROGRESS_SIZE / 2})`}
+              transform={`rotate(-90 ${progressSize / 2} ${progressSize / 2})`}
             />
           </Svg>
         ) : (
@@ -113,7 +132,7 @@ export function MiniDownloadButton({
                 ? require("@/assets/images/icons/buttons/downloaded.png")
                 : require("@/assets/images/icons/buttons/download.png")
             }
-            style={styles.icon}
+            style={{ width: iconSize, height: iconSize }}
             tintColor={isDownloaded ? downloadCompleteIcon : icon}
             contentFit="contain"
           />
@@ -128,9 +147,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   hit: {
-    width: HIT_SIZE,
-    height: HIT_SIZE,
-    borderRadius: HIT_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 1 },
@@ -140,9 +156,5 @@ const styles = StyleSheet.create({
   },
   hitPressed: {
     opacity: 0.9,
-  },
-  icon: {
-    width: 18,
-    height: 18,
   },
 });

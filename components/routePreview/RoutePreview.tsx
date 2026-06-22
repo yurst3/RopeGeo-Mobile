@@ -51,12 +51,10 @@ import {
 import { BadgeRow } from "./BadgeRow";
 import { RoutePreviewLocation, RoutePreviewTitle } from "./RoutePreviewText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useRoutePreviewFloaterLayout } from "@/utils/buttonChromeLayout";
 import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
 
 const NO_IMAGE_ICON_SIZE = 36;
-const EXTERNAL_LINK_BUTTON_GAP = 8;
-/** Matches {@link ExternalLinkButton} circle (white + shadow). */
-const SAVED_GLYPH_BUTTON_SIZE = 48;
 
 const SLIDE_ENTER_MS = 320;
 const SLIDE_EXIT_MS = 260;
@@ -275,6 +273,7 @@ function RoutePreviewDataView({
 }) {
   const themeColors = useColorTheme();
   const metrics = useRoutePreviewMetrics();
+  const floaterLayout = useRoutePreviewFloaterLayout();
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { isSaved } = useSavedPages();
@@ -302,11 +301,24 @@ function RoutePreviewDataView({
         onCurrentPreviewChange={onCurrentPreviewChange}
       />
       {currentPreview != null && isSaved(currentPreview.id) && (
-        <View style={styles.savedGlyphWrap} pointerEvents="none">
+        <View
+          style={[
+            styles.savedGlyphWrap,
+            {
+              top: floaterLayout.floaterTopOffset,
+              width: floaterLayout.floaterSize,
+              height: floaterLayout.floaterSize,
+            },
+          ]}
+          pointerEvents="none"
+        >
           <View
             style={[
               styles.savedGlyphCircle,
               {
+                width: floaterLayout.floaterSize,
+                height: floaterLayout.floaterSize,
+                borderRadius: floaterLayout.floaterSize / 2,
                 backgroundColor: themeColors.background,
                 shadowColor: themeColors.button.shadowColor,
               },
@@ -318,7 +330,12 @@ function RoutePreviewDataView({
         </View>
       )}
       {showExternalLink && currentPreview.externalLink != null && (
-          <View style={styles.externalLinkButtonWrap}>
+          <View
+            style={[
+              styles.externalLinkButtonWrap,
+              { top: floaterLayout.floaterTopOffset },
+            ]}
+          >
             <ExternalLinkButton
               icon={require("@/assets/images/icons/ropewiki.png")}
               link={currentPreview.externalLink}
@@ -625,18 +642,12 @@ const styles = StyleSheet.create({
   },
   savedGlyphWrap: {
     position: "absolute",
-    top: -(SAVED_GLYPH_BUTTON_SIZE + EXTERNAL_LINK_BUTTON_GAP),
     left: ROUTE_PREVIEW_CARD_MARGIN_H,
     zIndex: 1,
     justifyContent: "center",
     alignItems: "center",
-    width: SAVED_GLYPH_BUTTON_SIZE,
-    height: SAVED_GLYPH_BUTTON_SIZE,
   },
   savedGlyphCircle: {
-    width: SAVED_GLYPH_BUTTON_SIZE,
-    height: SAVED_GLYPH_BUTTON_SIZE,
-    borderRadius: SAVED_GLYPH_BUTTON_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 1 },
@@ -646,7 +657,6 @@ const styles = StyleSheet.create({
   },
   externalLinkButtonWrap: {
     position: "absolute",
-    top: -(48 + EXTERNAL_LINK_BUTTON_GAP),
     right: ROUTE_PREVIEW_CARD_MARGIN_H,
     zIndex: 1,
   },

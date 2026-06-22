@@ -1,18 +1,21 @@
 import React, { createContext, useContext } from "react";
 import type { ImageSourcePropType } from "react-native";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 
 const SUB_RATIO = 2 / 5; // sub circle width : main circle width
 
 export const DEFAULT_BADGE_SIZE = 56;
-const DEFAULT_LABEL_FONT_SIZE = 11;
 
 type BadgeLayoutContextValue = {
   size?: number;
   labelFontSize?: number;
+  /** Max width for value labels below the badge circle (page grid badge slot). */
+  labelMaxWidth?: number;
   allowLabelFontScaling?: boolean;
 };
 
@@ -21,17 +24,19 @@ const BadgeLayoutContext = createContext<BadgeLayoutContextValue>({});
 export function BadgeLayoutProvider({
   size,
   labelFontSize,
+  labelMaxWidth,
   allowLabelFontScaling = true,
   children,
 }: {
   size: number;
   labelFontSize: number;
+  labelMaxWidth?: number;
   allowLabelFontScaling?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <BadgeLayoutContext.Provider
-      value={{ size, labelFontSize, allowLabelFontScaling }}
+      value={{ size, labelFontSize, labelMaxWidth, allowLabelFontScaling }}
     >
       {children}
     </BadgeLayoutContext.Provider>
@@ -79,21 +84,20 @@ export function Badge({
   outline = true,
 }: BadgeProps) {
   const themeColors = useColorTheme();
+  const { uiScale: textSizes, style: textStyle } = useText();
   const layout = useContext(BadgeLayoutContext);
-  const size = sizeProp ?? layout.size ?? DEFAULT_BADGE_SIZE;
-  const labelFontSize =
-    layout.labelFontSize ??
-    Math.max(10, Math.round(DEFAULT_LABEL_FONT_SIZE * (size / DEFAULT_BADGE_SIZE)));
+  const badgeSize = sizeProp ?? layout.size ?? DEFAULT_BADGE_SIZE;
+  const labelWidth = layout.labelMaxWidth ?? badgeSize + 16;
 
   const borderColor = borderColorProp ?? themeColors.badge.border;
   const subBackgroundColor =
     subBackgroundColorProp ?? themeColors.badge.subBadge.background;
   const subIconColor = subIconColorProp ?? themeColors.badge.subBadge.icon;
 
-  const subSize = size * SUB_RATIO;
-  const mainRadius = size / 2;
+  const subSize = badgeSize * SUB_RATIO;
+  const mainRadius = badgeSize / 2;
   const subRadius = subSize / 2;
-  const iconSize = Math.round(size * ICON_SCALE_FACTOR * iconScale);
+  const iconSize = Math.round(badgeSize * ICON_SCALE_FACTOR * iconScale);
   const subIconSize =
     subIcon != null
       ? Math.round(subSize * SUB_ICON_SCALE_FACTOR * subIconScale)
@@ -107,8 +111,8 @@ export function Badge({
           ? [styles.mainCircleOutline, { borderColor }]
           : null,
         {
-          width: size,
-          height: size,
+          width: badgeSize,
+          height: badgeSize,
           borderRadius: mainRadius,
           backgroundColor,
         },
@@ -150,23 +154,26 @@ export function Badge({
 
   if (label != null && label !== "") {
     return (
-      <View style={styles.withLabel}>
+      <View style={[styles.withLabel, { width: labelWidth }]}>
         {circle}
-        <Text
-          allowFontScaling={layout.allowLabelFontScaling ?? true}
-          style={[
-            styles.label,
-            {
-              color: themeColors.text.secondary,
-              fontSize: labelFontSize,
-              maxWidth: size + 16,
-            },
-          ]}
+        <ScalingText
+          size={textSizes.pageScreen.text.badgeLabel}
+          typography={textStyle.pageScreen.badgeLabel}
           numberOfLines={2}
           ellipsizeMode="tail"
+          measure={{
+            type: "lineCount",
+            maxLinesAtMaxSize: 2,
+            widthSafetyMargin: 2,
+          }}
+          containerStyle={styles.labelContainer}
+          style={[
+            styles.label,
+            { color: themeColors.text.secondary, textAlign: "center" },
+          ]}
         >
           {label}
-        </Text>
+        </ScalingText>
       </View>
     );
   }
@@ -176,11 +183,15 @@ export function Badge({
 const styles = StyleSheet.create({
   withLabel: {
     alignItems: "center",
+    alignSelf: "center",
+    maxWidth: "100%",
+  },
+  labelContainer: {
+    alignSelf: "stretch",
+    width: "100%",
   },
   label: {
     marginTop: 4,
-    fontWeight: "700",
-    textAlign: "center",
   },
   mainCircle: {
     alignItems: "center",

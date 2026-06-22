@@ -97,6 +97,33 @@ export function unclusteredRouteMarkerIconSize(
 }
 
 /**
+ * Page minimap point icons: constant screen size scaled by accessibility, larger when `legendId`
+ * matches the selected legend row (same multiplier as explore route markers).
+ */
+export function pageMiniMapPointIconSize(
+  selectedLegendId: string | null | undefined,
+  iconSizeScale = 1,
+): SymbolLayerStyle["iconSize"] {
+  const z0 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * iconSizeScale;
+  const z22 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 * iconSizeScale;
+  if (selectedLegendId == null || selectedLegendId === "") {
+    return routeMarkerIconSizeInterpolate(iconSizeScale);
+  }
+  const m = SELECTED_ROUTE_MARKER_ICON_SIZE_MULTIPLIER;
+  const key: ["to-string", ["get", "legendId"]] = ["to-string", ["get", "legendId"]];
+  const cond = ["==", key, selectedLegendId] as ["==", typeof key, string];
+  return [
+    "interpolate",
+    ["exponential", 2],
+    ["zoom"],
+    0,
+    ["case", cond, z0 * m, z0],
+    22,
+    ["case", cond, z22 * m, z22],
+  ] as SymbolLayerStyle["iconSize"];
+}
+
+/**
  * Data-driven `iconImage` for unclustered points: selected when `id` matches tap focus or accent (e.g. centered route).
  */
 export function unclusteredRouteMarkerIconImage(

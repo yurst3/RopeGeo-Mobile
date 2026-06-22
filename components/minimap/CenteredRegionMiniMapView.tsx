@@ -5,7 +5,6 @@ import { ResetCameraToPositionButton } from "@/components/buttons/standard/Reset
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { RoutePreview } from "@/components/routePreview/RoutePreview";
 import {
-  CLUSTER_RADIUS,
   ROUTE_MARKER_CAMERA_ZOOM,
   RouteMarkersLayer,
   type RoutesState,
@@ -22,10 +21,9 @@ import {
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import {
-  expandedMiniMapButtonStackTop,
-  routePreviewDockedPaddingBottom,
-} from "./shared/fullScreenMapLayout";
+import { useText } from "@/context/TextContext";
+import { expandedMiniMapButtonStackTopScaled, useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { routePreviewDockedPaddingBottom } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { MiniMapHeader, MiniMapHeaderSideSlot } from "./shared/MiniMapHeader";
 import { miniMapHostStyles } from "./shared/miniMapHostStyles";
@@ -47,7 +45,7 @@ import {
   useState,
   type ComponentRef,
 } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
 import Animated from "react-native-reanimated";
 import {
@@ -117,6 +115,9 @@ export function CenteredRegionMiniMapView({
   reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
   const { map } = useColorTheme();
+  const { uiScale } = useText();
+  const { fontScale } = useWindowDimensions();
+  const headerChrome = useHeaderChromeLayout();
   const markerMetrics = useRouteMarkerMetrics();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
@@ -582,7 +583,7 @@ export function CenteredRegionMiniMapView({
               id="centered-offline-routes"
               shape={offlineShape}
               cluster
-              clusterRadius={CLUSTER_RADIUS}
+              clusterRadius={markerMetrics.clusterRadius}
               onPress={handleOfflineMarkerPress}
             >
               <SymbolLayer
@@ -614,7 +615,7 @@ export function CenteredRegionMiniMapView({
           <MiniMapHeader
             title={miniMap.title}
             onBack={shell.requestCollapse}
-            top={insets.top + 8}
+            top={insets.top + headerChrome.rowTopInset}
             rightSlot={
               boundsSlotVisible ? (
                 <MiniMapHeaderSideSlot>
@@ -658,7 +659,12 @@ export function CenteredRegionMiniMapView({
             }}
           />
           <ButtonStack
-            top={expandedMiniMapButtonStackTop(insets.top, boundsSlotVisible)}
+            top={expandedMiniMapButtonStackTopScaled(
+              insets.top,
+              boundsSlotVisible,
+              uiScale,
+              fontScale,
+            )}
           >
             <ButtonStack.Slot id="orientation" visible={compassVisible}>
               <ResetCameraOrientationButton

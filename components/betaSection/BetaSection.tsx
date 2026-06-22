@@ -4,7 +4,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
@@ -18,14 +17,22 @@ import type {
   OfflineBetaSection,
   OnlineBetaSection,
 } from "ropegeo-common/models";
+import { ConstantText } from "@/components/text/ConstantText";
+import { ScalingText } from "@/components/text/ScalingText";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
+  ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
+import {
+  useResolvedConstantSize,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 import { BetaSectionImages } from "./BetaSectionImages";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -39,9 +46,19 @@ type HtmlSource = { html: string; baseUrl: string };
 /** Owns expand + measure state so a `key` on this block resets cleanly when `section.text` changes. */
 function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const bodyFontSize = useResolvedConstantSize(uiScale.betaSection.text.body);
+  const bodyTypography = useResolvedTypography(textStyle.betaSection.body);
+  const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
   const htmlTagsStyles = useMemo(
-    () => buildRopewikiHtmlTagsStyles(themeColors.text),
-    [themeColors.text],
+    () =>
+      buildRopewikiHtmlTagsStyles({
+        link: themeColors.text.link,
+        secondary: themeColors.text.secondary,
+        captionFontSize,
+        bodyFontSize,
+      }),
+    [themeColors.text.link, themeColors.text.secondary, captionFontSize, bodyFontSize],
   );
   const [textExpanded, setTextExpanded] = useState(false);
   const [fullContentHeight, setFullContentHeight] = useState(0);
@@ -88,13 +105,17 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
             contentWidth={CONTENT_WIDTH}
             source={htmlSource}
             baseStyle={{
-              ...styles.htmlBase,
+              fontFamily: bodyTypography.fontFamily,
+              fontWeight: bodyTypography.fontWeight,
+              lineHeight: bodyTypography.lineHeight,
+              fontSize: bodyFontSize,
               color: themeColors.text.primary,
             }}
             tagsStyles={htmlTagsStyles}
             customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
+            defaultTextProps={ROPEWIKI_HTML_DEFAULT_TEXT_PROPS}
           />
         </ScrollView>
       </Animated.View>
@@ -104,11 +125,13 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
           style={styles.showMoreButton}
           accessibilityLabel={textExpanded ? "Show less" : "Show more"}
         >
-          <Text
-            style={[styles.showMoreText, { color: themeColors.text.link }]}
+          <ConstantText
+            size={uiScale.betaSection.buttons.showMore.text!}
+            typography={textStyle.betaSection.showMore}
+            style={{ color: themeColors.text.link }}
           >
             {textExpanded ? "Show less" : "Show more"}
-          </Text>
+          </ConstantText>
         </Pressable>
       )}
     </View>
@@ -123,6 +146,7 @@ export type BetaSectionProps = {
 
 export function BetaSection({ section, pageTitle }: BetaSectionProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const hasImages = section.images.length > 0;
   const sortedImages = hasImages
     ? [...section.images].sort((a, b) => a.order - b.order)
@@ -138,9 +162,16 @@ export function BetaSection({ section, pageTitle }: BetaSectionProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: themeColors.text.primary }]}>
+      <ScalingText
+        size={uiScale.betaSection.text.title}
+        typography={textStyle.betaSection.title}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+        measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+        style={[styles.title, { color: themeColors.text.primary }]}
+      >
         {section.title}
-      </Text>
+      </ScalingText>
 
       {section.text ? (
         <CollapsibleHtmlBlock key={section.text} htmlSource={htmlSource} />
@@ -162,8 +193,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "700",
     marginBottom: 12,
   },
   textBlock: {
@@ -173,16 +202,8 @@ const styles = StyleSheet.create({
   htmlMeasureScrollContent: {
     width: CONTENT_WIDTH,
   },
-  htmlBase: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
   showMoreButton: {
     marginTop: 8,
     alignSelf: "flex-start",
-  },
-  showMoreText: {
-    fontSize: 15,
-    fontWeight: "500",
   },
 });

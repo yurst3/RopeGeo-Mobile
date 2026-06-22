@@ -2,8 +2,10 @@ import type { StyleProp, ViewStyle } from "react-native";
 import { SHARE_BUTTON_KEY } from "@/constants/buttons";
 import { StyleSheet } from "react-native";
 
-import { Button } from "@/components/buttons/Button";
+import { Button, STANDARD_BUTTON_SIZE } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
 
 export type ShareButtonProps = {
@@ -17,9 +19,16 @@ export type ShareButtonProps = {
 export function ShareButton({ onPress, top, style }: ShareButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[SHARE_BUTTON_KEY];
+  const { uiScale } = useText();
+  const { size, iconScale } = useResolvedButtonDimensions(
+    uiScale.common.buttons.share,
+    STANDARD_BUTTON_SIZE,
+  );
   return (
     <Button
       onPress={onPress}
+      size={size}
+      iconScale={iconScale}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
       icon={require("@/assets/images/icons/buttons/share.png")}

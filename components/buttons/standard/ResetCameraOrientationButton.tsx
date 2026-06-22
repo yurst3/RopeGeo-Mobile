@@ -5,11 +5,15 @@ import { Animated, StyleSheet, View } from "react-native";
 
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
-
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
 
 const FADE_DURATION = 150;
-const ICON_SIZE = Math.round(26 * 1.5);
+const BASE_ICON_SIZE = Math.round(26 * 1.5);
 
 const COMPASS_ICON = require("@/assets/images/icons/buttons/compass.png");
 
@@ -32,6 +36,12 @@ export function ResetCameraOrientationButton({
 }: ResetCameraOrientationButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[RESET_CAMERA_ORIENTATION_BUTTON_KEY];
+  const { uiScale } = useText();
+  const buttonSpec = uiScale.map.buttons.resetCameraOrientation;
+  const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
+  const profileIconScale = useResolvedButtonIconScale(buttonSpec);
+  const buttonSize = Math.round(MAP_BUTTON_SIZE * backgroundScale);
+  const iconSize = Math.round(BASE_ICON_SIZE * profileIconScale);
   const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {
@@ -52,7 +62,7 @@ export function ResetCameraOrientationButton({
     >
       <Image
         source={COMPASS_ICON}
-        style={{ width: ICON_SIZE, height: ICON_SIZE }}
+        style={{ width: iconSize, height: iconSize }}
         contentFit="contain"
         tintColor={buttonColors.icon}
       />
@@ -64,7 +74,7 @@ export function ResetCameraOrientationButton({
       onPress={onPress}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
-      size={MAP_BUTTON_SIZE}
+      size={buttonSize}
       accessibilityLabel={accessibilityLabel}
     >
       {icon}
@@ -91,8 +101,6 @@ const styles = StyleSheet.create({
     right: 16,
   },
   iconRotate: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
     justifyContent: "center",
     alignItems: "center",
   },

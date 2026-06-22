@@ -1,6 +1,8 @@
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { RopewikiPageView } from "ropegeo-common/models";
 
 export type TimeEstimatesProps = Pick<
@@ -82,6 +84,40 @@ function shouldShowTimeEstimates(props: TimeEstimatesProps): boolean {
   );
 }
 
+function StatColumn({
+  value,
+  label,
+}: {
+  value: string;
+  label: string;
+}) {
+  const { text } = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+
+  return (
+    <>
+      <ScalingText
+        size={uiScale.pageScreen.text.stat}
+        typography={textStyle.pageScreen.stat}
+        numberOfLines={1}
+        measure={{ type: "width" }}
+        style={[styles.value, { color: text.primary }]}
+      >
+        {value}
+      </ScalingText>
+      <ScalingText
+        size={uiScale.pageScreen.text.statLabel}
+        typography={textStyle.pageScreen.statLabel}
+        numberOfLines={2}
+        measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
+        style={[styles.label, { color: text.secondary }]}
+      >
+        {label}
+      </ScalingText>
+    </>
+  );
+}
+
 export function TimeEstimates({
   overallTime,
   approachTime,
@@ -89,7 +125,6 @@ export function TimeEstimates({
   exitTime,
   shuttleTime,
 }: TimeEstimatesProps) {
-  const { text } = useColorTheme();
   const overallStr = formatOverallTime(overallTime);
   const showOverall = overallStr != null;
   const approachStr = formatHoursTime(approachTime);
@@ -135,8 +170,7 @@ export function TimeEstimates({
       <View style={[rowStyle, styles.rowWrap]}>
         {items.map((item) => (
           <View key={item.label} style={columnStyle}>
-            <Text style={[styles.value, { color: text.primary }]}>{item.value}</Text>
-            <Text style={[styles.label, { color: text.secondary }]}>{item.label}</Text>
+            <StatColumn value={item.value} label={item.label} />
           </View>
         ))}
       </View>
@@ -165,13 +199,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   value: {
-    fontSize: 20,
-    fontWeight: "700",
     marginBottom: 2,
     textAlign: "center",
   },
   label: {
-    fontSize: 13,
     textAlign: "center",
   },
 });

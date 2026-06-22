@@ -1,11 +1,14 @@
+import { ConstantText } from "@/components/text/ConstantText";
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useRouter } from "expo-router";
-import { ScalingText } from "@/components/ScalingText";
+import { useText } from "@/context/TextContext";
 import {
+  PAGE_PREVIEW_TRAILING_MARGIN,
   PREVIEW_META_MAX_LINES,
   PREVIEW_TITLE_MAX_LINES,
-  usePreviewTextMetrics,
+  usePreviewLayoutMetrics,
 } from "@/utils/previewLayout";
+import { useRouter } from "expo-router";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/models";
 import { useState } from "react";
 import { Image } from "expo-image";
@@ -13,16 +16,11 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
 const IMAGE_SIZE = 96;
 const REGION_MAX = 3;
-const REGION_ICON_SIZE = 28;
-const SOURCE_ICON_CIRCLE_SIZE = 32;
-const SOURCE_ICON_INNER_SIZE = 18;
-const NO_IMAGE_ICON_SIZE = 36;
 
 function sourceIcon(source: PageDataSource): number | null {
   if (source === PageDataSource.Ropewiki) {
@@ -46,7 +44,8 @@ type Props = {
 
 export function RegionPreview({ preview }: Props) {
   const themeColors = useColorTheme();
-  const textMetrics = usePreviewTextMetrics();
+  const layoutMetrics = usePreviewLayoutMetrics();
+  const { uiScale, style } = useText();
   const { text, image } = themeColors;
   const { regionIconBackground, regionIcon, shadowColor, sourceIconBackground } =
     themeColors.preview.region;
@@ -100,8 +99,8 @@ export function RegionPreview({ preview }: Props) {
               style={[
                 styles.noImageIcon,
                 {
-                  width: NO_IMAGE_ICON_SIZE,
-                  height: NO_IMAGE_ICON_SIZE,
+                  width: layoutMetrics.noImageIconSize,
+                  height: layoutMetrics.noImageIconSize,
                   tintColor: image.missingIcon,
                 },
               ]}
@@ -115,75 +114,96 @@ export function RegionPreview({ preview }: Props) {
             {
               backgroundColor: regionIconBackground,
               shadowColor,
+              width: layoutMetrics.regionIconOverlaySize,
+              height: layoutMetrics.regionIconOverlaySize,
+              borderRadius: layoutMetrics.regionIconOverlaySize / 2,
             },
           ]}
         >
           <Image
             source={require("@/assets/images/icons/region.png")}
-            style={[styles.regionIcon, { tintColor: regionIcon }]}
+            style={[
+              styles.regionIcon,
+              {
+                width: layoutMetrics.regionIconInnerSize,
+                height: layoutMetrics.regionIconInnerSize,
+                tintColor: regionIcon,
+              },
+            ]}
             contentFit="contain"
           />
         </View>
       </View>
       <View style={styles.body}>
         <ScalingText
-          maxFontSize={textMetrics.titleMaxFontSize}
-          minFontSize={textMetrics.titleMinFontSize}
+          size={uiScale.preview.text.title}
+          typography={style.preview.title}
           numberOfLines={PREVIEW_TITLE_MAX_LINES}
           ellipsizeMode="tail"
-          measureKey={textMetrics.fontScale}
           containerStyle={styles.titleWrap}
           measure={{
             type: "width",
-            widthSafetyMargin: textMetrics.widthSafetyMargin,
+            widthSafetyMargin: layoutMetrics.widthSafetyMargin,
           }}
           measureTextStyle={styles.titleMeasure}
           style={[styles.title, { color: text.primary }]}
         >
           {preview.name}
         </ScalingText>
-        {regionLine ? (
-          <ScalingText
-            maxFontSize={textMetrics.metaMaxFontSize}
-            minFontSize={textMetrics.metaMinFontSize}
-            numberOfLines={PREVIEW_META_MAX_LINES}
-            ellipsizeMode="tail"
-            hideWhenEmpty
-            measureKey={textMetrics.fontScale}
-            measure={{
-              type: "lineCount",
-              maxLinesAtMaxSize: PREVIEW_META_MAX_LINES,
-              widthSafetyMargin: textMetrics.widthSafetyMargin,
-            }}
-            style={[styles.meta, { color: text.secondary }]}
-          >
-            {regionLine}
-          </ScalingText>
-        ) : null}
-        <Text
-          allowFontScaling={false}
-          style={[
-            styles.counts,
-            { color: text.secondary, fontSize: textMetrics.metaMaxFontSize },
-          ]}
+        <View style={styles.middleRow}>
+          <View style={styles.metaColumn}>
+            {regionLine ? (
+              <ScalingText
+                size={uiScale.preview.text.locationHierarchy}
+                typography={style.preview.locationHierarchy}
+                numberOfLines={PREVIEW_META_MAX_LINES}
+                ellipsizeMode="tail"
+                hideWhenEmpty
+                measure={{
+                  type: "lineCount",
+                  maxLinesAtMaxSize: PREVIEW_META_MAX_LINES,
+                  widthSafetyMargin: layoutMetrics.widthSafetyMargin,
+                }}
+                style={[styles.meta, { color: text.secondary }]}
+              >
+                {regionLine}
+              </ScalingText>
+            ) : null}
+          </View>
+          {icon != null ? (
+            <View
+              style={[
+                styles.sourceIconCircle,
+                styles.trailingControl,
+                {
+                  backgroundColor: sourceIconBackground,
+                  shadowColor: buttonShadowColor,
+                  width: layoutMetrics.sourceIconCircleSize,
+                  height: layoutMetrics.sourceIconCircleSize,
+                  borderRadius: layoutMetrics.sourceIconCircleSize / 2,
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <Image
+                source={icon}
+                style={{
+                  width: layoutMetrics.regionSourceIconInnerSize,
+                  height: layoutMetrics.regionSourceIconInnerSize,
+                }}
+                contentFit="contain"
+              />
+            </View>
+          ) : null}
+        </View>
+        <ConstantText
+          size={uiScale.preview.text.other}
+          typography={style.preview.other}
+          style={[styles.counts, { color: text.secondary }]}
         >
           {countsText}
-        </Text>
+        </ConstantText>
       </View>
-      {icon != null ? (
-        <View
-          style={[
-            styles.sourceIconCircle,
-            {
-              backgroundColor: sourceIconBackground,
-              shadowColor: buttonShadowColor,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <Image source={icon} style={styles.sourceIconInner} contentFit="contain" />
-        </View>
-      ) : null}
     </Pressable>
   );
 }
@@ -226,9 +246,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 6,
     right: 6,
-    width: REGION_ICON_SIZE,
-    height: REGION_ICON_SIZE,
-    borderRadius: REGION_ICON_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 1 },
@@ -237,10 +254,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 2,
   },
-  regionIcon: {
-    width: 18,
-    height: 18,
-  },
+  regionIcon: {},
   body: {
     flex: 1,
     minWidth: 0,
@@ -251,22 +265,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   titleMeasure: {
-    fontWeight: "700",
     textAlign: "center",
   },
   title: {
-    fontWeight: "700",
     textAlign: "left",
   },
   meta: {
     marginBottom: 2,
   },
+  middleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  metaColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
   counts: {},
   sourceIconCircle: {
-    marginLeft: 8,
-    width: SOURCE_ICON_CIRCLE_SIZE,
-    height: SOURCE_ICON_CIRCLE_SIZE,
-    borderRadius: SOURCE_ICON_CIRCLE_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 1 },
@@ -274,8 +291,8 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3,
   },
-  sourceIconInner: {
-    width: SOURCE_ICON_INNER_SIZE,
-    height: SOURCE_ICON_INNER_SIZE,
+  trailingControl: {
+    marginLeft: PAGE_PREVIEW_TRAILING_MARGIN,
+    alignItems: "center",
   },
 });

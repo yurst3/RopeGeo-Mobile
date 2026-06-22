@@ -1,31 +1,133 @@
+import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
+import { ConstantText } from "@/components/text/ConstantText";
+import { ScalingText } from "@/components/text/ScalingText";
 import { useFilterTheme } from "@/components/filters/useFilterTheme";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedMultiSliderThumbScale,
+  useResolvedScalingBounds,
+} from "@/utils/resolvers";
 import React, { type ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutChangeEvent,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import type { BadgeThumbProps } from "./acaDifficultyBadgeMaps";
+import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
 
 const THUMB_HIT = 48;
-const THUMB_VISUAL_SCALE = 0.8;
 const TRACK_HEIGHT = 10;
 /** Diameter of each step dot on the track */
 const TICK_SIZE = 10;
 const TICK_RADIUS = TICK_SIZE / 2;
 
 const THUMB_TOP = 0;
-/** Bottom of the band where thumbs overlap the track (before tick text row). */
-const TICK_LABEL_ROW_TOP = 32;
-const TICK_LABEL_ROW_H = 14;
-const THUMB_TITLE_TOP = TICK_LABEL_ROW_TOP + TICK_LABEL_ROW_H + 6;
-const THUMB_TITLE_ROW_H = 36;
 const TICK_LABEL_SLOT_W = 40;
 const THUMB_TITLE_COL_W = 64;
+const THUMB_TITLE_MERGED_W = 168;
+const THUMB_LABEL_MAX_LINES = 2;
+const TICK_LABEL_MAX_LINES = 1;
+const TEXT_LINE_HEIGHT_FACTOR = 1.2;
+const LABEL_TRACK_OVERLAP = 8;
+const CANVAS_BOTTOM_PAD = 2;
+/** Pull tick labels up into the lower hit-band so they sit closer to the track. */
+const TICK_LABELS_OVERLAP_INTO_HIT = 10;
+/** Thumb titles stay just below scaled badge bottoms (not the full tick row). */
+const THUMB_TITLES_GAP_BELOW_BADGE = 0;
+
+function computeMultiSliderCanvasLayout(
+  multiSliderThumbScale: number,
+  thumbLabelMaxPx: number,
+  tickLabelMaxPx: number,
+  showTickLabels: boolean,
+) {
+  const badgeOverflowBelow = Math.max(
+    0,
+    Math.round((DEFAULT_BADGE_SIZE * multiSliderThumbScale - THUMB_HIT) / 2),
+  );
+  const tickRowH = Math.ceil(
+    tickLabelMaxPx * TICK_LABEL_MAX_LINES * TEXT_LINE_HEIGHT_FACTOR,
+  );
+  const thumbRowH = Math.ceil(
+    thumbLabelMaxPx * THUMB_LABEL_MAX_LINES * TEXT_LINE_HEIGHT_FACTOR,
+  );
+  const thumbTitlesBelowBadge =
+    THUMB_HIT + badgeOverflowBelow + THUMB_TITLES_GAP_BELOW_BADGE;
+  const tickLabelsTop = showTickLabels
+    ? THUMB_HIT - TICK_LABELS_OVERLAP_INTO_HIT
+    : thumbTitlesBelowBadge;
+  const thumbTitlesTop = showTickLabels
+    ? Math.max(
+        tickLabelsTop + tickRowH - LABEL_TRACK_OVERLAP,
+        thumbTitlesBelowBadge,
+      )
+    : thumbTitlesBelowBadge;
+  const canvasHeight = thumbTitlesTop + thumbRowH + CANVAS_BOTTOM_PAD;
+
+  return {
+    canvasHeight,
+    tickLabelsTop,
+    tickRowH,
+    thumbTitlesTop,
+    thumbRowH,
+  };
+}
+
+function TickLabel({
+  children,
+  color,
+}: {
+  children: string;
+  color: string;
+}) {
+  const { uiScale, style: textStyle } = useText();
+
+  return (
+    <ScalingText
+      size={uiScale.filter.text.multiSliderTickLabel}
+      typography={textStyle.filter.note}
+      numberOfLines={TICK_LABEL_MAX_LINES}
+      ellipsizeMode="tail"
+      measure={{ type: "width", widthSafetyMargin: 2 }}
+      containerStyle={styles.tickLabelMeasureWrap}
+      style={[styles.tickLabelText, { color }]}
+    >
+      {children}
+    </ScalingText>
+  );
+}
+
+function ThumbLabel({
+  children,
+  width,
+  height,
+  color,
+}: {
+  children: string;
+  width: number;
+  height: number;
+  color: string;
+}) {
+  const { uiScale, style: textStyle } = useText();
+
+  return (
+    <ScalingText
+      size={uiScale.filter.text.multiSliderThumbLabel}
+      typography={textStyle.filter.sectionTitle}
+      numberOfLines={THUMB_LABEL_MAX_LINES}
+      ellipsizeMode="tail"
+      measure={{ type: "lineCount", maxLinesAtMaxSize: THUMB_LABEL_MAX_LINES }}
+      containerStyle={{ width, height }}
+      style={[styles.thumbTitleText, { color }]}
+    >
+      {children}
+    </ScalingText>
+  );
+}
 
 /**
  * Pan must move this many px horizontally before the thumb gesture activates,
@@ -80,6 +182,23 @@ function thumbDisplayCenters(
   return { xLow, xHigh };
 }
 
+function mergedThumbLabelBounds(
+  centerX: number,
+  trackWidth: number,
+  maxW: number = THUMB_TITLE_MERGED_W,
+  horizontalBleed: number = FILTER_SHEET_HORIZONTAL_INSET,
+): { left: number; width: number } {
+  const halfAvailable = Math.min(
+    centerX + horizontalBleed,
+    trackWidth - centerX + horizontalBleed,
+  );
+  const width = Math.min(maxW, Math.max(0, halfAvailable * 2));
+  return {
+    left: centerX - width / 2,
+    width,
+  };
+}
+
 export type AcaDiscreteRangeSliderProps<T extends string> = {
   label: string;
   orderedValues: readonly T[];
@@ -107,7 +226,15 @@ export function AcaDiscreteRangeSlider<T extends string>({
   formatTickLabel = (v: T) => String(v),
 }: AcaDiscreteRangeSliderProps<T>) {
   const { filter, sectionLabel, text } = useFilterTheme();
+  const { uiScale, style: textStyle } = useText();
   const { badgeSlider } = filter;
+  const multiSliderThumbScale = useResolvedMultiSliderThumbScale();
+  const { maxFontSize: thumbLabelMaxPx } = useResolvedScalingBounds(
+    uiScale.filter.text.multiSliderThumbLabel,
+  );
+  const { maxFontSize: tickLabelMaxPx } = useResolvedScalingBounds(
+    uiScale.filter.text.multiSliderTickLabel,
+  );
   const n = orderedValues.length;
   const minIndex = Math.max(0, orderedValues.indexOf(min));
   const maxIndexRaw = orderedValues.indexOf(max);
@@ -261,15 +388,45 @@ export function AcaDiscreteRangeSlider<T extends string>({
   const highTitle = highVal != null ? thumbTitles[highVal] : "";
   const mergedTitle =
     sameThumbValue && lowVal != null ? thumbTitles[lowVal] : null;
+  const mergedThumbBounds =
+    trackW > 0 && mergedTitle != null
+      ? mergedThumbLabelBounds((xLow + xHigh) / 2, tw)
+      : { left: 0, width: THUMB_TITLE_MERGED_W };
+  const showTickLabelsBand = n > 2;
+  const canvasLayout = useMemo(
+    () =>
+      computeMultiSliderCanvasLayout(
+        multiSliderThumbScale,
+        thumbLabelMaxPx,
+        tickLabelMaxPx,
+        showTickLabelsBand,
+      ),
+    [
+      multiSliderThumbScale,
+      thumbLabelMaxPx,
+      tickLabelMaxPx,
+      showTickLabelsBand,
+    ],
+  );
 
   return (
     <View style={styles.block}>
-      <Text style={[styles.label, sectionLabel]}>{label}</Text>
-      <View style={styles.trackWrap} onLayout={onTrackLayout}>
-        <View style={styles.trackInner}>
-          <View
-            style={[styles.trackBg, { backgroundColor: badgeSlider.unfilledBar }]}
-          />
+      <ConstantText
+        size={uiScale.filter.text.sectionTitle}
+        typography={textStyle.filter.sectionTitle}
+        style={[styles.label, sectionLabel]}
+      >
+        {label}
+      </ConstantText>
+      <View
+        style={[styles.sliderCanvas, { height: canvasLayout.canvasHeight }]}
+        onLayout={onTrackLayout}
+      >
+        <View style={styles.trackBand}>
+          <View style={styles.trackInner}>
+            <View
+              style={[styles.trackBg, { backgroundColor: badgeSlider.unfilledBar }]}
+            />
           {trackW > 0 && n > 0 ? (
             <View
               style={[
@@ -314,7 +471,12 @@ export function AcaDiscreteRangeSlider<T extends string>({
                 },
               ]}
             >
-              <View style={styles.thumbScale}>
+              <View
+                style={[
+                  styles.thumbScale,
+                  { transform: [{ scale: multiSliderThumbScale }] },
+                ]}
+              >
                 {React.createElement(LowBadge, {})}
               </View>
             </View>
@@ -332,100 +494,127 @@ export function AcaDiscreteRangeSlider<T extends string>({
                 },
               ]}
             >
-              <View style={styles.thumbScale}>
+              <View
+                style={[
+                  styles.thumbScale,
+                  { transform: [{ scale: multiSliderThumbScale }] },
+                ]}
+              >
                 {React.createElement(HighBadge, {})}
               </View>
             </View>
           </GestureDetector>
         ) : null}
+        </View>
 
-        {trackW > 0 && n > 0
-          ? Array.from({ length: n }, (_, i) => {
-              const v = orderedValues[i];
-              if (v === undefined) return null;
-              const coveredByThumb = i === lowIdx || i === highIdx;
-              if (coveredByThumb) return null;
-              const cx = thumbCenterX(i, tw, n);
-              return (
-                <View
-                  key={`tick-lbl-${String(v)}`}
-                  style={[
-                    styles.tickLabelSlot,
-                    {
-                      left: cx - TICK_LABEL_SLOT_W / 2,
-                      top: TICK_LABEL_ROW_TOP,
-                    },
-                  ]}
-                  pointerEvents="none"
-                >
-                  <Text
-                    style={[styles.tickLabelText, { color: text.tertiary }]}
-                    numberOfLines={1}
-                  >
-                    {formatTickLabel(v)}
-                  </Text>
-                </View>
-              );
-            })
-          : null}
+        {showTickLabelsBand ? (
+          <View
+            style={[
+              styles.tickLabelsLayer,
+              {
+                top: canvasLayout.tickLabelsTop,
+                height: canvasLayout.tickRowH,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            {trackW > 0
+              ? Array.from({ length: n }, (_, i) => {
+                  const v = orderedValues[i];
+                  if (v === undefined) return null;
+                  const coveredByThumb = i === lowIdx || i === highIdx;
+                  const cx = thumbCenterX(i, tw, n);
+                  return (
+                    <View
+                      key={`tick-lbl-${String(v)}`}
+                      style={[
+                        styles.tickLabelSlot,
+                        {
+                          left: cx - TICK_LABEL_SLOT_W / 2,
+                          height: canvasLayout.tickRowH,
+                          opacity: coveredByThumb ? 0 : 1,
+                        },
+                      ]}
+                    >
+                      <TickLabel color={text.tertiary}>
+                        {formatTickLabel(v)}
+                      </TickLabel>
+                    </View>
+                  );
+                })
+              : null}
+          </View>
+        ) : null}
 
-        {trackW > 0 && mergedTitle != null ? (
-          <View
-            style={[
-              styles.thumbTitleMergedWrap,
-              {
-                left: (xLow + xHigh) / 2,
-                top: THUMB_TITLE_TOP,
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <Text
-              style={[styles.thumbTitleText, { color: text.secondary }]}
-              numberOfLines={2}
+        <View
+          style={[
+            styles.thumbTitlesLayer,
+            {
+              top: canvasLayout.thumbTitlesTop,
+              height: canvasLayout.thumbRowH,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          {trackW > 0 && mergedTitle != null ? (
+            <View
+              style={[
+                styles.thumbTitleMergedWrap,
+                {
+                  left: mergedThumbBounds.left,
+                  width: mergedThumbBounds.width,
+                  height: canvasLayout.thumbRowH,
+                },
+              ]}
             >
-              {mergedTitle}
-            </Text>
-          </View>
-        ) : null}
-        {trackW > 0 && !sameThumbValue && lowVal != null ? (
-          <View
-            style={[
-              styles.thumbTitleCol,
-              {
-                left: xLow - THUMB_TITLE_COL_W / 2,
-                top: THUMB_TITLE_TOP,
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <Text
-              style={[styles.thumbTitleText, { color: text.secondary }]}
-              numberOfLines={2}
+              <ThumbLabel
+                width={mergedThumbBounds.width}
+                height={canvasLayout.thumbRowH}
+                color={text.secondary}
+              >
+                {mergedTitle}
+              </ThumbLabel>
+            </View>
+          ) : null}
+          {trackW > 0 && !sameThumbValue && lowVal != null ? (
+            <View
+              style={[
+                styles.thumbTitleCol,
+                {
+                  left: xLow - THUMB_TITLE_COL_W / 2,
+                  height: canvasLayout.thumbRowH,
+                },
+              ]}
             >
-              {lowTitle}
-            </Text>
-          </View>
-        ) : null}
-        {trackW > 0 && !sameThumbValue && highVal != null ? (
-          <View
-            style={[
-              styles.thumbTitleCol,
-              {
-                left: xHigh - THUMB_TITLE_COL_W / 2,
-                top: THUMB_TITLE_TOP,
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <Text
-              style={[styles.thumbTitleText, { color: text.secondary }]}
-              numberOfLines={2}
+              <ThumbLabel
+                width={THUMB_TITLE_COL_W}
+                height={canvasLayout.thumbRowH}
+                color={text.secondary}
+              >
+                {lowTitle}
+              </ThumbLabel>
+            </View>
+          ) : null}
+          {trackW > 0 && !sameThumbValue && highVal != null ? (
+            <View
+              style={[
+                styles.thumbTitleCol,
+                {
+                  left: xHigh - THUMB_TITLE_COL_W / 2,
+                  height: canvasLayout.thumbRowH,
+                },
+              ]}
             >
-              {highTitle}
-            </Text>
-          </View>
-        ) : null}
+              <ThumbLabel
+                width={THUMB_TITLE_COL_W}
+                height={canvasLayout.thumbRowH}
+                color={text.secondary}
+              >
+                {highTitle}
+              </ThumbLabel>
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -438,11 +627,17 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 6,
   },
-  trackWrap: {
-    minHeight:
-      THUMB_TITLE_TOP + THUMB_TITLE_ROW_H + 6,
-    justifyContent: "flex-start",
+  sliderCanvas: {
     position: "relative",
+    width: "100%",
+    overflow: "visible",
+  },
+  trackBand: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: THUMB_HIT,
   },
   trackInner: {
     width: "100%",
@@ -478,39 +673,44 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  thumbScale: {
-    transform: [{ scale: THUMB_VISUAL_SCALE }],
+  thumbScale: {},
+  tickLabelsLayer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  tickLabelMeasureWrap: {
+    width: TICK_LABEL_SLOT_W,
+    alignItems: "center",
   },
   tickLabelSlot: {
     position: "absolute",
+    top: 0,
     width: TICK_LABEL_SLOT_W,
-    height: TICK_LABEL_ROW_H,
-    justifyContent: "flex-start",
     alignItems: "center",
   },
   tickLabelText: {
-    fontSize: 11,
-    fontWeight: "500",
     textAlign: "center",
+  },
+  thumbTitlesLayer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
   thumbTitleCol: {
     position: "absolute",
+    top: 0,
     width: THUMB_TITLE_COL_W,
-    minHeight: THUMB_TITLE_ROW_H,
-    justifyContent: "flex-start",
     alignItems: "center",
   },
   thumbTitleMergedWrap: {
     position: "absolute",
-    width: 168,
-    marginLeft: -84,
-    minHeight: THUMB_TITLE_ROW_H,
-    justifyContent: "flex-start",
+    top: 0,
     alignItems: "center",
   },
   thumbTitleText: {
-    fontSize: 11,
-    fontWeight: "600",
     textAlign: "center",
   },
 });

@@ -2,7 +2,8 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { MAP_HEADER_ROW_TOP_INSET } from "./shared/fullScreenMapLayout";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { PageMiniMapLegend } from "./shared/PageMiniMapLegend";
@@ -22,17 +23,17 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
+import { ConstantText } from "@/components/text/ConstantText";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
 import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
 import { useMiniMapCamera } from "./shared/useMiniMapCamera";
 import { pagePointLabelSymbolStyle } from "@/components/screens/explore/mapMarkerLayerStyles";
-import {
-  ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
-} from "@/components/screens/explore/routeMarkerIcons";
+import { pageMiniMapPointIconSize } from "@/components/screens/explore/routeMarkerIcons";
 import {
   Camera,
   Images,
@@ -55,7 +56,7 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated from "react-native-reanimated";
 import {
   Bounds,
@@ -150,7 +151,10 @@ export function PageMiniMapView({
 }: PageMiniMapViewProps) {
   const themeColors = useColorTheme();
   const { map } = themeColors;
+  const { uiScale, style: textStyle } = useText();
+  const markerMetrics = useRouteMarkerMetrics();
   const shell = useMiniMapShell();
+  const headerChrome = useHeaderChromeLayout();
   const tabBarHeight = useBottomTabBarHeight();
   const b = miniMap.bounds;
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
@@ -611,10 +615,10 @@ export function PageMiniMapView({
   }, [pointTooltip?.fullName, refreshTooltipScreenPosition]);
 
   const { insets } = shell;
-  const headerTop = insets.top + MAP_HEADER_ROW_TOP_INSET;
+  const headerTop = insets.top + headerChrome.rowTopInset;
 
   const legendMaxH = windowHeight / 3;
-  const legendMaxW = windowWidth / 2;
+  const legendLeftOffset = windowWidth / 2;
   /** Tab bar + home indicator + gap so the legend sits above the tab bar (same as docked RoutePreview). */
   const legendBottomOffset = useMemo(
     () => tabBarHeight + 12,
@@ -622,20 +626,28 @@ export function PageMiniMapView({
   );
 
   const pagePointLabelStyle = useMemo(
-    () => pagePointLabelSymbolStyle(map.marker),
-    [map.marker],
+    () => pagePointLabelSymbolStyle(map.marker, markerMetrics),
+    [map.marker, markerMetrics],
   );
 
   const pagePointIconStyle = useMemo(
     () => ({
       iconImage: pointIconImageExpr,
-      iconSize: ROUTE_MARKER_ICON_SIZE_INTERPOLATE,
+      iconSize: pageMiniMapPointIconSize(
+        selectedSegmentKey,
+        markerMetrics.iconSizeScale,
+      ),
       iconColor: map.marker.defaultIcon,
       iconAllowOverlap: true,
       iconIgnorePlacement: true,
       iconAnchor: "center" as const,
     }),
-    [map.marker.defaultIcon, pointIconImageExpr],
+    [
+      map.marker.defaultIcon,
+      markerMetrics.iconSizeScale,
+      pointIconImageExpr,
+      selectedSegmentKey,
+    ],
   );
 
   const pageLineLayerStyle = useMemo(
@@ -746,9 +758,14 @@ export function PageMiniMapView({
                   },
                 ]}
               >
-                <Text style={styles.tooltipText} numberOfLines={4}>
+                <ConstantText
+                  size={uiScale.map.text.markerTooltip}
+                  typography={textStyle.map.markerTooltip}
+                  style={styles.tooltipText}
+                  numberOfLines={4}
+                >
                   {pointTooltip.fullName}
-                </Text>
+                </ConstantText>
               </View>
             </View>
           ) : null}
@@ -767,7 +784,7 @@ export function PageMiniMapView({
               selectedKey={selectedSegmentKey}
               scrollIntoViewEpoch={legendScrollIntoViewEpoch}
               maxHeight={legendMaxH}
-              maxWidth={legendMaxW}
+              leftOffset={legendLeftOffset}
               bottomOffset={legendBottomOffset}
               rightInset={insets.right}
               onToggleExpanded={() => setLegendExpanded((e) => !e)}
@@ -823,6 +840,5 @@ const styles = StyleSheet.create({
   },
   tooltipText: {
     color: "#fff",
-    fontSize: 13,
   },
 });

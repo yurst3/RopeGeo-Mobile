@@ -1,7 +1,7 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { SearchBar } from "@/components/SearchBar";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   forwardRef,
@@ -12,9 +12,6 @@ import {
 } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const HEADER_BUTTON_SIZE = 44;
-const HEADER_BUTTON_GAP = 8;
 
 type SearchScreenHeaderProps = {
   query: string;
@@ -28,11 +25,11 @@ export const SearchScreenHeader = forwardRef<TextInput, SearchScreenHeaderProps>
     { query, onChangeQuery, searchPersisted, setFilterSheetOpen },
     searchInputRef,
   ) {
-  const themeColors = useColorTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const headerChrome = useHeaderChromeLayout();
   const inputRef = useRef<TextInput>(null);
-  const searchBarTop = insets.top + 8;
+  const searchBarTop = insets.top + headerChrome.rowTopInset;
 
   const setInputRef = useCallback(
     (node: TextInput | null) => {
@@ -54,16 +51,15 @@ export const SearchScreenHeader = forwardRef<TextInput, SearchScreenHeaderProps>
   );
 
   return (
-    <View
-      style={[
-        styles.headerRow,
-        { top: searchBarTop, backgroundColor: themeColors.background },
-      ]}
-    >
+    <View style={[styles.headerRow, { top: searchBarTop }]}>
       <View
         style={[
           styles.headerButtonWrap,
-          { width: HEADER_BUTTON_SIZE, marginRight: HEADER_BUTTON_GAP },
+          {
+            width: headerChrome.buttonSize,
+            height: headerChrome.buttonWrapHeight,
+            marginRight: headerChrome.gap,
+          },
         ]}
       >
         <BackButton onPress={() => router.back()} />
@@ -78,7 +74,11 @@ export const SearchScreenHeader = forwardRef<TextInput, SearchScreenHeaderProps>
       <View
         style={[
           styles.headerButtonWrap,
-          { width: HEADER_BUTTON_SIZE, marginLeft: HEADER_BUTTON_GAP },
+          {
+            width: headerChrome.buttonSize,
+            height: headerChrome.buttonWrapHeight,
+            marginLeft: headerChrome.gap,
+          },
         ]}
       >
         <FilterButton persisted={searchPersisted} onPress={() => setFilterSheetOpen(true)} />
@@ -98,7 +98,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerButtonWrap: {
-    height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     alignItems: "center",
   },

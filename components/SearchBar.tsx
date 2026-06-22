@@ -1,4 +1,19 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { UI_SCALE_PROFILES } from "@/constants/text";
+import type { UiScaleProfile } from "@/constants/uiScale/types";
+import type { TypographySpec } from "@/constants/text/style/types";
+import {
+  resolveButtonBackgroundScale,
+  resolveButtonConstantTextSize,
+  resolveButtonIconScale,
+  resolveConstantTextSize,
+  resolveTypographyStyle,
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonConstantTextSize,
+  useResolvedButtonIconScale,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { forwardRef, useMemo } from "react";
 import {
@@ -10,23 +25,42 @@ import {
   useWindowDimensions,
   type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from "react-native";
 
-export const SEARCH_BAR_FONT_SIZE = 16;
 export const SEARCH_BAR_PADDING_VERTICAL = 12;
 export const SEARCH_BAR_PADDING_HORIZONTAL = 16;
 export const SEARCH_BAR_GAP = 10;
-/** Max accessibility scale applied to search bar typography and padding. */
-export const SEARCH_BAR_MAX_FONT_SCALE = 1.75;
+/** Search glyph base size at medium profile (decoupled from text token). */
+export const SEARCH_BAR_ICON_BASE_SIZE = 14;
 
-export function getSearchBarMetrics(fontScale = 1) {
-  const scale = Math.min(fontScale, SEARCH_BAR_MAX_FONT_SCALE);
-  const fontSize = SEARCH_BAR_FONT_SIZE * scale;
-  const iconSize = fontSize;
-  const paddingVertical = SEARCH_BAR_PADDING_VERTICAL * scale;
-  const paddingHorizontal = SEARCH_BAR_PADDING_HORIZONTAL * scale;
-  const gap = SEARCH_BAR_GAP * scale;
+export function getSearchBarMetrics(
+  fontScale = 1,
+  sizeProfile: UiScaleProfile = UI_SCALE_PROFILES.Auto,
+) {
+  const searchBarSpec = sizeProfile.map.buttons.searchBar;
+  const fontSize =
+    resolveButtonConstantTextSize(searchBarSpec, sizeProfile.global, fontScale) ??
+    resolveConstantTextSize(
+      { default: searchBarSpec.text?.default ?? 14 },
+      sizeProfile.global,
+      fontScale,
+    );
+  const backgroundScale = resolveButtonBackgroundScale(
+    searchBarSpec,
+    sizeProfile.global,
+    fontScale,
+  );
+  const iconScale = resolveButtonIconScale(
+    searchBarSpec,
+    sizeProfile.global,
+    fontScale,
+  );
+  const iconSize = SEARCH_BAR_ICON_BASE_SIZE * iconScale;
+  const paddingVertical = SEARCH_BAR_PADDING_VERTICAL * backgroundScale;
+  const paddingHorizontal = SEARCH_BAR_PADDING_HORIZONTAL * backgroundScale;
+  const gap = SEARCH_BAR_GAP * backgroundScale;
   const height = Math.round(paddingVertical * 2 + fontSize);
   return {
     fontSize,
@@ -38,8 +72,32 @@ export function getSearchBarMetrics(fontScale = 1) {
   };
 }
 
-export function getSearchBarHeight(fontScale = 1): number {
-  return getSearchBarMetrics(fontScale).height;
+export function getSearchBarTextStyle(
+  typography: TypographySpec,
+  fontProfile: ReturnType<typeof useText>["font"],
+  sizeProfile: UiScaleProfile,
+  fontScale: number,
+  color: string,
+): TextStyle {
+  const searchBarSpec = sizeProfile.map.buttons.searchBar;
+  const fontSize =
+    resolveButtonConstantTextSize(searchBarSpec, sizeProfile.global, fontScale) ??
+    14;
+  return {
+    ...resolveTypographyStyle(typography, fontProfile),
+    fontSize,
+    color,
+    flex: 1,
+    paddingVertical: 0,
+    minWidth: 0,
+  };
+}
+
+export function getSearchBarHeight(
+  fontScale = 1,
+  sizeProfile: UiScaleProfile = UI_SCALE_PROFILES.Auto,
+): number {
+  return getSearchBarMetrics(fontScale, sizeProfile).height;
 }
 
 /** Estimated height at default Dynamic Type scale (use {@link getSearchBarHeight} when `fontScale` ≠ 1). */
@@ -74,11 +132,13 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
 ) {
   const themeColors = useColorTheme();
   const { searchBar, text } = themeColors;
-  const { fontScale } = useWindowDimensions();
-  const metrics = useMemo(
-    () => getSearchBarMetrics(fontScale),
-    [fontScale],
-  );
+  const textDef = useText();
+  const searchBarSpec = textDef.uiScale.map.buttons.searchBar;
+  const fontSize = useResolvedButtonConstantTextSize(searchBarSpec) ?? 14;
+  const profileIconScale = useResolvedButtonIconScale(searchBarSpec);
+  const iconSize = Math.round(SEARCH_BAR_ICON_BASE_SIZE * profileIconScale);
+  const backgroundScale = useResolvedButtonBackgroundScale(searchBarSpec);
+  const typographyStyle = useResolvedTypography(textDef.style.button.searchBar);
 
   const barStyle = useMemo(
     () => [
@@ -86,30 +146,36 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
       {
         backgroundColor: searchBar.background,
         shadowColor: searchBar.shadow,
-        paddingVertical: metrics.paddingVertical,
-        paddingHorizontal: metrics.paddingHorizontal,
-        gap: metrics.gap,
+        paddingVertical: SEARCH_BAR_PADDING_VERTICAL * backgroundScale,
+        paddingHorizontal: SEARCH_BAR_PADDING_HORIZONTAL * backgroundScale,
+        gap: SEARCH_BAR_GAP * backgroundScale,
       },
       style,
     ],
     [
       searchBar.background,
       searchBar.shadow,
-      metrics.paddingVertical,
-      metrics.paddingHorizontal,
-      metrics.gap,
+      backgroundScale,
       style,
     ],
   );
 
-  const textStyle = useMemo(
-    () => [styles.text, { color: text.primary, fontSize: metrics.fontSize }],
-    [text.primary, metrics.fontSize],
+  const inputTextStyle = useMemo(
+    () => [
+      styles.text,
+      typographyStyle,
+      { color: text.primary, fontSize },
+    ],
+    [typographyStyle, text.primary, fontSize],
   );
 
-  const placeholderStyle = useMemo(
-    () => [styles.text, { color: text.tertiary, fontSize: metrics.fontSize }],
-    [text.tertiary, metrics.fontSize],
+  const placeholderTextStyle = useMemo(
+    () => [
+      styles.text,
+      typographyStyle,
+      { color: text.tertiary, fontSize },
+    ],
+    [typographyStyle, text.tertiary, fontSize],
   );
 
   const isPressable = onPress != null;
@@ -124,14 +190,14 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
       >
         <FontAwesome5
           name="search"
-          size={metrics.iconSize}
+          size={iconSize}
           color={searchBar.icon}
         />
         <Text
           allowFontScaling={false}
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={placeholderStyle}
+          style={placeholderTextStyle}
         >
           {placeholder}
         </Text>
@@ -143,7 +209,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
     <View style={barStyle}>
       <FontAwesome5
         name="search"
-        size={metrics.iconSize}
+        size={iconSize}
         color={searchBar.icon}
       />
       <TextInput
@@ -151,7 +217,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
         allowFontScaling={false}
         multiline={false}
         numberOfLines={1}
-        style={textStyle}
+        style={inputTextStyle}
         placeholder={placeholder}
         placeholderTextColor={text.tertiary}
         value={value}

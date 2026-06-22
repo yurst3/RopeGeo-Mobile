@@ -1,6 +1,9 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
+import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect } from "react";
@@ -9,7 +12,6 @@ import {
   BackHandler,
   Dimensions,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
 } from "react-native";
@@ -20,8 +22,7 @@ const HALF_HEIGHT = SCREEN_HEIGHT / 2;
 const CARD_BORDER_RADIUS = 24;
 /** Matches {@link RegionSeamButtons} seam positioning. */
 const SEAM_FLOAT_OFFSET = 64;
-const EXTERNAL_LINK_SIZE = 48;
-const EXTERNAL_LINK_ICON = 28;
+const SEAM_FLOAT_HEIGHT = 48;
 
 export type RopewikiRegionPlaceholderProps = {
   backTop: number;
@@ -41,9 +42,18 @@ function iconForSource(source: PageDataSource): ImageSourcePropType {
   }
 }
 
+function externalLinkForSource(source: PageDataSource): string {
+  switch (source) {
+    case PageDataSource.Ropewiki:
+      return "https://ropewiki.com";
+    default:
+      return "https://ropewiki.com";
+  }
+}
+
 /**
  * Loading / offline / error shell matching loaded region layout: ~50% banner, overlapping card.
- * Non-interactive external-link control at the same seam position as {@link RegionSeamButtons}.
+ * Non-interactive {@link ExternalLinkButton} at the same seam position as {@link RegionSeamButtons}.
  */
 export function RopewikiRegionPlaceholder({
   backTop,
@@ -51,8 +61,9 @@ export function RopewikiRegionPlaceholder({
   errorMessage,
   onBackPress,
 }: RopewikiRegionPlaceholderProps) {
-  const { background, placeholder, image, text, button, loadingIndicator } =
+  const { background, placeholder, image, text, loadingIndicator } =
     useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const handleBack = useCallback(() => {
@@ -73,6 +84,7 @@ export function RopewikiRegionPlaceholder({
   const paddingTop = HALF_HEIGHT;
   const seamTop =
     paddingTop - CARD_BORDER_RADIUS - SEAM_FLOAT_OFFSET;
+  const linkUrl = externalLinkForSource(source);
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
@@ -89,9 +101,13 @@ export function RopewikiRegionPlaceholder({
               style={[styles.missingImage, { tintColor: image.missingIcon }]}
               contentFit="contain"
             />
-            <Text style={[styles.errorTitle, { color: text.error }]}>
+            <ConstantText
+              size={uiScale.toast.text.message}
+              typography={textStyle.toast.message}
+              style={[styles.errorTitle, { color: text.error }]}
+            >
               {errorMessage}
-            </Text>
+            </ConstantText>
           </>
         ) : (
           <ActivityIndicator size="large" color={loadingIndicator} />
@@ -117,25 +133,15 @@ export function RopewikiRegionPlaceholder({
       </View>
 
       <View
-        pointerEvents="none"
+        pointerEvents="box-none"
         style={[styles.seamLinkWrap, { top: seamTop }]}
-        accessibilityElementsHidden
       >
-        <View
-          style={[
-            styles.seamLinkCircle,
-            {
-              backgroundColor: background,
-              shadowColor: button.shadowColor,
-            },
-          ]}
-        >
-          <Image
-            source={iconForSource(source)}
-            style={styles.seamLinkIcon}
-            contentFit="contain"
-          />
-        </View>
+        <ExternalLinkButton
+          icon={iconForSource(source)}
+          link={linkUrl}
+          disabled
+          accessibilityLabel="Open on RopeWiki (unavailable while loading)"
+        />
       </View>
 
       <BackButton onPress={handleBack} top={backTop} />
@@ -158,8 +164,6 @@ const styles = StyleSheet.create({
     height: 56,
   },
   errorTitle: {
-    fontSize: 17,
-    fontWeight: "600",
     textAlign: "center",
     paddingHorizontal: 24,
   },
@@ -186,23 +190,8 @@ const styles = StyleSheet.create({
   seamLinkWrap: {
     position: "absolute",
     left: 16,
-    height: EXTERNAL_LINK_SIZE,
+    height: SEAM_FLOAT_HEIGHT,
     justifyContent: "center",
     zIndex: 2001,
-  },
-  seamLinkCircle: {
-    width: EXTERNAL_LINK_SIZE,
-    height: EXTERNAL_LINK_SIZE,
-    borderRadius: EXTERNAL_LINK_SIZE / 2,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  seamLinkIcon: {
-    width: EXTERNAL_LINK_ICON,
-    height: EXTERNAL_LINK_ICON,
   },
 });

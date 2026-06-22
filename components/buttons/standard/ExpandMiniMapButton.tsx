@@ -1,6 +1,8 @@
 import { Button } from "@/components/buttons/Button";
 import { EXPAND_MINI_MAP_BUTTON_KEY } from "@/constants/buttons";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import { useResolvedButtonDimensions } from "@/utils/resolvers";
 import {
   EXPAND_BUTTON_SIZE,
   minimapStyles,
@@ -15,14 +17,20 @@ type ExpandMiniMapButtonProps = {
 export function ExpandMiniMapButton({ onPress }: ExpandMiniMapButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[EXPAND_MINI_MAP_BUTTON_KEY];
+  const { uiScale } = useText();
+  const { size, iconScale } = useResolvedButtonDimensions(
+    uiScale.map.buttons.expandMiniMap,
+    EXPAND_BUTTON_SIZE,
+  );
   return (
     <Button
       onPress={onPress ?? (() => {})}
+      size={size}
+      iconScale={iconScale}
       backgroundColor={buttonColors.background}
       shadowColor={themeColors.button.shadowColor}
       icon={require("@/assets/images/icons/buttons/expand.png")}
       iconColor={buttonColors.icon}
-      size={EXPAND_BUTTON_SIZE}
       style={[minimapStyles.expandButton]}
       accessibilityLabel="Expand map"
     />

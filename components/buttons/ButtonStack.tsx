@@ -1,7 +1,4 @@
-import {
-  MAP_BUTTON_GAP,
-  MAP_BUTTON_SIZE,
-} from "@/components/minimap/shared/fullScreenMapLayout";
+import { useMapButtonChromeLayout } from "@/utils/buttonChromeLayout";
 import {
   Children,
   isValidElement,
@@ -131,14 +128,16 @@ type ButtonStackBaseProps = {
 function ButtonStackBase({
   top,
   right = 16,
-  gap = MAP_BUTTON_GAP,
+  gap: gapProp,
   children,
 }: ButtonStackBaseProps) {
+  const mapChrome = useMapButtonChromeLayout();
+  const gap = gapProp ?? mapChrome.gap;
   const slots = Children.toArray(children).filter(isButtonStackSlot);
 
   return (
     <View
-      style={[styles.host, { top, right, gap }]}
+      style={[styles.host, { top, right, gap, minWidth: mapChrome.stackMinWidth }]}
       pointerEvents="box-none"
     >
       {slots.map((el) => (
@@ -173,7 +172,5 @@ const styles = StyleSheet.create({
     zIndex: 4,
     flexDirection: "column",
     alignItems: "flex-end",
-    /** Same width as stacked map controls so 44px header buttons do not shift when 48px slots mount. */
-    minWidth: MAP_BUTTON_SIZE,
   },
 });

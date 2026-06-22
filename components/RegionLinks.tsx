@@ -1,9 +1,11 @@
+import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { isSavedRopewikiPagePath } from "@/lib/navigation/savedPagePath";
 import { usePathname, useRouter } from "expo-router";
 import { PageDataSource } from "ropegeo-common/models";
 import React from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 
 export type RegionLinksProps = {
   source: PageDataSource;
@@ -14,9 +16,9 @@ export type RegionLinksProps = {
    */
   pageId?: string;
   /** Optional container style (e.g. for margin). */
-  containerStyle?: React.ComponentProps<typeof Text>["style"];
+  containerStyle?: React.ComponentProps<typeof ConstantText>["style"];
   /** Optional style when rendered after another block (e.g. AKA). */
-  styleAfterBlock?: React.ComponentProps<typeof Text>["style"];
+  styleAfterBlock?: React.ComponentProps<typeof ConstantText>["style"];
   /** Optional numberOfLines for the container. */
   numberOfLines?: number;
 };
@@ -30,6 +32,7 @@ export function RegionLinks({
   numberOfLines,
 }: RegionLinksProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,36 +59,44 @@ export function RegionLinks({
   };
 
   return (
-    <Text
+    <ConstantText
+      size={uiScale.regionScreen.text.locationHierarchy}
+      typography={textStyle.regionScreen.locationHierarchy}
       style={[styles.regionsContainer, containerStyle, styleAfterBlock]}
       numberOfLines={numberOfLines}
     >
       {regions.flatMap((region, i) => [
-        <Text
+        <ConstantText
           key={`region-${region.id}`}
+          size={uiScale.regionScreen.text.locationHierarchy}
+          typography={textStyle.regionScreen.locationHierarchy}
           style={[styles.regionLink, { color: themeColors.text.link }]}
           onPress={() => onRegionPress(region.id)}
         >
           {region.name}
-        </Text>,
+        </ConstantText>,
         ...(i < regions.length - 1
           ? [
-              <Text
+              <ConstantText
                 key={`sep-${i}`}
-                style={[styles.regionSeparator, { color: themeColors.text.secondary }]}
+                size={uiScale.regionScreen.text.locationHierarchy}
+                typography={textStyle.regionScreen.locationHierarchy}
+                style={[
+                  styles.regionSeparator,
+                  { color: themeColors.text.secondary },
+                ]}
               >
                 {" "}•{" "}
-              </Text>,
+              </ConstantText>,
             ]
           : []),
       ])}
-    </Text>
+    </ConstantText>
   );
 }
 
 const styles = StyleSheet.create({
   regionsContainer: {
-    fontSize: 16,
     marginBottom: 10,
   },
   regionLink: {

@@ -1,15 +1,18 @@
 import { BADGE_BUTTON_KEY } from "@/constants/buttons";
 import type { BadgeButtonColors } from "@/constants/colors/types";
+import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
 import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
 import { Image } from "expo-image";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
 const INFO_ICON = require("@/assets/images/icons/buttons/info.png");
 
-const INFO_ICON_WRAP_SIZE = 18;
-const INFO_ICON_IMAGE_SIZE = 12;
+const DESIGN_INFO_ICON_WRAP_SIZE = 18;
+const DESIGN_INFO_ICON_IMAGE_SIZE = 12;
 
 export type BadgeButtonProps = {
   badge: ReactNode;
@@ -29,20 +32,39 @@ export function BadgeButton({
   accessibilityLabel,
 }: BadgeButtonProps) {
   const themeColors = useColorTheme();
-  const { badgeSlotWidth, typeLabelFontSize } = usePageBadgeMetrics();
+  const { uiScale, style: textStyle } = useText();
+  const { badgeSlotWidth, badgeSize, iconSizeScale } = usePageBadgeMetrics();
   const { infoIconBackground, infoIcon } =
     themeColors.button.nonstandard[BADGE_BUTTON_KEY] as BadgeButtonColors;
 
+  const infoIconSizes = useMemo(
+    () => ({
+      wrap: Math.round(DESIGN_INFO_ICON_WRAP_SIZE * iconSizeScale),
+      image: Math.round(DESIGN_INFO_ICON_IMAGE_SIZE * iconSizeScale),
+    }),
+    [iconSizeScale],
+  );
+
   const content = (
     <View style={styles.row}>
-      <View style={styles.labelRow}>
+      <View style={[styles.labelRow, { minHeight: badgeSize }]}>
         {onPress != null ? (
-          <View style={[styles.infoIconWrap, { backgroundColor: infoIconBackground }]}>
+          <View
+            style={[
+              styles.infoIconWrap,
+              {
+                backgroundColor: infoIconBackground,
+                width: infoIconSizes.wrap,
+                height: infoIconSizes.wrap,
+                borderRadius: infoIconSizes.wrap / 2,
+              },
+            ]}
+          >
             <Image
               source={INFO_ICON}
               style={{
-                width: INFO_ICON_IMAGE_SIZE,
-                height: INFO_ICON_IMAGE_SIZE,
+                width: infoIconSizes.image,
+                height: infoIconSizes.image,
                 tintColor: infoIcon,
               }}
               contentFit="contain"
@@ -50,23 +72,27 @@ export function BadgeButton({
           </View>
         ) : null}
         <View style={styles.labelTextWrap}>
-          <Text
-            style={[
-              styles.typeLabel,
-              {
-                color: themeColors.text.secondary,
-                fontSize: typeLabelFontSize,
-              },
-            ]}
+          <ScalingText
+            size={uiScale.pageScreen.text.badgeTypeLabel}
+            typography={textStyle.pageScreen.badgeTypeLabel}
             numberOfLines={2}
             ellipsizeMode="tail"
+            measure={{
+              type: "lineCount",
+              maxLinesAtMaxSize: 2,
+              widthSafetyMargin: 2,
+            }}
+            style={{ color: themeColors.text.secondary }}
+            containerStyle={styles.typeLabel}
           >
             {badgeTypeLabel}
-          </Text>
+          </ScalingText>
         </View>
       </View>
       <View style={[styles.badgeSlot, { width: badgeSlotWidth }]}>
-        <View style={styles.badgeWrap}>{badge}</View>
+        <View style={[styles.badgeWrap, { width: badgeSlotWidth }]}>
+          {badge}
+        </View>
       </View>
     </View>
   );
@@ -103,7 +129,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     flex: 1,
     minWidth: 0,
     minHeight: 0,
@@ -117,9 +143,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   infoIconWrap: {
-    width: INFO_ICON_WRAP_SIZE,
-    height: INFO_ICON_WRAP_SIZE,
-    borderRadius: INFO_ICON_WRAP_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
@@ -127,17 +150,22 @@ const styles = StyleSheet.create({
   labelTextWrap: {
     flex: 1,
     minWidth: 0,
+    justifyContent: "center",
   },
   typeLabel: {
-    fontWeight: "500",
+    alignSelf: "stretch",
+    minWidth: 0,
+    width: "100%",
+    justifyContent: "center",
   },
   badgeSlot: {
     flexShrink: 0,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    overflow: "hidden",
   },
   badgeWrap: {
-    maxWidth: "100%",
     alignItems: "center",
+    overflow: "hidden",
   },
 });

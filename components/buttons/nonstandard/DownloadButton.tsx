@@ -1,10 +1,21 @@
 import { RemoveDownloadButton } from "@/components/buttons/standard/RemoveDownloadButton";
+import { ScalingText } from "@/components/text/ScalingText";
 import { DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import type { DownloadButtonColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/TextContext";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonIconScale,
+} from "@/utils/resolvers";
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+
+const BASE_ICON_SIZE = 18;
+const BASE_PILL_PADDING_VERTICAL = 8;
+const BASE_PILL_PADDING_HORIZONTAL = 12;
+const BASE_PILL_GAP = 8;
 
 export type DownloadButtonProps = {
   isDownloaded: boolean;
@@ -35,6 +46,11 @@ export function DownloadButton({
   const colors = useColorTheme().button.nonstandard[
     DOWNLOAD_BUTTON_KEY
   ] as DownloadButtonColors;
+  const { uiScale, style: textStyle } = useText();
+  const downloadButtonSpec = uiScale.pageScreen.buttons.download;
+  const backgroundScale = useResolvedButtonBackgroundScale(downloadButtonSpec);
+  const iconScale = useResolvedButtonIconScale(downloadButtonSpec);
+  const iconSize = BASE_ICON_SIZE * iconScale;
   const {
     background,
     downloadCompleteBackground,
@@ -51,8 +67,8 @@ export function DownloadButton({
     downloadDisplayTotal > 0
       ? Math.max(1, Math.min(downloadDisplayTotal, downloadDisplayStep || 1))
       : null;
-  const progressSize = 18;
-  const progressStroke = 2.25;
+  const progressSize = iconSize;
+  const progressStroke = 2.25 * iconScale;
   const progressRadius = (progressSize - progressStroke) / 2;
   const progressCircumference = 2 * Math.PI * progressRadius;
   const progressOffset = progressCircumference * (1 - progress01);
@@ -68,14 +84,20 @@ export function DownloadButton({
   const labelColor = isDownloaded ? downloadCompleteIcon : icon;
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { gap: BASE_PILL_GAP * backgroundScale }]}>
       {showRemove ? <RemoveDownloadButton onPress={onRemovePress} /> : null}
       <Pressable
         onPress={onDownloadPress}
         disabled={downloading || isDownloaded}
         style={({ pressed }) => [
           styles.pill,
-          { backgroundColor: pillBackground, shadowColor },
+          {
+            backgroundColor: pillBackground,
+            shadowColor,
+            paddingVertical: BASE_PILL_PADDING_VERTICAL * backgroundScale,
+            paddingHorizontal: BASE_PILL_PADDING_HORIZONTAL * backgroundScale,
+            gap: BASE_PILL_GAP * backgroundScale,
+          },
           pressed && !isDownloaded && styles.pillPressed,
         ]}
         accessibilityLabel={
@@ -83,9 +105,19 @@ export function DownloadButton({
         }
         accessibilityRole="button"
       >
-        <Text style={[styles.label, { color: labelColor }]}>{labelText}</Text>
+        {downloadButtonSpec.text != null ? (
+          <ScalingText
+            size={downloadButtonSpec.text}
+            typography={textStyle.button.download}
+            style={{ color: labelColor }}
+            numberOfLines={1}
+            measure={{ type: "lineCount" }}
+          >
+            {labelText}
+          </ScalingText>
+        ) : null}
         {downloading && !isDownloaded ? (
-          <Svg width={progressSize} height={progressSize} style={styles.pillIcon}>
+          <Svg width={progressSize} height={progressSize} style={{ width: iconSize, height: iconSize }}>
             <Circle
               cx={progressSize / 2}
               cy={progressSize / 2}
@@ -114,7 +146,7 @@ export function DownloadButton({
                 ? require("@/assets/images/icons/buttons/downloaded.png")
                 : require("@/assets/images/icons/buttons/download.png")
             }
-            style={styles.pillIcon}
+            style={{ width: iconSize, height: iconSize }}
             tintColor={isDownloaded ? downloadCompleteIcon : icon}
             contentFit="contain"
           />
@@ -128,14 +160,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
     borderRadius: 999,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -144,13 +172,5 @@ const styles = StyleSheet.create({
   },
   pillPressed: {
     opacity: 0.92,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  pillIcon: {
-    width: 18,
-    height: 18,
   },
 });

@@ -13,7 +13,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
@@ -21,7 +20,9 @@ import type {
   OfflineBetaSectionImage,
   OnlineBetaSectionImage,
 } from "ropegeo-common/models";
+import { ConstantText } from "@/components/text/ConstantText";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
+import { useText } from "@/context/TextContext";
 import type {
   ExpandedImageAnchorRect,
   ExpandedImageGalleryPage,
@@ -32,8 +33,13 @@ import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsW
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
+  ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
 } from "@/utils/ropewikiRenderHtml";
+import {
+  useResolvedConstantSize,
+  useResolvedTypography,
+} from "@/utils/resolvers";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
@@ -46,13 +52,8 @@ const SLIDE_ITEM_LENGTH = CONTENT_WIDTH + SLIDE_MARGIN_RIGHT;
 const IMAGE_HEIGHT = 220;
 /** Distance from the bottom edge of the image to the indicator pill. */
 const IMAGE_INDICATOR_BOTTOM_INSET = 8;
-const CAPTION_FONT_SIZE = 13;
-const CAPTION_LINE_HEIGHT = 18;
 const CAPTION_MAX_LINES = 3;
 const CAPTION_MARGIN_TOP = 8;
-const CAPTION_AREA_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES;
-/** Fixed slide height so paging does not shift content below the gallery. */
-const SLIDE_HEIGHT = IMAGE_HEIGHT + CAPTION_MARGIN_TOP + CAPTION_AREA_HEIGHT;
 
 const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 
@@ -71,9 +72,19 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   onLayoutRef,
 }: BetaSectionImageSlideProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
+  const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
+  const captionTypography = useResolvedTypography(textStyle.betaSection.caption);
   const captionTagsStyles = useMemo(
-    () => buildRopewikiHtmlTagsStyles(themeColors.text),
-    [themeColors.text],
+    () =>
+      buildRopewikiHtmlTagsStyles({
+        link: themeColors.text.link,
+        secondary: themeColors.text.secondary,
+        captionFontSize,
+        captionTextAlign: "left",
+        bodyFontSize: captionFontSize,
+      }),
+    [themeColors.text.link, themeColors.text.secondary, captionFontSize],
   );
   const itemKey = item.linkUrl + item.order;
   const fullUrl = item.fetchType === "online" ? item.fullUrl : item.downloadedFullPath;
@@ -104,7 +115,7 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   }, [item, onOpenExpand]);
 
   return (
-    <View style={[styles.imageSlide, { height: SLIDE_HEIGHT }]}>
+    <View style={styles.imageSlide}>
       <Pressable
         disabled={!canExpand}
         onPress={onPress}
@@ -140,14 +151,16 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
                 ]}
                 contentFit="contain"
               />
-              <Text
+              <ConstantText
+                size={uiScale.pageScreen.text.metaData}
+                typography={textStyle.map.markerTooltip}
                 style={[
                   styles.missingImageText,
                   { color: themeColors.image.missingText },
                 ]}
               >
                 Missing Image
-              </Text>
+              </ConstantText>
             </View>
           )}
         </View>
@@ -158,14 +171,18 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
             contentWidth={CONTENT_WIDTH}
             source={captionSource}
             baseStyle={{
-              ...styles.caption,
+              fontFamily: captionTypography.fontFamily,
+              fontWeight: captionTypography.fontWeight,
+              fontSize: captionFontSize,
               color: themeColors.text.secondary,
+              textAlign: "left",
             }}
             tagsStyles={captionTagsStyles}
             customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
             ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
             enableUserAgentStyles={false}
             defaultTextProps={{
+              ...ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
               numberOfLines: CAPTION_MAX_LINES,
               ellipsizeMode: "clip",
             }}
@@ -195,6 +212,7 @@ export function BetaSectionImages({
   sectionTitle,
 }: BetaSectionImagesProps) {
   const themeColors = useColorTheme();
+  const { uiScale, style: textStyle } = useText();
   const [currentIndex, setCurrentIndex] = useState(0);
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.order - b.order),
@@ -368,7 +386,6 @@ export function BetaSectionImages({
     <View style={styles.imagesWrap}>
       <FlatList
         ref={flatListRef}
-        style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
         data={sortedImages}
         keyExtractor={keyExtractor}
@@ -387,7 +404,9 @@ export function BetaSectionImages({
       />
       {sortedImages.length > 1 ? (
         <View style={styles.imageIndicator} pointerEvents="none">
-          <Text
+          <ConstantText
+            size={uiScale.pageScreen.text.metaData}
+            typography={textStyle.pageScreen.metaData}
             style={[
               styles.imageIndicatorText,
               {
@@ -397,7 +416,7 @@ export function BetaSectionImages({
             ]}
           >
             {currentIndex + 1}/{sortedImages.length}
-          </Text>
+          </ConstantText>
         </View>
       ) : null}
 
@@ -424,12 +443,8 @@ export function BetaSectionImages({
 const styles = StyleSheet.create({
   imagesWrap: {
     position: "relative",
-    height: SLIDE_HEIGHT,
     marginLeft: -CARD_PADDING_HORIZONTAL,
     marginRight: -CARD_PADDING_HORIZONTAL,
-  },
-  flatList: {
-    height: SLIDE_HEIGHT,
   },
   flatListContent: {
     paddingLeft: CARD_PADDING_HORIZONTAL,
@@ -465,17 +480,9 @@ const styles = StyleSheet.create({
   },
   missingImageText: {
     marginTop: 8,
-    fontSize: 13,
-    fontWeight: "600",
   },
   captionWrap: {
     marginTop: CAPTION_MARGIN_TOP,
-    height: CAPTION_AREA_HEIGHT,
-    overflow: "hidden",
-  },
-  caption: {
-    fontSize: CAPTION_FONT_SIZE,
-    lineHeight: CAPTION_LINE_HEIGHT,
   },
   imageIndicator: {
     position: "absolute",
@@ -487,7 +494,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   imageIndicatorText: {
-    fontSize: 13,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
