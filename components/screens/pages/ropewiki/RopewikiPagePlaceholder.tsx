@@ -4,7 +4,8 @@ import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { PlaceholderPageBadges } from "@/components/screens/pages/ropewiki/PlaceholderPageBadges";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import {
@@ -59,7 +60,8 @@ export function RopewikiPagePlaceholder({
 }: RopewikiPagePlaceholderProps) {
   const { background, placeholder, image, text, loadingIndicator } =
     useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const seamTop = HALF_HEIGHT - CARD_BORDER_RADIUS - SEAM_FLOAT_OFFSET;

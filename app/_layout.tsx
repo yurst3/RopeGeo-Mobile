@@ -2,6 +2,11 @@ import { NetworkStateDebugToasts } from "@/components/toast/NetworkStateDebugToa
 import { ToastStackAnchor } from "@/components/navigation/ToastStackAnchor";
 import { ColorThemeProvider } from "@/context/ColorThemeContext";
 import { TextProvider } from "@/context/TextContext";
+import { UIScaleProvider } from "@/context/UIScaleContext";
+import {
+  SettingsAppGate,
+  SettingsProvider,
+} from "@/context/SettingsContext";
 import { NetworkStatusProvider, SHOW_NETWORK_STATE } from "@/context/NetworkStatusContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
@@ -16,38 +21,44 @@ import { StyleSheet } from "react-native";
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ColorThemeProvider>
-        <TextProvider>
-          <NetworkStatusProvider>
-            <ToastProvider>
-              <ToastStackAnchor />
-              {SHOW_NETWORK_STATE ? <NetworkStateDebugToasts /> : null}
-              <ShareSheetDimmerProvider>
-                <SavedPagesProvider>
-                  <SavedFiltersProvider>
-                    <DownloadJobQueueProvider>
-                      <Stack screenOptions={stackScreenOptions}>
-                        <Stack.Screen
-                          name="(tabs)"
-                          options={{
-                            headerShown: false,
-                          }}
-                        />
-                        <Stack.Screen
-                          name="index"
-                          options={{
-                            headerShown: false,
-                          }}
-                        />
-                      </Stack>
-                    </DownloadJobQueueProvider>
-                  </SavedFiltersProvider>
-                </SavedPagesProvider>
-              </ShareSheetDimmerProvider>
-            </ToastProvider>
-          </NetworkStatusProvider>
-        </TextProvider>
-      </ColorThemeProvider>
+      <SettingsProvider>
+        <SettingsAppGate>
+          <ColorThemeProvider>
+            <UIScaleProvider>
+              <TextProvider>
+                <NetworkStatusProvider>
+                  <ToastProvider>
+                    <ToastStackAnchor />
+                    {SHOW_NETWORK_STATE ? <NetworkStateDebugToasts /> : null}
+                    <ShareSheetDimmerProvider>
+                      <SavedPagesProvider>
+                        <SavedFiltersProvider>
+                          <DownloadJobQueueProvider>
+                            <Stack screenOptions={stackScreenOptions}>
+                              <Stack.Screen
+                                name="(tabs)"
+                                options={{
+                                  headerShown: false,
+                                }}
+                              />
+                              <Stack.Screen
+                                name="index"
+                                options={{
+                                  headerShown: false,
+                                }}
+                              />
+                            </Stack>
+                          </DownloadJobQueueProvider>
+                        </SavedFiltersProvider>
+                      </SavedPagesProvider>
+                    </ShareSheetDimmerProvider>
+                  </ToastProvider>
+                </NetworkStatusProvider>
+              </TextProvider>
+            </UIScaleProvider>
+          </ColorThemeProvider>
+        </SettingsAppGate>
+      </SettingsProvider>
     </GestureHandlerRootView>
   );
 }

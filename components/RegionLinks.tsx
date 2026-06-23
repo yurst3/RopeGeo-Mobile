@@ -1,6 +1,7 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { isSavedRopewikiPagePath } from "@/lib/navigation/savedPagePath";
 import { usePathname, useRouter } from "expo-router";
 import { PageDataSource } from "ropegeo-common/models";
@@ -32,7 +33,8 @@ export function RegionLinks({
   numberOfLines,
 }: RegionLinksProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const router = useRouter();
   const pathname = usePathname();
 

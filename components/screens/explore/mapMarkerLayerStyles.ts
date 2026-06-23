@@ -9,6 +9,7 @@ export function unclusteredRouteMarkerSymbolStyle(
   iconImage: SymbolLayerStyle["iconImage"],
   iconSize: SymbolLayerStyle["iconSize"],
   markerMetrics: RouteMarkerMetrics,
+  textFont: readonly string[],
 ): SymbolLayerStyle {
   return {
     iconImage,
@@ -18,6 +19,7 @@ export function unclusteredRouteMarkerSymbolStyle(
     iconIgnorePlacement: true,
     iconAnchor: "bottom",
     textField: ["get", "name"],
+    textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,
@@ -32,6 +34,7 @@ export function unclusteredRouteMarkerSymbolStyle(
 export function clusterRouteMarkerSymbolStyle(
   marker: MarkerColors,
   markerMetrics: RouteMarkerMetrics,
+  textFont: readonly string[],
 ): SymbolLayerStyle {
   return {
     iconImage: ROUTE_MARKER_CLUSTER_IMAGE,
@@ -46,6 +49,7 @@ export function clusterRouteMarkerSymbolStyle(
       ["to-string", ["get", "point_count"]],
       ")",
     ],
+    textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,
@@ -61,9 +65,11 @@ export function clusterRouteMarkerSymbolStyle(
 export function pagePointLabelSymbolStyle(
   marker: MarkerColors,
   markerMetrics: RouteMarkerMetrics,
+  textFont: readonly string[],
 ): SymbolLayerStyle {
   return {
     textField: ["coalesce", ["get", "name"], " "],
+    textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
     textHaloColor: marker.textHalo,

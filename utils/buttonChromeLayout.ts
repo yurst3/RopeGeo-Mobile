@@ -5,6 +5,7 @@ import {
   MAP_HEADER_ROW_TOP_INSET,
 } from "@/components/minimap/shared/fullScreenMapLayout";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import type { UiScaleProfile } from "@/constants/uiScale/types";
 import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
@@ -243,7 +244,7 @@ export function resolvePageHeaderStackLayout(
 }
 
 export function useHeaderChromeLayout(): HeaderChromeLayout {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveHeaderChromeLayout(uiScale, fontScale),
@@ -252,7 +253,7 @@ export function useHeaderChromeLayout(): HeaderChromeLayout {
 }
 
 export function useMapButtonChromeLayout(): MapButtonChromeLayout {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveMapButtonChromeLayout(uiScale, fontScale),
@@ -261,7 +262,7 @@ export function useMapButtonChromeLayout(): MapButtonChromeLayout {
 }
 
 export function useExploreHeaderLayout(): ExploreHeaderLayout {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveExploreHeaderLayout(uiScale, fontScale),
@@ -270,7 +271,7 @@ export function useExploreHeaderLayout(): ExploreHeaderLayout {
 }
 
 export function useSearchChromeStackedLayout(): SearchChromeStackedLayout {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveSearchChromeStackedLayout(uiScale, fontScale),
@@ -279,7 +280,7 @@ export function useSearchChromeStackedLayout(): SearchChromeStackedLayout {
 }
 
 export function useRoutePreviewFloaterLayout(): RoutePreviewFloaterLayout {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveRoutePreviewFloaterLayout(uiScale, fontScale),
@@ -288,7 +289,7 @@ export function useRoutePreviewFloaterLayout(): RoutePreviewFloaterLayout {
 }
 
 export function useToastChromeLayout() {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => ({

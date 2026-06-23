@@ -1,14 +1,14 @@
 import { StyleSheet } from "react-native";
 
 import { ScalingText } from "@/components/text/ScalingText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   formatPreviewAkaLine,
 } from "@/utils/previewLayout";
 import {
   ROUTE_PREVIEW_AKA_MAX_LINES,
   ROUTE_PREVIEW_LOCATION_MAX_LINES,
-  ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN,
   ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN,
   useRoutePreviewMetrics,
 } from "@/utils/routePreviewLayout";
@@ -21,7 +21,8 @@ export function RoutePreviewTitle({
   color: string;
 }) {
   const metrics = useRoutePreviewMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
 
   return (
     <ScalingText
@@ -54,7 +55,8 @@ export function RoutePreviewAka({
   color: string;
 }) {
   const metrics = useRoutePreviewMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
   const line = formatPreviewAkaLine(aka);
 
   return (
@@ -87,7 +89,8 @@ export function RoutePreviewLocation({
   compactBelowTitle?: boolean;
 }) {
   const metrics = useRoutePreviewMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
 
   return (
     <ScalingText
@@ -104,7 +107,7 @@ export function RoutePreviewLocation({
       measure={{
         type: "lineCount",
         maxLinesAtMaxSize: ROUTE_PREVIEW_LOCATION_MAX_LINES,
-        widthSafetyMargin: ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN,
+        widthSafetyMargin: metrics.locationWidthSafetyMargin,
       }}
       style={[styles.location, { color }]}
     >

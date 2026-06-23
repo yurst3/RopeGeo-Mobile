@@ -1,7 +1,8 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   PAGE_PREVIEW_TRAILING_MARGIN,
   PREVIEW_META_MAX_LINES,
@@ -45,7 +46,8 @@ type Props = {
 export function RegionPreview({ preview }: Props) {
   const themeColors = useColorTheme();
   const layoutMetrics = usePreviewLayoutMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
   const { text, image } = themeColors;
   const { regionIconBackground, regionIcon, shadowColor, sourceIconBackground } =
     themeColors.preview.region;

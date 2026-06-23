@@ -22,6 +22,7 @@ import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { expandedMiniMapButtonStackTopScaled, useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 import { routePreviewDockedPaddingBottom } from "./shared/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -47,6 +48,7 @@ import {
 } from "react";
 import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/resolvers";
 import Animated from "react-native-reanimated";
 import {
   Camera,
@@ -115,10 +117,11 @@ export function CenteredRegionMiniMapView({
   reloadRegisterRef,
 }: CenteredRegionMiniMapViewProps) {
   const { map } = useColorTheme();
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   const headerChrome = useHeaderChromeLayout();
   const markerMetrics = useRouteMarkerMetrics();
+  const markerTextFont = useMapMarkerTextFont();
   const shell = useMiniMapShell();
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
@@ -224,13 +227,14 @@ export function CenteredRegionMiniMapView({
         offlineUnclusteredIconImage,
         offlineUnclusteredIconSize,
         markerMetrics,
+        markerTextFont,
       ),
-    [map.marker, offlineUnclusteredIconImage, offlineUnclusteredIconSize, markerMetrics],
+    [map.marker, offlineUnclusteredIconImage, offlineUnclusteredIconSize, markerMetrics, markerTextFont],
   );
 
   const offlineClusterStyle = useMemo(
-    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics),
-    [map.marker, markerMetrics],
+    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics, markerTextFont),
+    [map.marker, markerMetrics, markerTextFont],
   );
 
   const {

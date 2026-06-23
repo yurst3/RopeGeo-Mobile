@@ -1,4 +1,4 @@
-import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedButtonSelectableScale } from "@/utils/resolvers";
 import { useMemo } from "react";
 
@@ -7,7 +7,7 @@ const RADIO_INNER_SIZE_AT_REFERENCE = 12;
 const RADIO_MARGIN_RIGHT_AT_REFERENCE = 8;
 
 export function useFilterRadioMetrics() {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const scale = useResolvedButtonSelectableScale(uiScale.filter.buttons.radio);
 
   return useMemo(() => {

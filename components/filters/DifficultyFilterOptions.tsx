@@ -26,7 +26,8 @@ import {
 } from "ropegeo-common/models";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { fullRangeAcaDifficultyFilterOptions } from "@/lib/defaultAcaDifficultyFilterOptions";
 import { AcaDiscreteRangeSlider } from "./AcaDiscreteRangeSlider";
 import {
@@ -98,7 +99,8 @@ export function DifficultyFilterOptions({
     text,
   } = useFilterTheme();
   const { dropdown, noteText } = filter;
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   const selectedType: DifficultyRatingSystem | null = useMemo(() => {
     if (options == null) return null;

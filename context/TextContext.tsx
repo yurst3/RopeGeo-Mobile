@@ -1,17 +1,15 @@
 import {
-  buildTextDefinition,
+  buildFontDefinition,
   type FontProfile,
   type FontProfileKey,
   type TextDefinition,
   type TextStyleProfile,
-  type UiScaleProfile,
-  type UiScaleProfileKey,
 } from "@/constants/text";
+import { useSettings } from "@/context/SettingsContext";
 import {
   createContext,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 
@@ -19,18 +17,13 @@ type TextContextValue = TextDefinition;
 
 const TextContext = createContext<TextContextValue | null>(null);
 
-const DEFAULT_UI_SCALE_PROFILE: UiScaleProfileKey = "Auto";
-const DEFAULT_FONT_PROFILE: FontProfileKey = "Auto";
-
 export function TextProvider({ children }: { children: ReactNode }) {
-  const [uiScaleProfileKey] = useState<UiScaleProfileKey>(
-    DEFAULT_UI_SCALE_PROFILE,
-  );
-  const [fontProfileKey] = useState<FontProfileKey>(DEFAULT_FONT_PROFILE);
+  const { settings } = useSettings();
+  const fontProfileKey = settings.font;
 
   const value = useMemo<TextContextValue>(
-    () => buildTextDefinition(uiScaleProfileKey, fontProfileKey),
-    [uiScaleProfileKey, fontProfileKey],
+    () => buildFontDefinition(fontProfileKey),
+    [fontProfileKey],
   );
 
   return (
@@ -44,14 +37,6 @@ export function useText(): TextDefinition {
     throw new Error("useText must be used within TextProvider");
   }
   return ctx;
-}
-
-export function useUiScaleProfileKey(): UiScaleProfileKey {
-  return useText().uiScaleProfileKey;
-}
-
-export function useUiScale(): UiScaleProfile {
-  return useText().uiScale;
 }
 
 export function useFontProfileKey(): FontProfileKey {

@@ -3,7 +3,8 @@ import { BadgeLayoutProvider } from "@/components/badges/Badge";
 import { ConstantText } from "@/components/text/ConstantText";
 import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   ROUTE_PREVIEW_CARD_BORDER_RADIUS,
   ROUTE_PREVIEW_CARD_MARGIN_H,
@@ -26,7 +27,8 @@ export function RoutePreviewPlaceholder({
 }: RoutePreviewPlaceholderProps) {
   const themeColors = useColorTheme();
   const metrics = useRoutePreviewMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
   const { text, image, background, placeholder, loadingIndicator } = themeColors;
   const isError = errorMessage != null && errorMessage !== "";
 

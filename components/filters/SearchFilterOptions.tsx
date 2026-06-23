@@ -1,5 +1,6 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedScalingBounds,
   useResolvedTypography,
@@ -64,7 +65,8 @@ function SearchOrderRadioGroup({
   radioButton,
   text,
 }: SearchOrderRadioGroupProps) {
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const radioButtonSpec = uiScale.filter.buttons.radio;
   const typographyStyle = useResolvedTypography(textStyle.filter.optionLabel);
   const { maxFontSize, minFontSize } = useResolvedScalingBounds(
@@ -204,7 +206,8 @@ export function SearchFilterOptions({
     switchProps,
     text,
   } = useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const { radioButton, slider, noteText } = filterColors;
 
   const patch = (fn: (s: SearchFilter) => void) => {

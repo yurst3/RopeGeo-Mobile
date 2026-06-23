@@ -62,6 +62,10 @@ Requires `EXPO_TOKEN` locally or `eas login`. Mapbox and other secrets are confi
 | `/explore/water-info` | Info screen for water difficulty ratings. |
 | `/explore/time-info` | Info screen for time ratings. |
 | `/explore/vehicle-info` | Info screen for vehicle type. |
+| `/saved` | Saved tab: list of saved pages with search and filters. |
+| `/settings` | Settings tab: theme, font, and UI scale preferences. |
+
+Custom fonts (Roboto, Merriweather, Comic Neue, Dancing Script) are embedded at build time via the `expo-font` config plugin. After changing font assets or plugin config, run `npx expo prebuild` and rebuild the dev client.
 
 ## Mapbox maps (iOS / Android)
 

@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/resolvers";
 import {
   clusterRouteMarkerSymbolStyle,
   unclusteredRouteMarkerSymbolStyle,
@@ -100,6 +101,7 @@ function RouteMarkersLayerContent({
 }: RouteMarkersLayerContentProps) {
   const { map } = useColorTheme();
   const markerMetrics = useRouteMarkerMetrics();
+  const markerTextFont = useMapMarkerTextFont();
   const shapeSourceRef = useRef<ComponentRef<typeof ShapeSource>>(null);
 
   const data = useMemo(
@@ -132,13 +134,14 @@ function RouteMarkersLayerContent({
         unclusteredIconImage,
         unclusteredIconSize,
         markerMetrics,
+        markerTextFont,
       ),
-    [map.marker, unclusteredIconImage, unclusteredIconSize, markerMetrics],
+    [map.marker, unclusteredIconImage, unclusteredIconSize, markerMetrics, markerTextFont],
   );
 
   const clusterStyle = useMemo(
-    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics),
-    [map.marker, markerMetrics],
+    () => clusterRouteMarkerSymbolStyle(map.marker, markerMetrics, markerTextFont),
+    [map.marker, markerMetrics, markerTextFont],
   );
 
   useEffect(() => {

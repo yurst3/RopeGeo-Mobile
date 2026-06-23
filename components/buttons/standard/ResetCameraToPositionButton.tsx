@@ -6,6 +6,7 @@ import { Animated, StyleSheet } from "react-native";
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
 import {
   useResolvedButtonBackgroundScale,
@@ -34,7 +35,7 @@ export function ResetCameraToPositionButton({
 }: ResetCameraToPositionButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[RESET_CAMERA_TO_POSITION_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const buttonSpec = uiScale.map.buttons.resetCameraToPosition;
   const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
   const profileIconScale = useResolvedButtonIconScale(buttonSpec);

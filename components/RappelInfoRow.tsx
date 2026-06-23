@@ -1,6 +1,7 @@
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -51,7 +52,8 @@ export function RappelInfoRow({
   technicalRating,
 }: RappelInfoRowProps) {
   const { text } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   if (!shouldShowRow({ rappelCount, longestRappel, jumps, technicalRating })) {
     return null;

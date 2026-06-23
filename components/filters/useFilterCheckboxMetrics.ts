@@ -1,5 +1,6 @@
 import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedButtonIconScale,
   useResolvedButtonSelectableScale,
@@ -23,7 +24,7 @@ const SOURCE_ICON_CIRCLE_SIZE_AT_REFERENCE = 32;
 const SOURCE_ICON_INNER_SIZE_AT_REFERENCE = 22;
 
 export function useFilterCheckboxMetrics() {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const checkboxSpec = uiScale.filter.buttons.checkbox;
   const selectableScale = useResolvedButtonSelectableScale(checkboxSpec);
   const iconScale = useResolvedButtonIconScale(checkboxSpec);

@@ -7,8 +7,8 @@ export type FontSlot = "display" | "body" | "ui";
  */
 export type FontSlotDefinition = {
   /**
-   * RN `fontFamily` string after loading via expo-font (e.g. `Roboto_400Regular`).
-   * Matches export names from `@expo-google-fonts/*` packages.
+   * RN `fontFamily` PostScript name after build-time embedding via the expo-font
+   * config plugin (e.g. `Roboto-Regular`, `Merriweather-Bold`).
    */
   fontFamily?: string;
 };

@@ -2,6 +2,7 @@ import { Button, STANDARD_BUTTON_SIZE } from "@/components/buttons/Button";
 import { FILTER_BUTTON_KEY } from "@/constants/buttons";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
 const FILTER_ICON_DESIGN_SCALE = 1.2;
@@ -17,7 +18,7 @@ export function FilterButton({
 }) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[FILTER_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.common.buttons.filter,
     STANDARD_BUTTON_SIZE,

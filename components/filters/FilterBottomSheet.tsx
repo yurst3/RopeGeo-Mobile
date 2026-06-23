@@ -11,7 +11,8 @@ import {
   View,
 } from "react-native";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -105,7 +106,8 @@ export function FilterBottomSheet({
   mode,
 }: FilterBottomSheetProps) {
   const { background, text, placeholder, filter, separator } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(400);
 

@@ -1,6 +1,7 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
@@ -19,7 +20,8 @@ function isPageDataSource(value: unknown): value is PageDataSource {
  */
 export default function PageRouteScreen() {
   const { text } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const params = useLocalSearchParams<{
     id: string;
     source: string;

@@ -22,7 +22,8 @@ import type {
 } from "ropegeo-common/models";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
-import { useText } from "@/context/TextContext";
+import { useTextStyle, useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import type {
   ExpandedImageAnchorRect,
   ExpandedImageGalleryPage,
@@ -35,6 +36,8 @@ import {
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
+  RENDER_HTML_SYSTEM_FONTS,
+  toRenderHtmlTypographyStyle,
 } from "@/utils/ropewikiRenderHtml";
 import {
   useResolvedConstantSize,
@@ -72,7 +75,9 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   onLayoutRef,
 }: BetaSectionImageSlideProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const { font } = useText();
   const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
   const captionTypography = useResolvedTypography(textStyle.betaSection.caption);
   const captionTagsStyles = useMemo(
@@ -83,8 +88,16 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
         captionFontSize,
         captionTextAlign: "left",
         bodyFontSize: captionFontSize,
+        bodyFontFamily: captionTypography.fontFamily,
+        bodyBoldFontFamily: font.display.fontFamily,
       }),
-    [themeColors.text.link, themeColors.text.secondary, captionFontSize],
+    [
+      themeColors.text.link,
+      themeColors.text.secondary,
+      captionFontSize,
+      captionTypography.fontFamily,
+      font.display.fontFamily,
+    ],
   );
   const itemKey = item.linkUrl + item.order;
   const fullUrl = item.fetchType === "online" ? item.fullUrl : item.downloadedFullPath;
@@ -170,9 +183,9 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
           <RenderHtml
             contentWidth={CONTENT_WIDTH}
             source={captionSource}
+            systemFonts={RENDER_HTML_SYSTEM_FONTS}
             baseStyle={{
-              fontFamily: captionTypography.fontFamily,
-              fontWeight: captionTypography.fontWeight,
+              ...toRenderHtmlTypographyStyle(captionTypography),
               fontSize: captionFontSize,
               color: themeColors.text.secondary,
               textAlign: "left",
@@ -212,7 +225,8 @@ export function BetaSectionImages({
   sectionTitle,
 }: BetaSectionImagesProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const [currentIndex, setCurrentIndex] = useState(0);
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.order - b.order),

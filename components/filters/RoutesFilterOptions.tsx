@@ -14,7 +14,8 @@ import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
 import { FilterCheckbox } from "./FilterCheckbox";
 import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
 import { useFilterTheme } from "./useFilterTheme";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 
 const ROUTE_TYPE_ORDER: RouteType[] = [
   RouteType.Canyon,
@@ -49,7 +50,8 @@ export function RoutesFilterOptions({
   onChange,
 }: RoutesFilterOptionsProps) {
   const { sectionLabel, text } = useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const checkboxMetrics = useFilterCheckboxMetrics();
 
   const patch = (fn: (r: RouteFilter) => void) => {

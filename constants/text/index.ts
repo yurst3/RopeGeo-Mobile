@@ -67,24 +67,32 @@ import { FONT_PROFILES } from "./font";
 import { UI_SCALE_PROFILES } from "../uiScale";
 import { TEXT_STYLE } from "./style";
 
-/** Active UI scale + font profile pair with fixed typography styles. */
+/** Active font profile with fixed typography styles. */
 export type TextDefinition = {
-  uiScaleProfileKey: UiScaleProfileKey;
   fontProfileKey: FontProfileKey;
-  uiScale: UiScaleProfile;
   font: FontProfile;
   style: TextStyleProfile;
 };
 
+export function buildFontDefinition(fontProfileKey: FontProfileKey): TextDefinition {
+  return {
+    fontProfileKey,
+    font: FONT_PROFILES[fontProfileKey],
+    style: TEXT_STYLE,
+  };
+}
+
+/** @deprecated Use {@link buildFontDefinition} and {@link UIScaleContext} separately. */
 export function buildTextDefinition(
   uiScaleProfileKey: UiScaleProfileKey,
   fontProfileKey: FontProfileKey,
-): TextDefinition {
+): TextDefinition & {
+  uiScaleProfileKey: UiScaleProfileKey;
+  uiScale: UiScaleProfile;
+} {
   return {
+    ...buildFontDefinition(fontProfileKey),
     uiScaleProfileKey,
-    fontProfileKey,
     uiScale: UI_SCALE_PROFILES[uiScaleProfileKey],
-    font: FONT_PROFILES[fontProfileKey],
-    style: TEXT_STYLE,
   };
 }

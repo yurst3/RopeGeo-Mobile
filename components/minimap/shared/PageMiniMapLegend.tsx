@@ -1,7 +1,8 @@
 import { parseStrokeColor, parseStrokeWidth } from "@/components/minimap/shared/pageMiniMapSegments";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedIconSizeScale } from "@/utils/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
@@ -219,7 +220,8 @@ export function PageMiniMapLegend({
   onSelectLegendId,
 }: PageMiniMapLegendProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const iconScale = useResolvedIconSizeScale();
   const chevronSize = Math.round(LEGEND_CHEVRON_SIZE * iconScale);
   const { minimap, focusedLineSegment } = themeColors.map;

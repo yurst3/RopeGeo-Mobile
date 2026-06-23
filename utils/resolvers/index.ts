@@ -17,6 +17,9 @@ export {
   resolveScalingBounds,
   resolveScalingTextBounds,
   resolveTypographyStyle,
+  resolvePreviewSpacingScale,
+  resolveMapTextFontStack,
+  MAPBOX_DEFAULT_TEXT_FONT,
 } from "./resolveUiScale";
 export {
   useResolvedButtonBackgroundScale,
@@ -34,5 +37,6 @@ export {
   useResolvedScalingBounds,
   useResolvedScalingTextBounds,
   useResolvedTypography,
+  useMapMarkerTextFont,
   useTextMeasureKey,
 } from "./useResolvedUiScale";

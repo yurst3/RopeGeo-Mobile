@@ -21,13 +21,16 @@ import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle, useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
+  RENDER_HTML_SYSTEM_FONTS,
+  toRenderHtmlTypographyStyle,
 } from "@/utils/ropewikiRenderHtml";
 import {
   useResolvedConstantSize,
@@ -46,10 +49,14 @@ type HtmlSource = { html: string; baseUrl: string };
 /** Owns expand + measure state so a `key` on this block resets cleanly when `section.text` changes. */
 function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const { font } = useText();
   const bodyFontSize = useResolvedConstantSize(uiScale.betaSection.text.body);
   const bodyTypography = useResolvedTypography(textStyle.betaSection.body);
   const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
+  const bodyBoldFontFamily = font.display.fontFamily;
+  const bodyFontFamily = bodyTypography.fontFamily;
   const htmlTagsStyles = useMemo(
     () =>
       buildRopewikiHtmlTagsStyles({
@@ -57,8 +64,17 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
         secondary: themeColors.text.secondary,
         captionFontSize,
         bodyFontSize,
+        bodyFontFamily,
+        bodyBoldFontFamily,
       }),
-    [themeColors.text.link, themeColors.text.secondary, captionFontSize, bodyFontSize],
+    [
+      themeColors.text.link,
+      themeColors.text.secondary,
+      captionFontSize,
+      bodyFontSize,
+      bodyFontFamily,
+      bodyBoldFontFamily,
+    ],
   );
   const [textExpanded, setTextExpanded] = useState(false);
   const [fullContentHeight, setFullContentHeight] = useState(0);
@@ -104,10 +120,9 @@ function CollapsibleHtmlBlock({ htmlSource }: { htmlSource: HtmlSource }) {
           <RenderHtml
             contentWidth={CONTENT_WIDTH}
             source={htmlSource}
+            systemFonts={RENDER_HTML_SYSTEM_FONTS}
             baseStyle={{
-              fontFamily: bodyTypography.fontFamily,
-              fontWeight: bodyTypography.fontWeight,
-              lineHeight: bodyTypography.lineHeight,
+              ...toRenderHtmlTypographyStyle(bodyTypography),
               fontSize: bodyFontSize,
               color: themeColors.text.primary,
             }}
@@ -146,7 +161,8 @@ export type BetaSectionProps = {
 
 export function BetaSection({ section, pageTitle }: BetaSectionProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const hasImages = section.images.length > 0;
   const sortedImages = hasImages
     ? [...section.images].sort((a, b) => a.order - b.order)

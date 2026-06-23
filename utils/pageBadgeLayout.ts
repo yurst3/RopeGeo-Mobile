@@ -1,5 +1,6 @@
 import type { UiScaleProfile } from "@/constants/uiScale/types";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { resolveGlobalIconSizeScale, resolveScalingBounds } from "@/utils/resolvers";
 import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
@@ -93,7 +94,7 @@ export function getPageBadgeMetrics(
 }
 
 export function usePageBadgeMetrics(): PageBadgeMetrics {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { width, fontScale } = useWindowDimensions();
   return useMemo(
     () => getPageBadgeMetrics(width, fontScale, uiScale),

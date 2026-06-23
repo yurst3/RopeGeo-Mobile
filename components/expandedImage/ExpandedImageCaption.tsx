@@ -3,13 +3,16 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import RenderHtml from "react-native-render-html";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle, useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
   ROPEWIKI_HTML_DEFAULT_TEXT_PROPS,
   ROPEWIKI_HTML_IGNORED_STYLES,
+  RENDER_HTML_SYSTEM_FONTS,
+  toRenderHtmlTypographyStyle,
 } from "@/utils/ropewikiRenderHtml";
 import {
   useResolvedConstantSize,
@@ -57,7 +60,9 @@ export function ExpandedImageCaption({
   maxHeight,
 }: ExpandedImageCaptionProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const { font } = useText();
   const captionFontSize = useResolvedConstantSize(uiScale.betaSection.text.caption);
   const captionTypography = useResolvedTypography(textStyle.betaSection.caption);
   const captionTagsStyles = useMemo(
@@ -68,8 +73,16 @@ export function ExpandedImageCaption({
         captionColor: themeColors.image.text,
         captionFontSize,
         bodyFontSize: captionFontSize,
+        bodyFontFamily: captionTypography.fontFamily,
+        bodyBoldFontFamily: font.display.fontFamily,
       }),
-    [themeColors.image.text, themeColors.text, captionFontSize],
+    [
+      themeColors.image.text,
+      themeColors.text,
+      captionFontSize,
+      captionTypography.fontFamily,
+      font.display.fontFamily,
+    ],
   );
   const contentWidth = Math.max(0, stageWidth - HORIZONTAL_INSET * 2);
   const pillInnerWidth = Math.max(
@@ -103,13 +116,13 @@ export function ExpandedImageCaption({
         >
           <RenderHtml
             contentWidth={pillInnerWidth}
+            systemFonts={RENDER_HTML_SYSTEM_FONTS}
             source={{
               html: replaceEmbeddedImgTagsWithLinks(caption),
               baseUrl: ROPEWIKI_ORIGIN,
             }}
             baseStyle={{
-              fontFamily: captionTypography.fontFamily,
-              fontWeight: captionTypography.fontWeight,
+              ...toRenderHtmlTypographyStyle(captionTypography),
               fontSize: captionFontSize,
               textAlign: "center",
               color: themeColors.image.text,

@@ -9,7 +9,8 @@ import {
 import { ConstantText } from "@/components/text/ConstantText";
 import { useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useToast } from "@/context/ToastContext";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
 import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
@@ -118,7 +119,8 @@ function RegionBannerCarousel({
   controlRef,
 }: RegionBannerCarouselProps) {
   const { image, loadingIndicator } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const { upsertPill, dismiss } = useToast();
   const toastChrome = useToastChromeLayout();
   const pathname = usePathname();

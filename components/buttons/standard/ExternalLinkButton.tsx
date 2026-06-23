@@ -6,6 +6,7 @@ import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
 const EXTERNAL_LINK_ICON_DESIGN_SCALE = 28 / (MAP_BUTTON_SIZE * 0.5);
@@ -27,7 +28,7 @@ export function ExternalLinkButton({
 }: ExternalLinkButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[EXTERNAL_LINK_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.common.buttons.externalLink,
     MAP_BUTTON_SIZE,

@@ -4,6 +4,7 @@ import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCa
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/resolvers";
 import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { PageMiniMapLegend } from "./shared/PageMiniMapLegend";
@@ -26,7 +27,8 @@ import {
 import { ConstantText } from "@/components/text/ConstantText";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
 import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
@@ -151,8 +153,10 @@ export function PageMiniMapView({
 }: PageMiniMapViewProps) {
   const themeColors = useColorTheme();
   const { map } = themeColors;
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const markerMetrics = useRouteMarkerMetrics();
+  const markerTextFont = useMapMarkerTextFont();
   const shell = useMiniMapShell();
   const headerChrome = useHeaderChromeLayout();
   const tabBarHeight = useBottomTabBarHeight();
@@ -626,8 +630,8 @@ export function PageMiniMapView({
   );
 
   const pagePointLabelStyle = useMemo(
-    () => pagePointLabelSymbolStyle(map.marker, markerMetrics),
-    [map.marker, markerMetrics],
+    () => pagePointLabelSymbolStyle(map.marker, markerMetrics, markerTextFont),
+    [map.marker, markerMetrics, markerTextFont],
   );
 
   const pagePointIconStyle = useMemo(

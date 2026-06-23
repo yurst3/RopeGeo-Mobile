@@ -1,5 +1,7 @@
 import { COLORS } from "@/constants/colors";
 import type { ThemeColors } from "@/constants/colors/types";
+import type { ThemePreference } from "@/constants/settings/types";
+import { useSettings } from "@/context/SettingsContext";
 import {
   createContext,
   useContext,
@@ -12,25 +14,38 @@ export type ColorTheme = "light" | "dark";
 
 type ColorThemeContextValue = {
   colorTheme: ColorTheme;
+  themePreference: ThemePreference;
   colors: ThemeColors;
 };
 
 const ColorThemeContext = createContext<ColorThemeContextValue | null>(null);
 
-function resolveColorTheme(scheme: ColorSchemeName | null): ColorTheme {
+function resolveSystemColorTheme(scheme: ColorSchemeName | null): ColorTheme {
   return scheme === "dark" ? "dark" : "light";
 }
 
+function resolveColorTheme(
+  preference: ThemePreference,
+  systemScheme: ColorSchemeName | null,
+): ColorTheme {
+  if (preference === "Light") return "light";
+  if (preference === "Dark") return "dark";
+  return resolveSystemColorTheme(systemScheme);
+}
+
 export function ColorThemeProvider({ children }: { children: ReactNode }) {
+  const { settings } = useSettings();
   const systemScheme = useColorScheme();
-  const colorTheme = resolveColorTheme(systemScheme);
+  const themePreference = settings.theme;
+  const colorTheme = resolveColorTheme(themePreference, systemScheme);
 
   const value = useMemo<ColorThemeContextValue>(
     () => ({
       colorTheme,
+      themePreference,
       colors: COLORS[colorTheme === "dark" ? "Dark" : "Light"],
     }),
-    [colorTheme],
+    [colorTheme, themePreference],
   );
 
   return (
@@ -40,20 +55,22 @@ export function ColorThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useColorTheme(): ThemeColors {
+function useColorThemeContext(): ColorThemeContextValue {
   const ctx = useContext(ColorThemeContext);
   if (ctx == null) {
     throw new Error("useColorTheme must be used within ColorThemeProvider");
   }
-  return ctx.colors;
+  return ctx;
+}
+
+export function useColorTheme(): ThemeColors {
+  return useColorThemeContext().colors;
 }
 
 export function useColorThemePreference(): ColorTheme {
-  const ctx = useContext(ColorThemeContext);
-  if (ctx == null) {
-    throw new Error(
-      "useColorThemePreference must be used within ColorThemeProvider",
-    );
-  }
-  return ctx.colorTheme;
+  return useColorThemeContext().colorTheme;
+}
+
+export function useThemePreference(): ThemePreference {
+  return useColorThemeContext().themePreference;
 }

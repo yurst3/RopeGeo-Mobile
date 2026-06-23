@@ -11,7 +11,8 @@ import {
 import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
@@ -62,7 +63,8 @@ export function ActionToast({
   wrapStyle,
 }: ActionToastProps) {
   const { background, text, icon: iconColor } = useColorTheme().toast[style];
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const actionSpec = uiScale.toast.buttons.action;
   const backgroundScale = useResolvedButtonBackgroundScale(actionSpec);
   const profileIconScale = useResolvedButtonIconScale(actionSpec);

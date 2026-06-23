@@ -4,7 +4,9 @@ import type {
   ScalingTextSizeSpec,
 } from "@/constants/uiScale/types";
 import type { TypographySpec } from "@/constants/text/style/types";
-import { useText } from "@/context/TextContext";
+import { TEXT_STYLE } from "@/constants/text/style";
+import { useText, useFontProfileKey } from "@/context/TextContext";
+import { useUiScale, useUiScaleProfileKey } from "@/context/UIScaleContext";
 import { useMemo } from "react";
 import { useWindowDimensions, type TextStyle } from "react-native";
 
@@ -22,10 +24,11 @@ import {
   resolveConstantTextSize,
   resolveScalingTextBounds,
   resolveTypographyStyle,
+  resolveMapTextFontStack,
 } from "./resolveUiScale";
 
 export function useResolvedIconSizeScale(): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveGlobalIconSizeScale(uiScale.global, fontScale),
@@ -34,7 +37,7 @@ export function useResolvedIconSizeScale(): number {
 }
 
 export function useResolvedMultiSliderThumbScale(): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveMultiSliderThumbScale(uiScale.filter, uiScale.global, fontScale),
@@ -43,7 +46,7 @@ export function useResolvedMultiSliderThumbScale(): number {
 }
 
 export function useResolvedButtonBackgroundScale(spec: ButtonScaleSpec): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonBackgroundScale(spec, uiScale.global, fontScale),
@@ -52,7 +55,7 @@ export function useResolvedButtonBackgroundScale(spec: ButtonScaleSpec): number 
 }
 
 export function useResolvedButtonIconScale(spec: ButtonScaleSpec): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonIconScale(spec, uiScale.global, fontScale),
@@ -61,7 +64,7 @@ export function useResolvedButtonIconScale(spec: ButtonScaleSpec): number {
 }
 
 export function useResolvedButtonSelectableScale(spec: ButtonScaleSpec): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonSelectableScale(spec, uiScale.global, fontScale),
@@ -74,7 +77,7 @@ export function useResolvedButtonDimensions(
   baseSize: number,
   designIconScale = 1,
 ): { size: number; iconScale: number } {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () =>
@@ -92,7 +95,7 @@ export function useResolvedButtonDimensions(
 export function useResolvedButtonConstantTextSize(
   spec: ButtonScaleSpec,
 ): number | undefined {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonConstantTextSize(spec, uiScale.global, fontScale),
@@ -103,7 +106,7 @@ export function useResolvedButtonConstantTextSize(
 export function useResolvedButtonSubtextBounds(
   spec: ButtonScaleSpec,
 ): { maxFontSize: number; minFontSize: number } | undefined {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonSubtextBounds(spec, uiScale.global, fontScale),
@@ -114,7 +117,7 @@ export function useResolvedButtonSubtextBounds(
 export function useResolvedButtonConstantSubtextSize(
   spec: ButtonScaleSpec,
 ): number | undefined {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonConstantSubtextSize(spec, uiScale.global, fontScale),
@@ -125,7 +128,7 @@ export function useResolvedButtonConstantSubtextSize(
 export function useResolvedButtonTextBounds(
   spec: ButtonScaleSpec,
 ): { maxFontSize: number; minFontSize: number } | undefined {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveButtonTextBounds(spec, uiScale.global, fontScale),
@@ -134,7 +137,7 @@ export function useResolvedButtonTextBounds(
 }
 
 export function useResolvedConstantTextSize(spec: ConstantTextSizeSpec): number {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveConstantTextSize(spec, uiScale.global, fontScale),
@@ -146,7 +149,7 @@ export function useResolvedScalingTextBounds(spec: ScalingTextSizeSpec): {
   maxFontSize: number;
   minFontSize: number;
 } {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveScalingTextBounds(spec, uiScale.global, fontScale),
@@ -162,8 +165,19 @@ export function useResolvedTypography(typography: TypographySpec): TextStyle {
   );
 }
 
+export function useMapMarkerTextFont(
+  typography: TypographySpec = TEXT_STYLE.map.markerLabel,
+): readonly string[] {
+  const { font } = useText();
+  return useMemo(
+    () => resolveMapTextFontStack(typography, font),
+    [typography, font],
+  );
+}
+
 export function useTextMeasureKey(): string {
-  const { uiScaleProfileKey, fontProfileKey } = useText();
+  const uiScaleProfileKey = useUiScaleProfileKey();
+  const fontProfileKey = useFontProfileKey();
   const { fontScale } = useWindowDimensions();
   return `${uiScaleProfileKey}-${fontProfileKey}-${fontScale}`;
 }

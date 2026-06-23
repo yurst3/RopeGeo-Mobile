@@ -97,7 +97,7 @@ export function unclusteredRouteMarkerIconSize(
 }
 
 /**
- * Page minimap point icons: constant screen size scaled by accessibility, larger when `legendId`
+ * Page minimap point icons: constant screen size scaled by UI profile, larger when `legendId`
  * matches the selected legend row (same multiplier as explore route markers).
  */
 export function pageMiniMapPointIconSize(

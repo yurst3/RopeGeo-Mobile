@@ -69,7 +69,22 @@
           "locationWhenInUsePermission": "RopeGeo uses your location while you use the app to show where you are on the map, center the explore view on your position, and sort search results by distance from you. For example, when you browse routes on the map, your location helps you see nearby canyoneering areas and how far you are from them."
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Roboto_400Regular.ttf",
+            "./assets/fonts/Roboto_700Bold.ttf",
+            "./assets/fonts/Merriweather_400Regular.ttf",
+            "./assets/fonts/Merriweather_700Bold.ttf",
+            "./assets/fonts/ComicNeue_400Regular.ttf",
+            "./assets/fonts/ComicNeue_700Bold.ttf",
+            "./assets/fonts/DancingScript_400Regular.ttf",
+            "./assets/fonts/DancingScript_700Bold.ttf"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,5 +1,6 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { Image } from "expo-image";
 import React from "react";
@@ -36,7 +37,8 @@ export function PageBanner({
   onBannerImageLoadEnd,
 }: PageBannerProps) {
   const { image, loadingIndicator } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   return (
     <Animated.View pointerEvents="none" style={[styles.bannerWrap, imageFrameStyle]}>

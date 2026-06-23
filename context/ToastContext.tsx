@@ -8,6 +8,7 @@ import {
   type ToastStackLayoutMetrics,
 } from "@/utils/toastStackLayout";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   DOWNLOAD_TOAST_FADE_OUT_MS,
   SAVED_TOAST_FADE_OUT_MS,
@@ -607,7 +608,7 @@ type ToastProviderProps = { children: ReactNode };
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const insets = useSafeAreaInsets();
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   const defaultHorizontalInset = useMemo(
     () => resolveToastHorizontalInset(uiScale, fontScale),

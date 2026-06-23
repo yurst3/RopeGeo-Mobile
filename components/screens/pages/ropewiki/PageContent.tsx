@@ -1,7 +1,8 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedConstantSize,
   useResolvedTypography,
@@ -123,7 +124,8 @@ export function PageContent({
   onRemoveDownloadPress,
 }: PageContentProps) {
   const { background, text } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const starRatingLabelStyle = useResolvedTypography(textStyle.pageScreen.starRating);
   const starRatingFontSize = useResolvedConstantSize(uiScale.pageScreen.text.starRating);
   const miniMapGateRef = useRef<View>(null);

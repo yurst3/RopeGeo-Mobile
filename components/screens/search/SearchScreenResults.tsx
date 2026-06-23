@@ -12,7 +12,8 @@ import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -66,7 +67,8 @@ export function SearchScreenResults({
   onDismissKeyboard,
 }: SearchScreenResultsProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();

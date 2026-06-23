@@ -3,7 +3,8 @@ import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkBu
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect } from "react";
@@ -63,7 +64,8 @@ export function RopewikiRegionPlaceholder({
 }: RopewikiRegionPlaceholderProps) {
   const { background, placeholder, image, text, loadingIndicator } =
     useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const router = useRouter();
   const isError = errorMessage != null && errorMessage !== "";
   const handleBack = useCallback(() => {

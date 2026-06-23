@@ -1,6 +1,7 @@
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import type { RopewikiPageView } from "ropegeo-common/models";
@@ -41,7 +42,8 @@ function StatColumn({
   label: string;
 }) {
   const { text } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   return (
     <>

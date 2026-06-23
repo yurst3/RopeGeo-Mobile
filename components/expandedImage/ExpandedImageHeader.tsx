@@ -3,7 +3,8 @@ import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkButton";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
 
 export type ExpandedImageSectionImagePosition = {
@@ -38,7 +39,8 @@ export function ExpandedImageHeader({
   top,
 }: ExpandedImageHeaderProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const headerChrome = useHeaderChromeLayout();
   const trimmedSubtitle = sectionSubtitle?.trim() ?? "";
   const showSubtitle = trimmedSubtitle.length > 0;

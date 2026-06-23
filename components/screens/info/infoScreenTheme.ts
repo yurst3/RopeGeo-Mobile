@@ -1,5 +1,6 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedConstantSize,
   useResolvedTypography,
@@ -76,7 +77,8 @@ export type InfoScreenStyles = {
 
 export function useInfoScreenStyles(): InfoScreenStyles {
   const { background, cardHighlight, text } = useColorTheme();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
 
   const titleSize = useResolvedConstantSize(uiScale.infoScreen.text.title);
   const titleTypography = useResolvedTypography(style.infoScreen.title);

@@ -6,7 +6,8 @@ import { StarRating } from "@/components/StarRating";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   formatPreviewAkaLine,
   PAGE_PREVIEW_TRAILING_MARGIN,
@@ -73,7 +74,8 @@ export function PagePreview({
 }: Props) {
   const themeColors = useColorTheme();
   const layoutMetrics = usePreviewLayoutMetrics();
-  const { uiScale, style } = useText();
+  const uiScale = useUiScale();
+  const style = useTextStyle();
   const { text, image, preview: previewColors, button } = themeColors;
   const akaBoldTypography = useMemo(
     () => ({ ...style.preview.akaNames, fontWeight: "700" as const }),

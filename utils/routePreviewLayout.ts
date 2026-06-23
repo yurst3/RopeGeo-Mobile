@@ -4,7 +4,8 @@ import { useWindowDimensions } from "react-native";
 import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
 import type { UiScaleProfile } from "@/constants/uiScale/types";
 import { useText } from "@/context/TextContext";
-import { resolveGlobalIconSizeScale, resolveScalingBounds } from "@/utils/resolvers";
+import { useUiScale } from "@/context/UIScaleContext";
+import { resolveGlobalIconSizeScale, resolveScalingBounds, resolvePreviewSpacingScale } from "@/utils/resolvers";
 import {
   computeStarRatingMetrics,
   resolveStarRatingIconBounds,
@@ -207,12 +208,13 @@ export function getRoutePreviewMetrics(
     global,
     fontScale,
   );
+  const spacingScale = resolvePreviewSpacingScale(global, fontScale);
   const titleDescenderPadding =
-    ROUTE_PREVIEW_TITLE_DESCENDER_PADDING * fontScale;
+    ROUTE_PREVIEW_TITLE_DESCENDER_PADDING * spacingScale;
   const titleWidthSafetyMargin =
-    ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN * fontScale;
+    ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN * spacingScale;
   const locationWidthSafetyMargin =
-    ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN * fontScale;
+    ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN * spacingScale;
   const locationMarginTopAfterTitle = -titleDescenderPadding;
   const starRatingBounds = resolveStarRatingIconBounds(
     preview.text.starRating,
@@ -221,7 +223,7 @@ export function getRoutePreviewMetrics(
   );
   const { size: starRatingSize, fontSize: starRatingFontSize } =
     computeStarRatingMetrics(infoContentWidth, starRatingBounds);
-  const infoRowGap = ROUTE_PREVIEW_INFO_ROW_GAP * fontScale;
+  const infoRowGap = ROUTE_PREVIEW_INFO_ROW_GAP * spacingScale;
 
   return {
     screenWidth,
@@ -245,7 +247,7 @@ export function getRoutePreviewMetrics(
 }
 
 export function useRoutePreviewMetrics(): RoutePreviewMetrics {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { width, fontScale } = useWindowDimensions();
   return useMemo(
     () => getRoutePreviewMetrics(width, fontScale, uiScale),

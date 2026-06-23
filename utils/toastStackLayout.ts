@@ -5,6 +5,7 @@ import { resolveScalingBounds } from "@/utils/resolvers";
 import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 
 /** {@link Toast} wrap `minHeight` at design scale. */
 export const TOAST_WRAP_MIN_HEIGHT_DESIGN = 44;
@@ -33,7 +34,7 @@ export function getToastStackLayoutMetrics(
 }
 
 export function useToastStackLayoutMetrics(): ToastStackLayoutMetrics {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => getToastStackLayoutMetrics(uiScale, fontScale),

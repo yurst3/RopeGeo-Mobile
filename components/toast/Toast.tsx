@@ -10,7 +10,8 @@ import {
 import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ThemeColors, ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   SAVED_TOAST_FADE_IN_MS,
   SAVED_TOAST_FADE_OUT_MS,
@@ -75,7 +76,8 @@ export function Toast({
   wrapStyle,
 }: ToastProps) {
   const { toast } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);

@@ -9,6 +9,7 @@ import {
 } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
@@ -34,7 +35,7 @@ export function BackButton({
 }) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[BACK_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const buttonSpec = uiScale.common.buttons.back;
   const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
   const profileIconScale = useResolvedButtonIconScale(buttonSpec);

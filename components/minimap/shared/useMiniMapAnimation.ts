@@ -1,5 +1,6 @@
 import { boundsPaddingForFullScreenMapScaled } from "@/utils/buttonChromeLayout";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useEffect, useMemo, useRef } from "react";
 import { Dimensions, useWindowDimensions } from "react-native";
 import {
@@ -41,7 +42,7 @@ export function useMiniMapAnimation({
   onCollapseAnimationComplete?: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { fontScale } = useWindowDimensions();
   const { width: windowWidth, height: windowHeight } = Dimensions.get("window");
   const leftSv = useSharedValue(expandLayout?.collapsed.x ?? 0);

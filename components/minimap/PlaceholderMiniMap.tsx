@@ -1,6 +1,7 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { Image } from "expo-image";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { minimapStyles } from "./shared/minimapShared";
@@ -16,7 +17,8 @@ export type PlaceholderMiniMapProps = {
  */
 export function PlaceholderMiniMap({ errorMessage }: PlaceholderMiniMapProps) {
   const { image, text, loadingIndicator } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const isError = errorMessage != null && errorMessage !== "";
 
   return (

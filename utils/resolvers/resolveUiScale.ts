@@ -267,13 +267,26 @@ export function resolveScalingTextBounds(
   return { maxFontSize, minFontSize };
 }
 
+/**
+ * Scales preview layout spacing (gaps, descender padding, safety margins) with
+ * device font size only when the profile has global accessibility scaling enabled.
+ */
+export function resolvePreviewSpacingScale(
+  global: UiScaleGlobal,
+  fontScale: number,
+): number {
+  if (!global.accessibilityScaling.enabled) {
+    return 1;
+  }
+  return clampDeviceFontScale(fontScale, global.accessibilityScaling);
+}
+
 export function resolveTypographyStyle(
   typography: TypographySpec,
   fontProfile: FontProfile,
 ): TextStyle {
   const slot = fontProfile[typography.fontSlot];
   const style: TextStyle = {
-    fontWeight: typography.fontWeight,
     fontStyle: typography.fontStyle,
     textDecorationLine: typography.textDecorationLine,
     letterSpacing: typography.letterSpacing,
@@ -282,9 +295,33 @@ export function resolveTypographyStyle(
     textAlign: typography.textAlign,
   };
   if (slot.fontFamily != null) {
+    // Weight is encoded in the embedded font file; fontWeight breaks iOS lookup.
     style.fontFamily = slot.fontFamily;
+  } else {
+    style.fontWeight = typography.fontWeight;
   }
   return style;
+}
+
+/** Default Mapbox style stack when no custom profile font is active. */
+export const MAPBOX_DEFAULT_TEXT_FONT = [
+  "Open Sans Regular",
+  "Arial Unicode MS Regular",
+] as const;
+
+/**
+ * Mapbox `text-font` stack for symbol labels. Bundled PostScript names are matched
+ * locally on iOS/Android before falling back to style glyphs.
+ */
+export function resolveMapTextFontStack(
+  typography: TypographySpec,
+  fontProfile: FontProfile,
+): readonly string[] {
+  const slot = fontProfile[typography.fontSlot];
+  if (slot.fontFamily == null) {
+    return MAPBOX_DEFAULT_TEXT_FONT;
+  }
+  return [slot.fontFamily, ...MAPBOX_DEFAULT_TEXT_FONT];
 }
 
 /** @deprecated use {@link resolveConstantTextSize} */

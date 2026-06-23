@@ -1,6 +1,7 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 
@@ -9,7 +10,8 @@ const MISSING_IMAGE = require("@/assets/images/icons/missingImage.png");
 /** Shown at the end of a list when offline but more pages exist on the server. */
 export function OfflineLoadMoreBlockedFooter() {
   const { text: themeText } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   return (
     <View style={styles.wrap}>

@@ -2,7 +2,8 @@ import { BADGE_BUTTON_KEY } from "@/constants/buttons";
 import type { BadgeButtonColors } from "@/constants/colors/types";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
 import { Image } from "expo-image";
 import type { ReactNode } from "react";
@@ -32,7 +33,8 @@ export function BadgeButton({
   accessibilityLabel,
 }: BadgeButtonProps) {
   const themeColors = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const { badgeSlotWidth, badgeSize, iconSizeScale } = usePageBadgeMetrics();
   const { infoIconBackground, infoIcon } =
     themeColors.button.nonstandard[BADGE_BUTTON_KEY] as BadgeButtonColors;

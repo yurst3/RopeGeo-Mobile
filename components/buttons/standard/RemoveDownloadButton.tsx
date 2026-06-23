@@ -4,6 +4,7 @@ import { REMOVE_DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
 const REMOVE_BUTTON_SIZE = 40;
@@ -23,7 +24,7 @@ export type RemoveDownloadButtonProps = {
 export function RemoveDownloadButton({ onPress, style }: RemoveDownloadButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[REMOVE_DOWNLOAD_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.pageScreen.buttons.removeDownload,
     REMOVE_BUTTON_SIZE,

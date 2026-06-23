@@ -1,63 +1,90 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
-import { useResolvedButtonBackgroundScale } from "@/utils/resolvers";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { Pressable, StyleSheet, View } from "react-native";
-import { SavedPagesFilter } from "ropegeo-common/models";
+import { SavedPagesFilter, type SavedPagesOrder } from "ropegeo-common/models";
 import { ScaledFilterSwitch } from "./ScaledFilterSwitch";
+import { useFilterRadioMetrics } from "./useFilterRadioMetrics";
 import { useFilterTheme } from "./useFilterTheme";
 
 function cloneFilter(f: SavedPagesFilter): SavedPagesFilter {
   return SavedPagesFilter.fromJsonString(f.toString());
 }
 
-const CHIP_PADDING_VERTICAL = 8;
-const CHIP_PADDING_HORIZONTAL = 12;
-const CHIP_BORDER_RADIUS = 20;
+const SAVED_PAGES_ORDERS: SavedPagesOrder[] = ["newest", "oldest"];
 
-function Chip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const { filter, text, cardHighlight } = useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
-  const { checkbox } = filter;
-  const chipSpec = uiScale.filter.buttons.chip;
-  const backgroundScale = useResolvedButtonBackgroundScale(chipSpec);
+const ORDER_LABELS: Record<SavedPagesOrder, string> = {
+  newest: "Newest",
+  oldest: "Oldest",
+};
+
+type SavedPagesOrderRadioGroupProps = {
+  selectedOrder: SavedPagesOrder;
+  onSelectOrder: (order: SavedPagesOrder) => void;
+};
+
+function SavedPagesOrderRadioGroup({
+  selectedOrder,
+  onSelectOrder,
+}: SavedPagesOrderRadioGroupProps) {
+  const { filter, text } = useFilterTheme();
+  const { radioButton } = filter;
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const radioButtonSpec = uiScale.filter.buttons.radio;
+  const radioMetrics = useFilterRadioMetrics();
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: selected ? checkbox.checkedFill : cardHighlight,
-          borderColor: selected ? checkbox.checkedOutline : checkbox.uncheckedOutline,
-          paddingVertical: CHIP_PADDING_VERTICAL * backgroundScale,
-          paddingHorizontal: CHIP_PADDING_HORIZONTAL * backgroundScale,
-          borderRadius: CHIP_BORDER_RADIUS * backgroundScale,
-        },
-      ]}
-    >
-      <ConstantText
-        size={chipSpec.text!}
-        typography={
-          selected
-            ? textStyle.filter.sectionTitle
-            : textStyle.filter.optionLabel
-        }
-        style={[
-          styles.chipText,
-          { color: selected ? text.link : text.secondary },
-        ]}
-      >
-        {label}
-      </ConstantText>
-    </Pressable>
+    <View style={styles.radioGroup}>
+      {SAVED_PAGES_ORDERS.map((order) => {
+        const selected = selectedOrder === order;
+        return (
+          <Pressable
+            key={order}
+            style={styles.radioOption}
+            onPress={() => onSelectOrder(order)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+          >
+            <View
+              style={[
+                styles.radioOuter,
+                {
+                  width: radioMetrics.outerSize,
+                  height: radioMetrics.outerSize,
+                  borderRadius: radioMetrics.outerRadius,
+                  borderWidth: radioMetrics.borderWidth,
+                  marginRight: radioMetrics.marginRight,
+                  borderColor: radioButton.uncheckedOutline,
+                },
+                selected && { borderColor: radioButton.checkedFill },
+              ]}
+            >
+              {selected ? (
+                <View
+                  style={[
+                    styles.radioInner,
+                    {
+                      width: radioMetrics.innerSize,
+                      height: radioMetrics.innerSize,
+                      borderRadius: radioMetrics.innerRadius,
+                      backgroundColor: radioButton.checkedFill,
+                    },
+                  ]}
+                />
+              ) : null}
+            </View>
+            <ConstantText
+              size={radioButtonSpec.text!}
+              typography={textStyle.filter.optionLabel}
+              style={{ color: text.primary }}
+            >
+              {ORDER_LABELS[order]}
+            </ConstantText>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -72,7 +99,8 @@ export function SavedPagesFilterOptions({
 }: SavedPagesFilterOptionsProps) {
   const { sectionLabel, switchLabel, switchTrackColors, switchThumbColor } =
     useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   const patch = (fn: (s: SavedPagesFilter) => void) => {
     const s = cloneFilter(filter);
@@ -89,18 +117,10 @@ export function SavedPagesFilterOptions({
       >
         Sort by saved date
       </ConstantText>
-      <View style={styles.rowWrap}>
-        <Chip
-          label="Newest"
-          selected={filter.order === "newest"}
-          onPress={() => patch((s) => s.setOrder("newest"))}
-        />
-        <Chip
-          label="Oldest"
-          selected={filter.order === "oldest"}
-          onPress={() => patch((s) => s.setOrder("oldest"))}
-        />
-      </View>
+      <SavedPagesOrderRadioGroup
+        selectedOrder={filter.order}
+        onSelectOrder={(order) => patch((s) => s.setOrder(order))}
+      />
       <View style={styles.switchRow}>
         <ConstantText
           size={uiScale.filter.buttons.switch.text!}
@@ -129,11 +149,24 @@ const styles = StyleSheet.create({
   sectionLabelFirst: {
     marginTop: 12,
   },
-  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1,
+  radioGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  chipText: {},
+  radioOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+    paddingVertical: 6,
+  },
+  radioOuter: {
+    flexShrink: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  radioInner: {},
   switchRow: {
     flexDirection: "row",
     alignItems: "center",

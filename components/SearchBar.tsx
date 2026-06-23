@@ -1,5 +1,6 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextFont, useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { UI_SCALE_PROFILES } from "@/constants/text";
 import type { UiScaleProfile } from "@/constants/uiScale/types";
 import type { TypographySpec } from "@/constants/text/style/types";
@@ -74,7 +75,7 @@ export function getSearchBarMetrics(
 
 export function getSearchBarTextStyle(
   typography: TypographySpec,
-  fontProfile: ReturnType<typeof useText>["font"],
+  fontProfile: ReturnType<typeof useTextFont>,
   sizeProfile: UiScaleProfile,
   fontScale: number,
   color: string,
@@ -132,13 +133,14 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBa
 ) {
   const themeColors = useColorTheme();
   const { searchBar, text } = themeColors;
-  const textDef = useText();
-  const searchBarSpec = textDef.uiScale.map.buttons.searchBar;
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const searchBarSpec = uiScale.map.buttons.searchBar;
   const fontSize = useResolvedButtonConstantTextSize(searchBarSpec) ?? 14;
   const profileIconScale = useResolvedButtonIconScale(searchBarSpec);
   const iconSize = Math.round(SEARCH_BAR_ICON_BASE_SIZE * profileIconScale);
   const backgroundScale = useResolvedButtonBackgroundScale(searchBarSpec);
-  const typographyStyle = useResolvedTypography(textDef.style.button.searchBar);
+  const typographyStyle = useResolvedTypography(textStyle.button.searchBar);
 
   const barStyle = useMemo(
     () => [

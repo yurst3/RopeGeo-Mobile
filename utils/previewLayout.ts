@@ -4,9 +4,11 @@ import type {
   UiScaleGlobal,
 } from "@/constants/uiScale/types";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   resolveIconScaleSpec,
   resolveScalingBounds,
+  resolvePreviewSpacingScale,
 } from "@/utils/resolvers";
 import { useMemo } from "react";
 import { useWindowDimensions } from "react-native";
@@ -129,8 +131,8 @@ export type PreviewLayoutMetrics = {
   starRatingFontSize: number;
 };
 
-export function getPreviewItemGap(fontScale = 1): number {
-  return Math.max(PREVIEW_ITEM_GAP_MIN, PREVIEW_ITEM_GAP_MIN * fontScale);
+export function getPreviewItemGap(spacingScale = 1): number {
+  return Math.max(PREVIEW_ITEM_GAP_MIN, PREVIEW_ITEM_GAP_MIN * spacingScale);
 }
 
 export function getPreviewLayoutMetrics(
@@ -198,9 +200,10 @@ export function getPreviewLayoutMetrics(
     fontScale,
   );
 
-  const titleDescenderPadding = PREVIEW_TITLE_DESCENDER_PADDING * fontScale;
-  const metaBarHeight = PREVIEW_META_BAR_HEIGHT * fontScale;
-  const bodyRowGap = PREVIEW_BODY_ROW_GAP * fontScale;
+  const spacingScale = resolvePreviewSpacingScale(global, fontScale);
+  const titleDescenderPadding = PREVIEW_TITLE_DESCENDER_PADDING * spacingScale;
+  const metaBarHeight = PREVIEW_META_BAR_HEIGHT * spacingScale;
+  const bodyRowGap = PREVIEW_BODY_ROW_GAP * spacingScale;
   const placeholderTextRowGap = Math.round(
     metaBarHeight * PREVIEW_PLACEHOLDER_TEXT_ROW_GAP_RATIO,
   );
@@ -229,9 +232,9 @@ export function getPreviewLayoutMetrics(
     noImageIconSize,
     sourceIconColumnWidth,
     sourceIconColumnHeight,
-    widthSafetyMargin: PREVIEW_TEXT_WIDTH_SAFETY_MARGIN * fontScale,
+    widthSafetyMargin: PREVIEW_TEXT_WIDTH_SAFETY_MARGIN * spacingScale,
     metaTrailingReserve,
-    itemGap: getPreviewItemGap(fontScale),
+    itemGap: getPreviewItemGap(spacingScale),
     starRatingSize,
     starRatingFontSize,
   };
@@ -241,7 +244,7 @@ export function getPreviewLayoutMetrics(
 export type PreviewTextMetrics = PreviewLayoutMetrics;
 
 export function usePreviewLayoutMetrics(): PreviewLayoutMetrics {
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { width, fontScale } = useWindowDimensions();
   return useMemo(
     () => getPreviewLayoutMetrics(width, fontScale, uiScale),

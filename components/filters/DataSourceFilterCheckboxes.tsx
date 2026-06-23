@@ -1,5 +1,6 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
@@ -30,7 +31,8 @@ export function DataSourceFilterCheckboxes({
   title = "Data sources",
 }: DataSourceFilterCheckboxesProps) {
   const { sectionLabel, text, themeColors } = useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const checkboxMetrics = useFilterCheckboxMetrics();
   const sourceIconBackground = themeColors.preview.page.sourceIconBackground;
   const sourceIconShadowColor = themeColors.button.shadowColor;

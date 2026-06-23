@@ -5,6 +5,7 @@ import { Animated, StyleSheet } from "react-native";
 import { Button } from "@/components/buttons/Button";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
 import { useResolvedButtonDimensions } from "@/utils/resolvers";
 
@@ -32,7 +33,7 @@ export function ResetCameraToBoundsButton({
 }: ResetCameraToBoundsButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[RESET_CAMERA_TO_BOUNDS_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.map.buttons.resetCameraToBounds,
     MAP_BUTTON_SIZE,

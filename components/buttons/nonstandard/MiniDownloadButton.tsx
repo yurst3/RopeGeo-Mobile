@@ -2,6 +2,7 @@ import { MINI_DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import type { MiniDownloadButtonColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
@@ -38,7 +39,7 @@ export function MiniDownloadButton({
   const colors = useColorTheme().button.nonstandard[
     MINI_DOWNLOAD_BUTTON_KEY
   ] as MiniDownloadButtonColors;
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const buttonSpec = uiScale.preview.buttons.download;
   const backgroundScale = useResolvedButtonBackgroundScale(buttonSpec);
   const profileIconScale = useResolvedButtonIconScale(buttonSpec);

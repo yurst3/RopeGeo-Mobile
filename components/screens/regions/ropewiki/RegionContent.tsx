@@ -1,7 +1,8 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { MiniMap } from "@/components/minimap/MiniMap";
 import type { RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { useNetworkStatus } from "@/context/NetworkStatusContext";
@@ -121,7 +122,8 @@ export function RegionContent({
   onVerticalScrollActiveChange,
 }: RegionContentProps) {
   const { background, text, loadingIndicator } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const previewMetrics = usePreviewTextMetrics();
   const { isOnline } = useNetworkStatus();
   const isOnlineRef = useRef(isOnline);

@@ -3,7 +3,8 @@ import { ScalingText } from "@/components/text/ScalingText";
 import { DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import type { DownloadButtonColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
@@ -46,7 +47,8 @@ export function DownloadButton({
   const colors = useColorTheme().button.nonstandard[
     DOWNLOAD_BUTTON_KEY
   ] as DownloadButtonColors;
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const downloadButtonSpec = uiScale.pageScreen.buttons.download;
   const backgroundScale = useResolvedButtonBackgroundScale(downloadButtonSpec);
   const iconScale = useResolvedButtonIconScale(downloadButtonSpec);

@@ -2,7 +2,8 @@ import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useFilterTheme } from "@/components/filters/useFilterTheme";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedMultiSliderThumbScale,
   useResolvedScalingBounds,
@@ -84,7 +85,8 @@ function TickLabel({
   children: string;
   color: string;
 }) {
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   return (
     <ScalingText
@@ -112,7 +114,8 @@ function ThumbLabel({
   height: number;
   color: string;
 }) {
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
 
   return (
     <ScalingText
@@ -226,7 +229,8 @@ export function AcaDiscreteRangeSlider<T extends string>({
   formatTickLabel = (v: T) => String(v),
 }: AcaDiscreteRangeSliderProps<T>) {
   const { filter, sectionLabel, text } = useFilterTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const { badgeSlider } = filter;
   const multiSliderThumbScale = useResolvedMultiSliderThumbScale();
   const { maxFontSize: thumbLabelMaxPx } = useResolvedScalingBounds(

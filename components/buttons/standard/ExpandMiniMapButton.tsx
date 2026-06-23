@@ -2,6 +2,7 @@ import { Button } from "@/components/buttons/Button";
 import { EXPAND_MINI_MAP_BUTTON_KEY } from "@/constants/buttons";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { useResolvedButtonDimensions } from "@/utils/resolvers";
 import {
   EXPAND_BUTTON_SIZE,
@@ -17,7 +18,7 @@ type ExpandMiniMapButtonProps = {
 export function ExpandMiniMapButton({ onPress }: ExpandMiniMapButtonProps) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[EXPAND_MINI_MAP_BUTTON_KEY];
-  const { uiScale } = useText();
+  const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.map.buttons.expandMiniMap,
     EXPAND_BUTTON_SIZE,

@@ -5,7 +5,8 @@ import { StyleSheet, View } from "react-native";
 
 import { ScalingText } from "@/components/text/ScalingText";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 
 const SUB_RATIO = 2 / 5; // sub circle width : main circle width
 
@@ -84,7 +85,8 @@ export function Badge({
   outline = true,
 }: BadgeProps) {
   const themeColors = useColorTheme();
-  const { uiScale: textSizes, style: textStyle } = useText();
+  const textSizes = useUiScale();
+  const textStyle = useTextStyle();
   const layout = useContext(BadgeLayoutContext);
   const badgeSize = sizeProp ?? layout.size ?? DEFAULT_BADGE_SIZE;
   const labelWidth = layout.labelMaxWidth ?? badgeSize + 16;

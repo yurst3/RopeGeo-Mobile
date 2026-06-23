@@ -9,7 +9,8 @@ import { useSavedPages } from "@/context/SavedPagesContext";
 import { useToast } from "@/context/ToastContext";
 import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
@@ -24,7 +25,8 @@ import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/but
 
 export function SavedScreen() {
   const { background, text } = useColorTheme();
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
   const { dismiss } = useToast();

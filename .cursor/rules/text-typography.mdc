@@ -95,7 +95,7 @@ Always set `allowFontScaling={false}` on token-driven text.
 1. Add `FontProfileKey` in `constants/text/font/types.ts`.
 2. Create `constants/text/font/profiles/<name>.ts`.
 3. Register in `FONT_PROFILES`.
-4. Load fonts via `expo-font` when switching profiles.
+4. Add font files to `assets/fonts/` and register via the `expo-font` config plugin in `app.json`; use each file's PostScript name as `fontFamily` (e.g. `Roboto-Regular`, not `Roboto_400Regular`); rebuild native app.
 
 ## Adding typography for a new role
 

@@ -9,7 +9,8 @@ import {
 import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
+import { useTextStyle } from "@/context/TextContext";
+import { useUiScale } from "@/context/UIScaleContext";
 import {
   DOWNLOAD_TOAST_FADE_IN_MS,
   DOWNLOAD_TOAST_FADE_OUT_MS,
@@ -64,7 +65,8 @@ export function ProgressToast({
 }: ProgressToastProps) {
   const { background, text, filledTrack, unfilledTrack } =
     useColorTheme().toast[style];
-  const { uiScale, style: textStyle } = useText();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
   const opacity = useRef(new Animated.Value(0)).current;
   const topAnim = useRef(new Animated.Value(top)).current;
   const prevTopRef = useRef<number | null>(null);
