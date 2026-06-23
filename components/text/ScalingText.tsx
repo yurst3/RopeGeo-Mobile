@@ -13,14 +13,17 @@ import {
   View,
   type LayoutChangeEvent,
   type StyleProp,
+  type TextProps,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
 
 import {
   computeScalingTextFontSizeFromLineCount,
+  computeScalingTextFontSizeFromLongestWord,
   computeScalingTextFontSizeFromWidth,
   measureUnconstrainedTextWidth,
+  scalingTextWords,
 } from "@/utils/scalingText";
 
 const UNCONSTRAINED_MEASURE_WIDTH = 10000;
@@ -56,7 +59,29 @@ export type ScalingTextProps = {
   renderLabel?: (fontSize: number) => ReactNode;
   /** Called when the computed font size changes (e.g. to sync sibling labels). */
   onFontSizeChange?: (fontSize: number) => void;
+  /**
+   * When true, applies platform line-break settings that prefer word boundaries over
+   * mid-word wraps (iOS {@link TextProps.lineBreakStrategyIOS}, Android
+   * {@link TextProps.textBreakStrategy} / {@link TextProps.android_hyphenationFrequency}).
+   */
+  avoidMidWordLineBreaks?: boolean;
 };
+
+function midWordLineBreakTextProps(
+  avoidMidWordLineBreaks: boolean | undefined,
+): Pick<
+  TextProps,
+  "lineBreakStrategyIOS" | "textBreakStrategy" | "android_hyphenationFrequency"
+> {
+  if (!avoidMidWordLineBreaks) {
+    return {};
+  }
+  return {
+    lineBreakStrategyIOS: "push-out",
+    textBreakStrategy: "highQuality",
+    android_hyphenationFrequency: "none",
+  };
+}
 
 export function ScalingText({
   children,
@@ -71,6 +96,7 @@ export function ScalingText({
   hideWhenEmpty = false,
   renderLabel,
   onFontSizeChange,
+  avoidMidWordLineBreaks = false,
 }: ScalingTextProps) {
   const { maxFontSize, minFontSize } = useResolvedScalingBounds(size);
   const typographyStyle = useResolvedTypography(typography);
@@ -79,7 +105,13 @@ export function ScalingText({
   const [containerWidth, setContainerWidth] = useState(0);
   const [widthAtMax, setWidthAtMax] = useState(0);
   const [lineCountAtMax, setLineCountAtMax] = useState(0);
+  const [longestWordWidthAtMax, setLongestWordWidthAtMax] = useState(0);
   const prevMeasureKeyRef = useRef(measureKey);
+
+  const measureWords = useMemo(
+    () => (avoidMidWordLineBreaks ? scalingTextWords(children) : []),
+    [avoidMidWordLineBreaks, children],
+  );
 
   useLayoutEffect(() => {
     const measureKeyChanged = prevMeasureKeyRef.current !== measureKey;
@@ -87,8 +119,16 @@ export function ScalingText({
     if (measureKeyChanged) {
       setWidthAtMax(0);
       setLineCountAtMax(0);
+      setLongestWordWidthAtMax(0);
     }
   }, [measureKey]);
+
+  useLayoutEffect(() => {
+    if (!avoidMidWordLineBreaks) {
+      return;
+    }
+    setLongestWordWidthAtMax(0);
+  }, [avoidMidWordLineBreaks, children, measureKey]);
 
   const onContainerLayout = useCallback((event: LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);
@@ -97,26 +137,56 @@ export function ScalingText({
   const widthSafetyMargin = measure.widthSafetyMargin ?? 0;
 
   const fontSize = useMemo(() => {
-    if (measure.type === "width") {
-      return computeScalingTextFontSizeFromWidth(containerWidth, widthAtMax, {
-        maxFontSize,
-        minFontSize,
-        widthSafetyMargin: measure.widthSafetyMargin ?? 0,
-      });
-    }
-    return computeScalingTextFontSizeFromLineCount(lineCountAtMax, {
+    const wordFitOptions = {
       maxFontSize,
       minFontSize,
-      maxLinesAtMaxSize: measure.maxLinesAtMaxSize ?? numberOfLines,
-    });
+      widthSafetyMargin,
+    };
+    const capByLongestWord = (size: number) => {
+      if (
+        !avoidMidWordLineBreaks ||
+        longestWordWidthAtMax <= 0 ||
+        containerWidth <= 0
+      ) {
+        return size;
+      }
+      return Math.min(
+        size,
+        computeScalingTextFontSizeFromLongestWord(
+          containerWidth,
+          longestWordWidthAtMax,
+          wordFitOptions,
+        ),
+      );
+    };
+
+    if (measure.type === "width") {
+      return capByLongestWord(
+        computeScalingTextFontSizeFromWidth(containerWidth, widthAtMax, {
+          maxFontSize,
+          minFontSize,
+          widthSafetyMargin: measure.widthSafetyMargin ?? 0,
+        }),
+      );
+    }
+    return capByLongestWord(
+      computeScalingTextFontSizeFromLineCount(lineCountAtMax, {
+        maxFontSize,
+        minFontSize,
+        maxLinesAtMaxSize: measure.maxLinesAtMaxSize ?? numberOfLines,
+      }),
+    );
   }, [
     measure,
     containerWidth,
     widthAtMax,
     lineCountAtMax,
+    longestWordWidthAtMax,
+    avoidMidWordLineBreaks,
     maxFontSize,
     minFontSize,
     numberOfLines,
+    widthSafetyMargin,
   ]);
 
   useLayoutEffect(() => {
@@ -139,6 +209,11 @@ export function ScalingText({
   const visibleStyle = useMemo(
     () => [typographyStyle, style, { fontSize }],
     [typographyStyle, style, fontSize],
+  );
+
+  const lineBreakProps = useMemo(
+    () => midWordLineBreakTextProps(avoidMidWordLineBreaks),
+    [avoidMidWordLineBreaks],
   );
 
   if (hideWhenEmpty && children === "") {
@@ -165,6 +240,7 @@ export function ScalingText({
             allowFontScaling={false}
             accessible={false}
             importantForAccessibility="no-hide-descendants"
+            {...lineBreakProps}
             style={measureStyle}
             onTextLayout={(event) => {
               const lines = event.nativeEvent.lines;
@@ -179,6 +255,32 @@ export function ScalingText({
           </Text>
         </View>
       ) : null}
+      {avoidMidWordLineBreaks && measureWords.length > 0
+        ? measureWords.map((word, index) => (
+            <View
+              key={`${measureKey}-${index}-${word}`}
+              style={styles.unconstrainedMeasureWrap}
+              pointerEvents="none"
+            >
+              <Text
+                allowFontScaling={false}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+                style={measureStyle}
+                onTextLayout={(event) => {
+                  const width = measureUnconstrainedTextWidth(
+                    event.nativeEvent.lines,
+                  );
+                  if (width > 0) {
+                    setLongestWordWidthAtMax((prev) => Math.max(prev, width));
+                  }
+                }}
+              >
+                {word}
+              </Text>
+            </View>
+          ))
+        : null}
       {renderLabel != null ? (
         renderLabel(fontSize)
       ) : (
@@ -186,6 +288,7 @@ export function ScalingText({
           allowFontScaling={false}
           numberOfLines={numberOfLines}
           ellipsizeMode={ellipsizeMode}
+          {...lineBreakProps}
           style={[visibleStyle, styles.visibleText]}
         >
           {children}

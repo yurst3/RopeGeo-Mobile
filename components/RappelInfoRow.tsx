@@ -88,6 +88,7 @@ export function RappelInfoRow({
             size={uiScale.pageScreen.text.statLabel}
             typography={textStyle.pageScreen.statLabel}
             numberOfLines={2}
+            avoidMidWordLineBreaks
             measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
             style={[styles.label, { color: text.secondary }]}
           >
@@ -109,6 +110,7 @@ export function RappelInfoRow({
               size={uiScale.pageScreen.text.statLabel}
               typography={textStyle.pageScreen.statLabel}
               numberOfLines={2}
+              avoidMidWordLineBreaks
               measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
               style={[styles.label, { color: text.secondary }]}
             >
@@ -131,6 +133,7 @@ export function RappelInfoRow({
               size={uiScale.pageScreen.text.statLabel}
               typography={textStyle.pageScreen.statLabel}
               numberOfLines={1}
+              avoidMidWordLineBreaks
               measure={{ type: "width" }}
               style={[styles.label, { color: text.secondary }]}
             >

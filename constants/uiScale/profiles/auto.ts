@@ -134,15 +134,15 @@ export const autoUiScaleProfile: UiScaleProfile = {
       },
       badgeTypeLabel: {
         default: FontSizeStep.MEDIUM,
-        accessibilityScaling: { enabled: true, min: 0.6, max: 1.2 },
+        accessibilityScaling: { enabled: true, min: 0.5, max: 1.2 },
         computeFloorFromAccessibilityScaling: true,
-        computedFloorConstant: 20,
+        computedFloorConstant: 10,
       },
       badgeLabel: {
         default: FontSizeStep.SMALL,
         accessibilityScaling: { enabled: true, min: 0.8, max: 1.2 },
         computeFloorFromAccessibilityScaling: true,
-        computedFloorConstant: 10,
+        computedFloorConstant: 8,
       },
       metaData: {
         default: FontSizeStep.SMALL,

@@ -106,3 +106,33 @@ export function measureUnconstrainedTextWidth(
   }
   return lines.reduce((sum, line) => sum + line.width, 0);
 }
+
+/** Whitespace-delimited words used for longest-word font caps. */
+export function scalingTextWords(text: string): string[] {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return [];
+  }
+  return trimmed.split(/\s+/);
+}
+
+/** Caps font size so the longest word fits the container width at max size. */
+export function computeScalingTextFontSizeFromLongestWord(
+  containerWidth: number,
+  longestWordWidthAtMax: number,
+  {
+    maxFontSize,
+    minFontSize,
+    widthSafetyMargin = 0,
+  }: {
+    maxFontSize: number;
+    minFontSize: number;
+    widthSafetyMargin?: number;
+  },
+): number {
+  return computeScalingTextFontSizeFromWidth(
+    containerWidth,
+    longestWordWidthAtMax,
+    { maxFontSize, minFontSize, widthSafetyMargin },
+  );
+}

@@ -64,6 +64,7 @@ function StatColumn({
         size={uiScale.pageScreen.text.statLabel}
         typography={textStyle.pageScreen.statLabel}
         numberOfLines={2}
+        avoidMidWordLineBreaks
         measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
         style={[styles.label, { color: text.secondary }]}
       >

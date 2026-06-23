@@ -49,7 +49,7 @@ import {
   RouteType,
 } from "ropegeo-common/models";
 import { BadgeRow } from "./BadgeRow";
-import { RoutePreviewLocation, RoutePreviewTitle } from "./RoutePreviewText";
+import { RoutePreviewAka, RoutePreviewLocation, RoutePreviewTitle } from "./RoutePreviewText";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useRoutePreviewFloaterLayout } from "@/utils/buttonChromeLayout";
 import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
@@ -111,6 +111,7 @@ function SinglePreviewCard({
   const location = preview.regions?.length
     ? preview.regions.slice(0, 3).join(" • ")
     : "";
+  const akaNames = preview.aka?.length ? preview.aka : [];
   const hasBadges = showBadges(preview, routeType);
 
   const cardContent = (
@@ -191,8 +192,15 @@ function SinglePreviewCard({
               ]}
             />
             <RoutePreviewTitle title={preview.title} color={text.primary} />
+            {akaNames.length > 0 ? (
+              <RoutePreviewAka aka={akaNames} color={text.secondary} />
+            ) : null}
             {location ? (
-              <RoutePreviewLocation location={location} color={text.secondary} />
+              <RoutePreviewLocation
+                location={location}
+                color={text.secondary}
+                compactBelowTitle={akaNames.length === 0}
+              />
             ) : null}
             {hasBadges ? (
               <BadgeRow

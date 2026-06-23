@@ -8,7 +8,9 @@ import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
 import { useSavedPages } from "@/context/SavedPagesContext";
 import { useText } from "@/context/TextContext";
 import {
+  formatPreviewAkaLine,
   PAGE_PREVIEW_TRAILING_MARGIN,
+  PREVIEW_AKA_NAMES_TAB,
   PREVIEW_META_MAX_LINES,
   PREVIEW_TITLE_MAX_LINES,
   usePreviewLayoutMetrics,
@@ -278,13 +280,13 @@ export function PagePreview({
                           { color: text.secondary, fontSize },
                         ]}
                       >
-                        <Text>AKA: </Text>
+                        <Text>{PREVIEW_AKA_NAMES_TAB}AKA: </Text>
                         <Text style={akaBoldStyle}>{akaNames}</Text>
                       </Text>
                     );
                   }}
                 >
-                  {`AKA: ${preview.aka.join(", ")}`}
+                  {formatPreviewAkaLine(preview.aka)}
                 </ScalingText>
               ) : null}
               {regionLine ? (

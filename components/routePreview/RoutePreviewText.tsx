@@ -3,6 +3,10 @@ import { StyleSheet } from "react-native";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useText } from "@/context/TextContext";
 import {
+  formatPreviewAkaLine,
+} from "@/utils/previewLayout";
+import {
+  ROUTE_PREVIEW_AKA_MAX_LINES,
   ROUTE_PREVIEW_LOCATION_MAX_LINES,
   ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN,
   ROUTE_PREVIEW_TITLE_WIDTH_SAFETY_MARGIN,
@@ -42,12 +46,45 @@ export function RoutePreviewTitle({
   );
 }
 
+export function RoutePreviewAka({
+  aka,
+  color,
+}: {
+  aka: string[];
+  color: string;
+}) {
+  const metrics = useRoutePreviewMetrics();
+  const { uiScale, style } = useText();
+  const line = formatPreviewAkaLine(aka);
+
+  return (
+    <ScalingText
+      size={uiScale.preview.text.locationHierarchy}
+      typography={style.preview.locationHierarchy}
+      numberOfLines={ROUTE_PREVIEW_AKA_MAX_LINES}
+      ellipsizeMode="tail"
+      hideWhenEmpty
+      measure={{
+        type: "lineCount",
+        maxLinesAtMaxSize: ROUTE_PREVIEW_AKA_MAX_LINES,
+        widthSafetyMargin: metrics.locationWidthSafetyMargin,
+      }}
+      style={[styles.aka, { color }]}
+    >
+      {line}
+    </ScalingText>
+  );
+}
+
 export function RoutePreviewLocation({
   location,
   color,
+  compactBelowTitle = true,
 }: {
   location: string;
   color: string;
+  /** When false, omits the tight title overlap (e.g. when an AKA line sits above). */
+  compactBelowTitle?: boolean;
 }) {
   const metrics = useRoutePreviewMetrics();
   const { uiScale, style } = useText();
@@ -59,7 +96,11 @@ export function RoutePreviewLocation({
       numberOfLines={ROUTE_PREVIEW_LOCATION_MAX_LINES}
       ellipsizeMode="tail"
       hideWhenEmpty
-      containerStyle={{ marginTop: metrics.locationMarginTopAfterTitle }}
+      containerStyle={
+        compactBelowTitle
+          ? { marginTop: metrics.locationMarginTopAfterTitle }
+          : undefined
+      }
       measure={{
         type: "lineCount",
         maxLinesAtMaxSize: ROUTE_PREVIEW_LOCATION_MAX_LINES,
@@ -74,6 +115,9 @@ export function RoutePreviewLocation({
 
 const styles = StyleSheet.create({
   title: {},
+  aka: {
+    alignSelf: "stretch",
+  },
   location: {
     alignSelf: "stretch",
   },

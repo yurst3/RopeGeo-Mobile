@@ -31,6 +31,7 @@ export const ROUTE_PREVIEW_TITLE_DESCENDER_PADDING = 2;
 export const ROUTE_PREVIEW_INFO_ROW_GAP = 4;
 
 export const ROUTE_PREVIEW_LOCATION_MAX_LINES = 2;
+export const ROUTE_PREVIEW_AKA_MAX_LINES = 1;
 export const ROUTE_PREVIEW_LOCATION_WIDTH_SAFETY_MARGIN = 4;
 
 export type RoutePreviewMetrics = {

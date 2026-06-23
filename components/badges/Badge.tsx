@@ -161,6 +161,7 @@ export function Badge({
           typography={textStyle.pageScreen.badgeLabel}
           numberOfLines={2}
           ellipsizeMode="tail"
+          avoidMidWordLineBreaks
           measure={{
             type: "lineCount",
             maxLinesAtMaxSize: 2,

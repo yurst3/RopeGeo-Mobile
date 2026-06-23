@@ -57,6 +57,13 @@ export function getPagePreviewBodyContentWidth(
 export const PREVIEW_TITLE_MAX_LINES = 1;
 export const PREVIEW_META_MAX_LINES = 2;
 export const PREVIEW_TEXT_WIDTH_SAFETY_MARGIN = 4;
+/** Leading indent before the "AKA:" label in list/route previews. */
+export const PREVIEW_AKA_NAMES_TAB = "  ";
+
+export function formatPreviewAkaLine(aka: string[]): string {
+  return `${PREVIEW_AKA_NAMES_TAB}AKA: ${aka.join(", ")}`;
+}
+
 /** Extra height below title cap height for descenders (matches route preview placeholders). */
 export const PREVIEW_TITLE_DESCENDER_PADDING = 2;
 /** Skeleton meta bar height at fontScale 1. */
