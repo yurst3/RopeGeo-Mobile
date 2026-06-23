@@ -3,24 +3,23 @@ import { ProgressToast } from "@/components/toast/ProgressToast";
 import { Toast } from "@/components/toast/Toast";
 import type { ToastStyle } from "@/constants/colors/types";
 import { resolveStackedToastBaseOffsetBelowSafeTop, resolveToastHorizontalInset } from "@/utils/buttonChromeLayout";
+import {
+  useToastStackLayoutMetrics,
+  type ToastStackLayoutMetrics,
+} from "@/utils/toastStackLayout";
 import { useText } from "@/context/TextContext";
 import {
   DOWNLOAD_TOAST_FADE_OUT_MS,
   SAVED_TOAST_FADE_OUT_MS,
-  TOAST_STACK_GAP,
-  TOAST_STACK_ROW_HEIGHT_ACTION,
-  TOAST_STACK_ROW_HEIGHT_PILL_SINGLE,
-  TOAST_STACK_ROW_HEIGHT_PILL_SUBTITLE,
-  TOAST_STACK_ROW_HEIGHT_PROGRESS_BAR,
-  TOAST_STACK_ROW_HEIGHT_PROGRESS_PILL,
 } from "@/constants/toasts";
 import {
   getToastArchetypeForKey,
   resolveToastStyle,
+  resolveToastTextMaxLines,
   routeAllowedByPatterns,
   toastStackPriorityForKey,
 } from "@/constants/toasts/helpers";
-import type { ProgressToastKind } from "@/constants/toasts/types";
+import type { ProgressToastKind, ToastTextMaxLines } from "@/constants/toasts/types";
 import {
   createContext,
   useCallback,
@@ -35,6 +34,55 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function withMultipleSuffix(text: string, multiple: number): string {
   return multiple > 1 ? `${text} x${multiple}` : text;
+}
+
+function pillTextMaxLinesFor(
+  key: string,
+  opts: ToastTextMaxLines,
+  existing?: Pick<PillToastModel, "messageMaxLines" | "subtitleMaxLines">,
+): Pick<PillToastModel, "messageMaxLines" | "subtitleMaxLines"> {
+  const resolved = resolveToastTextMaxLines(key, {
+    messageMaxLines:
+      opts.messageMaxLines !== undefined
+        ? opts.messageMaxLines
+        : existing?.messageMaxLines,
+    subtitleMaxLines:
+      opts.subtitleMaxLines !== undefined
+        ? opts.subtitleMaxLines
+        : existing?.subtitleMaxLines,
+  });
+  return {
+    messageMaxLines: resolved.messageMaxLines,
+    subtitleMaxLines: resolved.subtitleMaxLines,
+  };
+}
+
+function progressTextMaxLinesFor(
+  key: string,
+  opts: ToastTextMaxLines,
+  existing?: Pick<ProgressToastModel, "titleMaxLines">,
+): Pick<ProgressToastModel, "titleMaxLines"> {
+  const resolved = resolveToastTextMaxLines(key, {
+    titleMaxLines:
+      opts.titleMaxLines !== undefined
+        ? opts.titleMaxLines
+        : existing?.titleMaxLines,
+  });
+  return { titleMaxLines: resolved.titleMaxLines };
+}
+
+function actionTextMaxLinesFor(
+  key: string,
+  opts: ToastTextMaxLines,
+  existing?: Pick<ActionToastModel, "messageMaxLines">,
+): Pick<ActionToastModel, "messageMaxLines"> {
+  const resolved = resolveToastTextMaxLines(key, {
+    messageMaxLines:
+      opts.messageMaxLines !== undefined
+        ? opts.messageMaxLines
+        : existing?.messageMaxLines,
+  });
+  return { messageMaxLines: resolved.messageMaxLines };
 }
 
 export class ToastKeyCollisionError extends Error {
@@ -85,6 +133,8 @@ export type PillToastModel = BaseToastModel & {
   variant: "pill";
   message: string;
   subtitle?: string;
+  messageMaxLines?: number;
+  subtitleMaxLines?: number;
 };
 
 export type ProgressToastModel = BaseToastModel & {
@@ -92,12 +142,14 @@ export type ProgressToastModel = BaseToastModel & {
   progressKind: ProgressToastKind;
   title: string;
   progress: number;
+  titleMaxLines?: number;
 };
 
 export type ActionToastModel = BaseToastModel & {
   variant: "action";
   message: string;
   icon: ImageSourcePropType;
+  messageMaxLines?: number;
 };
 
 export type ToastModel = PillToastModel | ProgressToastModel | ActionToastModel;
@@ -110,6 +162,8 @@ export type ShowPillToastOptions = {
   style?: ToastStyle;
   message: string;
   subtitle?: string;
+  messageMaxLines?: number;
+  subtitleMaxLines?: number;
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
   allowedRoutes?: string[] | null;
   multiple?: number;
@@ -125,6 +179,7 @@ export type ShowProgressToastOptions = {
   progressKind: ProgressToastKind;
   title: string;
   progress?: number;
+  titleMaxLines?: number;
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
   allowedRoutes?: string[] | null;
   multiple?: number;
@@ -140,6 +195,7 @@ export type ShowActionToastOptions = {
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
   style?: ToastStyle;
   message: string;
+  messageMaxLines?: number;
   icon: ImageSourcePropType;
   /** When omitted, defaults from `getToastArchetypeForKey(key)`. */
   allowedRoutes?: string[] | null;
@@ -159,6 +215,8 @@ export type ToastUpdate =
       style?: ToastStyle;
       message?: string;
       subtitle?: string;
+      messageMaxLines?: number;
+      subtitleMaxLines?: number;
       multiple?: number;
       allowedRoutes?: string[] | null;
       horizontalInset?: number;
@@ -171,6 +229,7 @@ export type ToastUpdate =
       progressKind?: ProgressToastKind;
       title?: string;
       progress?: number;
+      titleMaxLines?: number;
       multiple?: number;
       allowedRoutes?: string[] | null;
       horizontalInset?: number;
@@ -182,6 +241,8 @@ export type ToastUpdate =
       style?: ToastStyle;
       message?: string;
       subtitle?: string;
+      messageMaxLines?: number;
+      subtitleMaxLines?: number;
       multiple?: number;
       allowedRoutes?: string[] | null;
       horizontalInset?: number;
@@ -192,6 +253,7 @@ export type ToastUpdate =
       variant: "action";
       style?: ToastStyle;
       message?: string;
+      messageMaxLines?: number;
       icon?: ImageSourcePropType;
       multiple?: number;
       allowedRoutes?: string[] | null;
@@ -200,33 +262,24 @@ export type ToastUpdate =
       durationMs?: number | null;
     };
 
-function estimatedStackRowHeight(t: ToastModel): number {
-  if (t.variant === "pill") {
-    const hasSubtitle =
-      t.subtitle != null && String(t.subtitle).trim().length > 0;
-    return hasSubtitle
-      ? TOAST_STACK_ROW_HEIGHT_PILL_SUBTITLE
-      : TOAST_STACK_ROW_HEIGHT_PILL_SINGLE;
-  }
-  if (t.variant === "action") {
-    return TOAST_STACK_ROW_HEIGHT_ACTION;
-  }
-  if (t.variant === "progress") {
-    return t.progressKind === "progress"
-      ? TOAST_STACK_ROW_HEIGHT_PROGRESS_BAR
-      : TOAST_STACK_ROW_HEIGHT_PROGRESS_PILL;
-  }
-  const _exhaustive: never = t;
-  return _exhaustive;
+function stackRowHeight(
+  key: string,
+  measuredHeights: ReadonlyMap<string, number>,
+  metrics: ToastStackLayoutMetrics,
+): number {
+  return measuredHeights.get(key) ?? metrics.unmeasuredRowHeight;
 }
 
 /**
- * Stack order matches visual order (anchor = top toast). Each row's `top` is followed by a fixed
- * {@link TOAST_STACK_GAP} so spacing stays even when row heights differ.
+ * Stack order matches visual order (anchor = top toast). Row heights come from measured
+ * {@link onLayout} values; {@link ToastStackLayoutMetrics.unmeasuredRowHeight} is used only
+ * until the first measurement for a row.
  */
 function applyGlobalToastLayout(
   toasts: ToastModel[],
   anchorY: number,
+  metrics: ToastStackLayoutMetrics,
+  measuredHeights: ReadonlyMap<string, number>,
 ): Array<ToastModel & { top: number }> {
   const order = [...toasts]
     .map((t) => ({ t }))
@@ -240,7 +293,7 @@ function applyGlobalToastLayout(
   let y = anchorY;
   for (const { t } of order) {
     keyToTop.set(t.key, y);
-    y += estimatedStackRowHeight(t) + TOAST_STACK_GAP;
+    y += stackRowHeight(t.key, measuredHeights, metrics) + metrics.stackGap;
   }
   return toasts.map((t) => ({
     ...t,
@@ -301,6 +354,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         multiple: (p.multiple as number | undefined) ?? c.multiple,
         insertedAt: c.insertedAt,
         exiting: c.exiting,
+        ...progressTextMaxLinesFor(c.key, {
+          titleMaxLines: p.titleMaxLines as number | undefined,
+        }),
       };
     }
     if (cur.variant === "action") {
@@ -323,6 +379,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         multiple: (p.multiple as number | undefined) ?? c.multiple,
         insertedAt: c.insertedAt,
         exiting: c.exiting,
+        ...progressTextMaxLinesFor(c.key, {
+          titleMaxLines: p.titleMaxLines as number | undefined,
+        }),
       };
     }
     const c = cur as ProgressToastModel;
@@ -341,6 +400,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         p.durationMs !== undefined
           ? (p.durationMs as number | null)
           : c.durationMs,
+      ...progressTextMaxLinesFor(c.key, {
+        titleMaxLines: p.titleMaxLines as number | undefined,
+      }, c),
     };
   }
 
@@ -368,6 +430,10 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         p.subtitle === undefined ? undefined : (p.subtitle as string | undefined),
       insertedAt: c.insertedAt,
       exiting: c.exiting,
+      ...pillTextMaxLinesFor(c.key, {
+        messageMaxLines: p.messageMaxLines as number | undefined,
+        subtitleMaxLines: p.subtitleMaxLines as number | undefined,
+      }),
     };
   }
 
@@ -394,6 +460,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
       multiple: (p.multiple as number | undefined) ?? c.multiple,
       insertedAt: c.insertedAt,
       exiting: c.exiting,
+      ...actionTextMaxLinesFor(c.key, {
+        messageMaxLines: p.messageMaxLines as number | undefined,
+      }),
     };
   }
 
@@ -420,6 +489,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
       multiple: (p.multiple as number | undefined) ?? c.multiple,
       insertedAt: c.insertedAt,
       exiting: c.exiting,
+      ...actionTextMaxLinesFor(c.key, {
+        messageMaxLines: p.messageMaxLines as number | undefined,
+      }, c),
     };
   }
 
@@ -446,6 +518,10 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
           p.subtitle === undefined ? undefined : (p.subtitle as string | undefined),
         insertedAt: c.insertedAt,
         exiting: c.exiting,
+        ...pillTextMaxLinesFor(c.key, {
+          messageMaxLines: p.messageMaxLines as number | undefined,
+          subtitleMaxLines: p.subtitleMaxLines as number | undefined,
+        }),
       };
     }
     return {
@@ -462,6 +538,9 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
         p.durationMs !== undefined
           ? (p.durationMs as number | null)
           : c.durationMs,
+      ...actionTextMaxLinesFor(c.key, {
+        messageMaxLines: p.messageMaxLines as number | undefined,
+      }, c),
     };
   }
 
@@ -481,6 +560,10 @@ function mergeToast(cur: ToastModel, patch: ToastUpdate): ToastModel {
       p.durationMs !== undefined
         ? (p.durationMs as number | null)
         : c.durationMs,
+    ...pillTextMaxLinesFor(c.key, {
+      messageMaxLines: p.messageMaxLines as number | undefined,
+      subtitleMaxLines: p.subtitleMaxLines as number | undefined,
+    }, c),
   };
 }
 
@@ -597,6 +680,34 @@ export function ToastProvider({ children }: ToastProviderProps) {
     }
   }, []);
 
+  const [measuredHeights, setMeasuredHeights] = useState<
+    Map<string, number>
+  >(() => new Map());
+
+  const reportMeasuredHeight = useCallback((key: ToastKey, height: number) => {
+    const rounded = Math.round(height);
+    setMeasuredHeights((prev) => {
+      const current = prev.get(key);
+      if (current != null && Math.abs(current - rounded) < 1) {
+        return prev;
+      }
+      const next = new Map(prev);
+      next.set(key, rounded);
+      return next;
+    });
+  }, []);
+
+  const clearMeasuredHeight = useCallback((key: ToastKey) => {
+    setMeasuredHeights((prev) => {
+      if (!prev.has(key)) {
+        return prev;
+      }
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+  }, []);
+
   const finalizeRemoveToast = useCallback(
     (key: ToastKey) => {
       setToasts((prev) => {
@@ -608,12 +719,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
         toastsRef.current = next;
         return next;
       });
+      clearMeasuredHeight(key);
       queueMicrotask(() => {
         flushDismissCallback(key);
         releaseActionCallback(key);
       });
     },
-    [flushDismissCallback, releaseActionCallback],
+    [clearMeasuredHeight, flushDismissCallback, releaseActionCallback],
   );
 
   const beginExitToast = useCallback(
@@ -692,6 +804,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           durationMs,
           insertedAt: nextInsertedAt(),
           exiting: false,
+          ...pillTextMaxLinesFor(opts.key, opts),
         };
         const next = [...base, entry];
         toastsRef.current = next;
@@ -756,6 +869,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           durationMs,
           insertedAt: nextInsertedAt(),
           exiting: false,
+          ...actionTextMaxLinesFor(opts.key, opts),
         };
         const next = [...base, entry];
         toastsRef.current = next;
@@ -810,6 +924,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             durationMs,
             insertedAt: nextInsertedAt(),
             exiting: false,
+            ...actionTextMaxLinesFor(opts.key, opts),
           };
           const next = [...prev, entry];
           toastsRef.current = next;
@@ -825,6 +940,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                   variant: "action",
                   style: opts.style,
                   message: opts.message,
+                  messageMaxLines: opts.messageMaxLines,
                   icon: opts.icon,
                   allowedRoutes: opts.allowedRoutes,
                   multiple: opts.multiple,
@@ -848,6 +964,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                 durationMs,
                 insertedAt,
                 exiting: false,
+                ...actionTextMaxLinesFor(opts.key, opts),
               };
 
         const copy = [...prev];
@@ -902,6 +1019,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             durationMs,
             insertedAt: nextInsertedAt(),
             exiting: false,
+            ...pillTextMaxLinesFor(opts.key, opts),
           };
           const next = [...prev, entry];
           toastsRef.current = next;
@@ -914,6 +1032,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
             style: opts.style,
             message: opts.message,
             subtitle: opts.subtitle,
+            messageMaxLines: opts.messageMaxLines,
+            subtitleMaxLines: opts.subtitleMaxLines,
             allowedRoutes: opts.allowedRoutes,
             multiple: opts.multiple,
             horizontalInset,
@@ -980,6 +1100,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           durationMs,
           insertedAt: nextInsertedAt(),
           exiting: false,
+          ...progressTextMaxLinesFor(opts.key, opts),
         };
         const next = [...base, entry];
         toastsRef.current = next;
@@ -1033,6 +1154,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             durationMs,
             insertedAt: nextInsertedAt(),
             exiting: false,
+            ...progressTextMaxLinesFor(opts.key, opts),
           };
           const next = [...prev, entry];
           toastsRef.current = next;
@@ -1044,6 +1166,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             variant: "progress",
             progressKind: opts.progressKind,
             title: opts.title,
+            titleMaxLines: opts.titleMaxLines,
             allowedRoutes: opts.allowedRoutes,
             progress: opts.progress,
             multiple: opts.multiple,
@@ -1196,9 +1319,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
     ],
   );
 
+  const stackLayoutMetrics = useToastStackLayoutMetrics();
   const layoutToasts = useMemo(
-    () => applyGlobalToastLayout(toasts, stackAnchorY),
-    [toasts, stackAnchorY],
+    () =>
+      applyGlobalToastLayout(
+        toasts,
+        stackAnchorY,
+        stackLayoutMetrics,
+        measuredHeights,
+      ),
+    [toasts, stackAnchorY, stackLayoutMetrics, measuredHeights],
   );
 
   return (
@@ -1213,11 +1343,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
                 style={t.style}
                 message={withMultipleSuffix(t.message, t.multiple)}
                 subtitle={t.subtitle}
+                messageMaxLines={t.messageMaxLines}
+                subtitleMaxLines={t.subtitleMaxLines}
                 top={t.top}
                 horizontalInset={t.horizontalInset}
                 zIndex={t.zIndex}
                 exiting={t.exiting}
                 fadeOutMs={SAVED_TOAST_FADE_OUT_MS}
+                onMeasuredHeight={(height) =>
+                  reportMeasuredHeight(t.key, height)
+                }
                 onExitComplete={() => finalizeRemoveToast(t.key)}
               />
             );
@@ -1228,12 +1363,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
                 key={t.key}
                 style={t.style}
                 message={withMultipleSuffix(t.message, t.multiple)}
+                messageMaxLines={t.messageMaxLines}
                 icon={t.icon}
                 top={t.top}
                 horizontalInset={t.horizontalInset}
                 zIndex={t.zIndex}
                 exiting={t.exiting}
                 fadeOutMs={SAVED_TOAST_FADE_OUT_MS}
+                onMeasuredHeight={(height) =>
+                  reportMeasuredHeight(t.key, height)
+                }
                 onExitComplete={() => finalizeRemoveToast(t.key)}
                 onPress={() => {
                   actionCallbacksRef.current.get(t.key)?.();
@@ -1247,12 +1386,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
               kind={t.progressKind}
               style={t.style}
               title={withMultipleSuffix(t.title, t.multiple)}
+              titleMaxLines={t.titleMaxLines}
               progress={t.progress}
               top={t.top}
               horizontalInset={t.horizontalInset}
               zIndex={t.zIndex}
               exiting={t.exiting}
               fadeOutMs={DOWNLOAD_TOAST_FADE_OUT_MS}
+              onMeasuredHeight={(height) =>
+                reportMeasuredHeight(t.key, height)
+              }
               onExitComplete={() => finalizeRemoveToast(t.key)}
             />
           );

@@ -1,4 +1,4 @@
-import { SearchBar, getSearchBarHeight } from "@/components/SearchBar";
+import { SearchBar } from "@/components/SearchBar";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
@@ -17,18 +17,16 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SavedPagesFilter } from "ropegeo-common/models";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/buttonChromeLayout";
 
 export function SavedScreen() {
   const { background, text } = useColorTheme();
   const { uiScale, style: textStyle } = useText();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
-  const { fontScale } = useWindowDimensions();
   const { dismiss } = useToast();
   const { savedEntries } = useSavedPages();
   const {
@@ -58,8 +56,8 @@ export function SavedScreen() {
   );
 
   const headerChrome = useHeaderChromeLayout();
-  const searchBarTop = insets.top + headerChrome.rowTopInset;
-  const searchBarHeight = getSearchBarHeight(fontScale, uiScale);
+  const searchChrome = useSearchChromeStackedLayout();
+  const searchBarTop = insets.top + searchChrome.rowTop;
 
   useFocusEffect(
     useCallback(() => {
@@ -119,7 +117,7 @@ export function SavedScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: searchBarTop + searchBarHeight + 12,
+            paddingTop: insets.top + searchChrome.stackedAnchorOffset,
             gap: previewMetrics.itemGap,
           },
         ]}

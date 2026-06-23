@@ -2,6 +2,15 @@ import type { ToastStyle } from "@/constants/colors/types";
 
 export type ToastVariant = "pill" | "progress" | "action";
 
+export type ToastTextMaxLines = {
+  /** Pill / action primary line. */
+  messageMaxLines?: number;
+  /** Pill detail line. */
+  subtitleMaxLines?: number;
+  /** Progress toast primary line. */
+  titleMaxLines?: number;
+};
+
 export type ToastArchetype = {
   /** Lower number = closer to stack anchor (higher on screen). */
   priority: number;
@@ -16,6 +25,6 @@ export type ToastArchetype = {
   variant: ToastVariant;
   /** Default semantic colors for this toast family. */
   style: ToastStyle;
-};
+} & ToastTextMaxLines;
 
 export type ProgressToastKind = "progress" | "success" | "error";

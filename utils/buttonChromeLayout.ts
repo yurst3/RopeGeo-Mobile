@@ -115,13 +115,54 @@ export function resolveExploreHeaderLayout(
   };
 }
 
+/** Design gap between search chrome row bottom and stacked toasts / scroll content. */
+export const SEARCH_CHROME_GAP_BELOW_DESIGN = 12;
+
+export type SearchChromeStackedLayout = {
+  rowTop: number;
+  searchBarHeight: number;
+  chromeRowHeight: number;
+  gapBelowChrome: number;
+  /** Distance from safe-area top to toast anchor / scroll content inset (includes gap). */
+  stackedAnchorOffset: number;
+};
+
+/**
+ * Layout for explore / search / saved headers: search bar row + optional side buttons.
+ * Matches header `top` + vertically centered row height used on those screens.
+ */
+export function resolveSearchChromeStackedLayout(
+  uiScale: UiScaleProfile,
+  fontScale: number,
+  baseGapBelowChrome = SEARCH_CHROME_GAP_BELOW_DESIGN,
+): SearchChromeStackedLayout {
+  const header = resolveHeaderChromeLayout(uiScale, fontScale);
+  const search = getSearchBarMetrics(fontScale, uiScale);
+  const chromeRowHeight = Math.max(search.height, header.buttonWrapHeight);
+  const backSpec = uiScale.common.buttons.back;
+  const backgroundScale = resolveButtonBackgroundScale(
+    backSpec,
+    uiScale.global,
+    fontScale,
+  );
+  const gapBelowChrome = Math.round(baseGapBelowChrome * backgroundScale);
+  const stackedAnchorOffset = Math.round(
+    header.rowTopInset + chromeRowHeight + gapBelowChrome,
+  );
+  return {
+    rowTop: header.rowTopInset,
+    searchBarHeight: search.height,
+    chromeRowHeight,
+    gapBelowChrome,
+    stackedAnchorOffset,
+  };
+}
+
 export function resolveStackedToastBaseOffsetBelowSafeTop(
   uiScale: UiScaleProfile,
   fontScale: number,
 ): number {
-  const searchMetrics = getSearchBarMetrics(fontScale, uiScale);
-  const header = resolveHeaderChromeLayout(uiScale, fontScale);
-  return Math.round(searchMetrics.height + header.gap);
+  return resolveSearchChromeStackedLayout(uiScale, fontScale).stackedAnchorOffset;
 }
 
 export function resolveToastHorizontalInset(
@@ -224,6 +265,15 @@ export function useExploreHeaderLayout(): ExploreHeaderLayout {
   const { fontScale } = useWindowDimensions();
   return useMemo(
     () => resolveExploreHeaderLayout(uiScale, fontScale),
+    [uiScale, fontScale],
+  );
+}
+
+export function useSearchChromeStackedLayout(): SearchChromeStackedLayout {
+  const { uiScale } = useText();
+  const { fontScale } = useWindowDimensions();
+  return useMemo(
+    () => resolveSearchChromeStackedLayout(uiScale, fontScale),
     [uiScale, fontScale],
   );
 }

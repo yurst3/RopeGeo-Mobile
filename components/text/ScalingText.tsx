@@ -79,21 +79,16 @@ export function ScalingText({
   const [containerWidth, setContainerWidth] = useState(0);
   const [widthAtMax, setWidthAtMax] = useState(0);
   const [lineCountAtMax, setLineCountAtMax] = useState(0);
-  const prevTextRef = useRef(children);
   const prevMeasureKeyRef = useRef(measureKey);
 
   useLayoutEffect(() => {
-    if (
-      prevTextRef.current === children &&
-      prevMeasureKeyRef.current === measureKey
-    ) {
-      return;
-    }
-    prevTextRef.current = children;
+    const measureKeyChanged = prevMeasureKeyRef.current !== measureKey;
     prevMeasureKeyRef.current = measureKey;
-    setWidthAtMax(0);
-    setLineCountAtMax(0);
-  }, [children, measureKey]);
+    if (measureKeyChanged) {
+      setWidthAtMax(0);
+      setLineCountAtMax(0);
+    }
+  }, [measureKey]);
 
   const onContainerLayout = useCallback((event: LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);

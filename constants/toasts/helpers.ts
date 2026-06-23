@@ -6,7 +6,7 @@ import {
   TOAST_KEY_DOWNLOAD_PROGRESS,
   TOAST_KEY_INVALID_STORED_DOWNLOAD_JOB,
 } from "./toastArchetypes";
-import type { ProgressToastKind, ToastArchetype } from "./types";
+import type { ProgressToastKind, ToastArchetype, ToastTextMaxLines } from "./types";
 
 function escapeRegexLiteral(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -59,6 +59,7 @@ function archetypeForErrorFamily(key: string): ToastArchetype | null {
       durationMs: null,
       variant: "pill",
       style: "error",
+      messageMaxLines: 1,
     };
   }
   if (key.endsWith("-network-error")) {
@@ -68,6 +69,7 @@ function archetypeForErrorFamily(key: string): ToastArchetype | null {
       durationMs: null,
       variant: "pill",
       style: "error",
+      messageMaxLines: 1,
     };
   }
   return null;
@@ -87,6 +89,7 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: null,
       variant: "pill",
       style: "info",
+      messageMaxLines: 1,
     };
   }
 
@@ -100,6 +103,7 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: null,
       variant: "pill",
       style: "warning",
+      messageMaxLines: 1,
     };
   }
 
@@ -110,6 +114,7 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: 3000,
       variant: "progress",
       style: "warning",
+      titleMaxLines: 2,
     };
   }
 
@@ -120,6 +125,7 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: 5000,
       variant: "pill",
       style: "error",
+      messageMaxLines: 1,
     };
   }
 
@@ -130,6 +136,7 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: 5000,
       variant: "pill",
       style: "error",
+      messageMaxLines: 1,
     };
   }
 
@@ -140,10 +147,32 @@ export function getToastArchetypeForKey(key: string): ToastArchetype | null {
       durationMs: null,
       variant: "pill",
       style: "warning",
+      messageMaxLines: 2,
     };
   }
 
   return null;
+}
+
+export function resolveToastTextMaxLines(
+  key: string,
+  overrides?: ToastTextMaxLines,
+): ToastTextMaxLines {
+  const archetype = getToastArchetypeForKey(key);
+  return {
+    messageMaxLines:
+      overrides?.messageMaxLines !== undefined
+        ? overrides.messageMaxLines
+        : archetype?.messageMaxLines,
+    subtitleMaxLines:
+      overrides?.subtitleMaxLines !== undefined
+        ? overrides.subtitleMaxLines
+        : archetype?.subtitleMaxLines,
+    titleMaxLines:
+      overrides?.titleMaxLines !== undefined
+        ? overrides.titleMaxLines
+        : archetype?.titleMaxLines,
+  };
 }
 
 export function toastStackPriorityForKey(key: string): number {

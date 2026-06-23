@@ -34,6 +34,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "info",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_DEV_NETWORK_INTERNET_REACHABLE]: {
     priority: 0,
@@ -41,6 +42,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "info",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_NETWORK_OFFLINE]: {
     priority: 1,
@@ -48,6 +50,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_NETWORK_RETRY]: {
     priority: 2,
@@ -55,6 +58,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "action",
     style: "warning",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_ROUTES_PROGRESS]: {
     priority: 3,
@@ -62,6 +66,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: 3000,
     variant: "progress",
     style: "warning",
+    titleMaxLines: 2,
   },
   [TOAST_KEY_ROUTES_ERROR]: {
     priority: 2,
@@ -83,6 +88,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_SEARCH_NO_RESULTS]: {
     priority: 3,
@@ -90,6 +96,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "warning",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_SEARCH_REFRESHING]: {
     priority: 3,
@@ -97,6 +104,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "warning",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_REGION_ERROR]: {
     priority: 2,
@@ -104,6 +112,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_PAGE_ERROR]: {
     priority: 2,
@@ -111,6 +120,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_DOWNLOAD_PROGRESS]: {
     priority: 3,
@@ -118,6 +128,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: 3000,
     variant: "progress",
     style: "warning",
+    titleMaxLines: 2,
   },
   [TOAST_KEY_DOWNLOAD_CANCELLED]: {
     priority: 3,
@@ -125,6 +136,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: 5000,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_PAGE_SAVED]: {
     priority: 4,
@@ -132,6 +144,7 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: 5000,
     variant: "pill",
     style: "success",
+    messageMaxLines: 1,
   },
   [TOAST_KEY_DISTANCE_GPS_TIMEOUT]: {
     priority: 2,
@@ -139,5 +152,6 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     durationMs: null,
     variant: "pill",
     style: "error",
+    messageMaxLines: 1,
   },
 };

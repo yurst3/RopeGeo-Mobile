@@ -6,7 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { ScalingText } from "@/components/text/ScalingText";
+import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
@@ -26,6 +26,8 @@ export type ProgressToastProps = {
   style: ToastStyle;
   /** Primary line; caller formats (e.g. phase label, success copy). */
   title: string;
+  /** When set, title uses {@link ScalingText}; otherwise {@link ConstantText}. */
+  titleMaxLines?: number;
   /** 0–1 bar width when `kind === 'progress'`; ignored for success/error. */
   progress?: number;
   top: number;
@@ -36,6 +38,8 @@ export type ProgressToastProps = {
   exiting?: boolean;
   /** Invoked once after exit fade finishes (unless the exit animation is cancelled). */
   onExitComplete?: () => void;
+  /** Reports the measured height of the positioned wrap for stack layout. */
+  onMeasuredHeight?: (height: number) => void;
   wrapStyle?: StyleProp<ViewStyle>;
 };
 
@@ -47,6 +51,7 @@ export function ProgressToast({
   kind,
   style,
   title,
+  titleMaxLines,
   progress = 0,
   top,
   horizontalInset = TOAST_HORIZONTAL_INSET,
@@ -54,6 +59,7 @@ export function ProgressToast({
   fadeOutMs = DOWNLOAD_TOAST_FADE_OUT_MS,
   exiting = false,
   onExitComplete,
+  onMeasuredHeight,
   wrapStyle,
 }: ProgressToastProps) {
   const { background, text, filledTrack, unfilledTrack } =
@@ -65,6 +71,8 @@ export function ProgressToast({
   const prevKindRef = useRef<ProgressToastKind | "idle">("idle");
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
+  const onMeasuredHeightRef = useRef(onMeasuredHeight);
+  onMeasuredHeightRef.current = onMeasuredHeight;
 
   const progress01 = Math.max(0, Math.min(1, progress));
 
@@ -128,9 +136,23 @@ export function ProgressToast({
     };
   }, [exiting, fadeOutMs, opacity]);
 
+  const titleLine = (
+    <ToastTextLine
+      maxLines={titleMaxLines}
+      size={uiScale.toast.text.message}
+      typography={textStyle.toast.message}
+      style={[styles.title, { color: text }]}
+    >
+      {title}
+    </ToastTextLine>
+  );
+
   return (
     <Animated.View
       pointerEvents="none"
+      onLayout={(event) => {
+        onMeasuredHeightRef.current?.(event.nativeEvent.layout.height);
+      }}
       style={[
         styles.wrap,
         {
@@ -145,16 +167,7 @@ export function ProgressToast({
       <Animated.View style={[styles.opacityShell, { opacity }]}>
         {kind === "progress" ? (
           <View style={[styles.inner, { backgroundColor: background }]}>
-            <ScalingText
-              size={uiScale.toast.text.message}
-              typography={textStyle.toast.message}
-              numberOfLines={4}
-              ellipsizeMode="tail"
-              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
-              style={[styles.title, { color: text }]}
-            >
-              {title}
-            </ScalingText>
+            {titleLine}
             <View style={[styles.track, { backgroundColor: unfilledTrack }]}>
               <View
                 style={[
@@ -170,16 +183,7 @@ export function ProgressToast({
         ) : null}
         {kind === "success" || kind === "error" ? (
           <View style={[styles.inner, { backgroundColor: background }]}>
-            <ScalingText
-              size={uiScale.toast.text.message}
-              typography={textStyle.toast.message}
-              numberOfLines={4}
-              ellipsizeMode="tail"
-              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
-              style={[styles.title, { color: text }]}
-            >
-              {title}
-            </ScalingText>
+            {titleLine}
           </View>
         ) : null}
       </Animated.View>

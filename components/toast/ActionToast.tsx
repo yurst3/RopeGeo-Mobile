@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { ScalingText } from "@/components/text/ScalingText";
+import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
@@ -26,6 +26,8 @@ import {
 export type ActionToastProps = {
   style: ToastStyle;
   message: string;
+  /** When set, message uses {@link ScalingText}; otherwise {@link ConstantText}. */
+  messageMaxLines?: number;
   icon: ImageSourcePropType;
   top: number;
   horizontalInset?: number;
@@ -34,6 +36,8 @@ export type ActionToastProps = {
   fadeOutMs?: number;
   exiting?: boolean;
   onExitComplete?: () => void;
+  /** Reports the measured height of the positioned wrap for stack layout. */
+  onMeasuredHeight?: (height: number) => void;
   onPress: () => void;
   wrapStyle?: StyleProp<ViewStyle>;
 };
@@ -44,6 +48,7 @@ export type ActionToastProps = {
 export function ActionToast({
   style,
   message,
+  messageMaxLines,
   icon,
   top,
   horizontalInset = TOAST_HORIZONTAL_INSET,
@@ -52,6 +57,7 @@ export function ActionToast({
   fadeOutMs = SAVED_TOAST_FADE_OUT_MS,
   exiting = false,
   onExitComplete,
+  onMeasuredHeight,
   onPress,
   wrapStyle,
 }: ActionToastProps) {
@@ -66,6 +72,8 @@ export function ActionToast({
   const prevTopRef = useRef<number | null>(null);
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
+  const onMeasuredHeightRef = useRef(onMeasuredHeight);
+  onMeasuredHeightRef.current = onMeasuredHeight;
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
 
@@ -127,6 +135,9 @@ export function ActionToast({
   return (
     <Animated.View
       pointerEvents="box-none"
+      onLayout={(event) => {
+        onMeasuredHeightRef.current?.(event.nativeEvent.layout.height);
+      }}
       style={[
         styles.wrap,
         {
@@ -153,17 +164,15 @@ export function ActionToast({
             },
           ]}
         >
-          <ScalingText
+          <ToastTextLine
+            maxLines={messageMaxLines}
             size={uiScale.toast.text.message}
             typography={textStyle.toast.message}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-            measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
             containerStyle={styles.messageWrap}
             style={[styles.message, { color: text }]}
           >
             {message}
-          </ScalingText>
+          </ToastTextLine>
           <Image source={icon} style={[styles.icon, { width: iconSize, height: iconSize, tintColor: iconColor }]} />
         </Pressable>
       </Animated.View>

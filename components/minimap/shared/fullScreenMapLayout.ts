@@ -35,8 +35,9 @@ export function expandedMiniMapButtonStackTop(
   );
 }
 
-/** Design baseline for stacked toast anchor (use {@link resolveStackedToastBaseOffsetBelowSafeTop}). */
-export const STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP = 56 + 8;
+/** @deprecated Use {@link resolveSearchChromeStackedLayout} from buttonChromeLayout. */
+export const STACKED_TOAST_BASE_OFFSET_BELOW_SAFE_TOP =
+  MAP_HEADER_ROW_TOP_INSET + HEADER_BUTTON_SIZE + HEADER_BUTTON_GAP;
 
 export function boundsPaddingForFullScreenMap(insets: {
   top: number;

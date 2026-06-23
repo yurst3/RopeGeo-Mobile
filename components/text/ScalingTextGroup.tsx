@@ -11,6 +11,7 @@ import {
   useCallback,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -94,10 +95,18 @@ function ScalingTextGroup({
   const signature = segmentSignature(segments);
   const [containerWidth, setContainerWidth] = useState(0);
   const [widthsAtMax, setWidthsAtMax] = useState<number[]>([]);
+  const prevMeasureKeyRef = useRef(measureKey);
+  const prevSegmentCountRef = useRef(segments.length);
 
   useLayoutEffect(() => {
-    setWidthsAtMax([]);
-  }, [measureKey, signature]);
+    const measureKeyChanged = prevMeasureKeyRef.current !== measureKey;
+    const segmentCountChanged = prevSegmentCountRef.current !== segments.length;
+    prevMeasureKeyRef.current = measureKey;
+    prevSegmentCountRef.current = segments.length;
+    if (measureKeyChanged || segmentCountChanged) {
+      setWidthsAtMax([]);
+    }
+  }, [measureKey, segments.length]);
 
   const onContainerLayout = useCallback((event: LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);

@@ -7,7 +7,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { ScalingText } from "@/components/text/ScalingText";
+import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ThemeColors, ToastStyle } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useText } from "@/context/TextContext";
@@ -36,6 +36,10 @@ export type ToastProps = {
   message: string;
   /** Optional detail line (e.g. error body). */
   subtitle?: string;
+  /** When set, message uses {@link ScalingText}; otherwise {@link ConstantText}. */
+  messageMaxLines?: number;
+  /** When set, subtitle uses {@link ScalingText}; otherwise {@link ConstantText}. */
+  subtitleMaxLines?: number;
   /** Distance from top of screen (typically safe area + header offset). */
   top: number;
   horizontalInset?: number;
@@ -46,6 +50,8 @@ export type ToastProps = {
   exiting?: boolean;
   /** Invoked once after exit fade finishes (unless the exit animation is cancelled). */
   onExitComplete?: () => void;
+  /** Reports the measured height of the positioned wrap for stack layout. */
+  onMeasuredHeight?: (height: number) => void;
   wrapStyle?: StyleProp<ViewStyle>;
 };
 
@@ -56,6 +62,8 @@ export function Toast({
   style,
   message,
   subtitle,
+  messageMaxLines,
+  subtitleMaxLines,
   top,
   horizontalInset = TOAST_HORIZONTAL_INSET,
   zIndex = 3650,
@@ -63,6 +71,7 @@ export function Toast({
   fadeOutMs = SAVED_TOAST_FADE_OUT_MS,
   exiting = false,
   onExitComplete,
+  onMeasuredHeight,
   wrapStyle,
 }: ToastProps) {
   const { toast } = useColorTheme();
@@ -72,6 +81,8 @@ export function Toast({
   const prevTopRef = useRef<number | null>(null);
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
+  const onMeasuredHeightRef = useRef(onMeasuredHeight);
+  onMeasuredHeightRef.current = onMeasuredHeight;
 
   useEffect(() => {
     if (exiting) {
@@ -133,6 +144,9 @@ export function Toast({
   return (
     <Animated.View
       pointerEvents="none"
+      onLayout={(event) => {
+        onMeasuredHeightRef.current?.(event.nativeEvent.layout.height);
+      }}
       style={[
         styles.wrap,
         {
@@ -146,27 +160,23 @@ export function Toast({
     >
       <Animated.View style={[styles.opacityShell, { opacity }]}>
         <View style={[styles.inner, palette.inner]}>
-          <ScalingText
+          <ToastTextLine
+            maxLines={messageMaxLines}
             size={uiScale.toast.text.message}
             typography={textStyle.toast.message}
-            numberOfLines={3}
-            ellipsizeMode="tail"
-            measure={{ type: "lineCount", maxLinesAtMaxSize: 3 }}
             style={[styles.message, palette.primary]}
           >
             {message}
-          </ScalingText>
+          </ToastTextLine>
           {subtitle != null && subtitle !== "" ? (
-            <ScalingText
+            <ToastTextLine
+              maxLines={subtitleMaxLines}
               size={uiScale.toast.text.subtitle}
               typography={textStyle.toast.subtitle}
-              numberOfLines={4}
-              ellipsizeMode="tail"
-              measure={{ type: "lineCount", maxLinesAtMaxSize: 4 }}
               style={[styles.subtitle, palette.secondary]}
             >
               {subtitle}
-            </ScalingText>
+            </ToastTextLine>
           ) : null}
         </View>
       </Animated.View>

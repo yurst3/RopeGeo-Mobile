@@ -1,6 +1,6 @@
 import { FilterBottomSheet, type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
 import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useSearchChromeStackedLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
 import {
   TOAST_KEY_SEARCH_ERROR,
   TOAST_KEY_SEARCH_NO_RESULTS,
@@ -13,7 +13,6 @@ import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import { ConstantText } from "@/components/text/ConstantText";
 import { useText } from "@/context/TextContext";
-import { getSearchBarHeight } from "@/components/SearchBar";
 import { usePreviewTextMetrics } from "@/utils/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,7 +24,6 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  useWindowDimensions,
 } from "react-native";
 import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
 import { type OnlinePagePreview, Preview } from "ropegeo-common/models";
@@ -71,13 +69,10 @@ export function SearchScreenResults({
   const { uiScale, style: textStyle } = useText();
   const previewMetrics = usePreviewTextMetrics();
   const insets = useSafeAreaInsets();
-  const { fontScale } = useWindowDimensions();
   const isFocused = useIsFocused();
   const { upsertPill, dismiss } = useToast();
-  const headerChrome = useHeaderChromeLayout();
+  const searchChrome = useSearchChromeStackedLayout();
   const toastChrome = useToastChromeLayout();
-  const searchBarTop = insets.top + headerChrome.rowTopInset;
-  const searchBarHeight = getSearchBarHeight(fontScale, uiScale);
   const scrollYRef = useRef(0);
   const layoutHRef = useRef(0);
   const contentHRef = useRef(0);
@@ -189,7 +184,7 @@ export function SearchScreenResults({
     });
   }, [showNoResultsOnly, dismiss, upsertPill]);
 
-  const contentTopPadding = searchBarTop + searchBarHeight + 12;
+  const contentTopPadding = insets.top + searchChrome.stackedAnchorOffset;
 
   return (
     <>

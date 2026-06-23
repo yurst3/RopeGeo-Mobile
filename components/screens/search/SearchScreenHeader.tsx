@@ -1,7 +1,7 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { SearchBar } from "@/components/SearchBar";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/buttonChromeLayout";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   forwardRef,
@@ -28,8 +28,9 @@ export const SearchScreenHeader = forwardRef<TextInput, SearchScreenHeaderProps>
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const headerChrome = useHeaderChromeLayout();
+  const searchChrome = useSearchChromeStackedLayout();
   const inputRef = useRef<TextInput>(null);
-  const searchBarTop = insets.top + headerChrome.rowTopInset;
+  const searchBarTop = insets.top + searchChrome.rowTop;
 
   const setInputRef = useCallback(
     (node: TextInput | null) => {
