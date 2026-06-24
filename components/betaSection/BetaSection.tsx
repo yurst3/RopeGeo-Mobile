@@ -23,6 +23,7 @@ import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/ColorThemeContext";
 import { useTextStyle, useText } from "@/context/TextContext";
 import { useUiScale } from "@/context/UIScaleContext";
+import { useFabulousTitle } from "@/utils/useFabulousTitle";
 import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
@@ -163,6 +164,7 @@ export function BetaSection({ section, pageTitle }: BetaSectionProps) {
   const themeColors = useColorTheme();
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
+  const displayTitle = useFabulousTitle(section.title);
   const hasImages = section.images.length > 0;
   const sortedImages = hasImages
     ? [...section.images].sort((a, b) => a.order - b.order)
@@ -186,7 +188,7 @@ export function BetaSection({ section, pageTitle }: BetaSectionProps) {
         measure={{ type: "lineCount", maxLinesAtMaxSize: 2 }}
         style={[styles.title, { color: themeColors.text.primary }]}
       >
-        {section.title}
+        {displayTitle}
       </ScalingText>
 
       {section.text ? (

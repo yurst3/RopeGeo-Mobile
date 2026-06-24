@@ -1,13 +1,20 @@
 import { useColorTheme } from "@/context/ColorThemeContext";
+import type { TypographySpec } from "@/constants/text/style/types";
+import { useResolvedTypography } from "@/utils/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import type { StyleProp, TextStyle } from "react-native";
 
 export type StarRatingProps = {
   rating: number;
   count: number;
   /** Star size in px. Default 16. */
   size?: number;
+  /** Typography token for the numeric label (`X.X (N)`). */
+  labelTypography: TypographySpec;
+  /** Resolved label size in px (may be below token max when space is tight). */
+  labelFontSize?: number;
   /**
    * When true, stars and label use {@link ThemeColors.placeholder} (e.g. skeleton rows).
    * When false, star outlines and filled portions use {@link ThemeColors.starRating};
@@ -17,7 +24,7 @@ export type StarRatingProps = {
   /** When false, label text uses the explicit `fontSize` from `textStyle` without system scaling. */
   allowFontScaling?: boolean;
   style?: React.ComponentProps<typeof View>["style"];
-  textStyle?: React.ComponentProps<typeof Text>["style"];
+  textStyle?: StyleProp<TextStyle>;
 };
 
 const DEFAULT_SIZE = 16;
@@ -26,12 +33,15 @@ export function StarRating({
   rating,
   count,
   size = DEFAULT_SIZE,
+  labelTypography,
+  labelFontSize,
   placeholderColor = false,
   allowFontScaling = true,
   style,
   textStyle,
 }: StarRatingProps) {
   const { placeholder, starRating, text } = useColorTheme();
+  const labelTypographyStyle = useResolvedTypography(labelTypography);
   const starColor = placeholderColor ? placeholder : starRating;
   const labelColor = placeholderColor ? placeholder : text.secondary;
 
@@ -66,7 +76,13 @@ export function StarRating({
       {stars}
       <Text
         allowFontScaling={allowFontScaling}
-        style={[styles.ratingText, { color: labelColor }, textStyle]}
+        style={[
+          styles.ratingText,
+          { color: labelColor },
+          labelTypographyStyle,
+          labelFontSize != null ? { fontSize: labelFontSize } : null,
+          textStyle,
+        ]}
       >
         {rating.toFixed(1)} ({count})
       </Text>

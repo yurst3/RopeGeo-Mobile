@@ -135,4 +135,25 @@ export function ExampleButton() {
 - **First** check whether an existing token already matches (especially `text`, `card`, `separator`, `image`, `button`).
 - Add/extend types in `Mobile/constants/colors/types.ts` only when a new semantic or prototype-mapped slot is justified.
 - Add the new color values to **every** theme folder under `Mobile/constants/colors/*Theme/` and ensure they satisfy the types.
-- Prefer repeating literals over importing between theme modules to avoid cycles.
+- Prefer repeating literals over importing between theme modules to avoid cycles (re-exporting an unchanged subtree such as badges from an existing theme is acceptable when the palette is intentionally identical).
+
+## Adding a new named theme (Settings + runtime)
+
+When introducing a palette beyond Light/Dark (e.g. **Fabulous**), update these touchpoints:
+
+1. **Theme definition** — Create `Mobile/constants/colors/<name>Theme/` with a root `index.ts` exporting a `ThemeColors` object (mirror `lightTheme/` / `darkTheme/` structure: `buttons/`, `badges/`, etc.).
+2. **Palette registry** — Register in `Mobile/constants/colors/index.ts`:
+   - Extend `ThemePaletteKey` with the new key (PascalCase, e.g. `"Fabulous"`).
+   - Add the theme to `COLORS`.
+3. **Settings enum** — In `Mobile/constants/settings/types.ts`:
+   - Add the preference to `ThemePreference` (PascalCase string literal).
+   - Append it to `THEME_PREFERENCES` (order controls Settings chip order).
+   - `Settings.parseTheme` validates against `THEME_PREFERENCES` automatically.
+4. **Runtime resolution** — In `Mobile/context/ColorThemeContext.tsx`:
+   - Map the new preference to its `COLORS` key in `resolveThemePaletteKey`.
+   - Set `resolveColorTheme` to `"light"` or `"dark"` for system chrome (status bar, etc.); use `"dark"` for deep backgrounds, `"light"` for light backgrounds.
+5. **Settings UI** — In `Mobile/components/screens/settings/ThemeSettingsSection.tsx`:
+   - Add a label in `THEME_LABELS`.
+   - Add swatch colors in `swatchColors` (`primary` = `background`, `secondary` = accent such as `text.link`).
+
+`Auto` is not a palette: it follows the system scheme and picks `COLORS.Light` or `COLORS.Dark`.

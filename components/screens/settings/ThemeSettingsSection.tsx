@@ -9,6 +9,7 @@ const THEME_LABELS: Record<ThemePreference, string> = {
   Auto: "Auto",
   Light: "Light",
   Dark: "Dark",
+  Fabulous: "Fabulous",
 };
 
 function swatchColors(preference: ThemePreference, systemDark: boolean) {
@@ -22,6 +23,12 @@ function swatchColors(preference: ThemePreference, systemDark: boolean) {
     return {
       primary: COLORS.Dark.background,
       secondary: COLORS.Dark.text.link,
+    };
+  }
+  if (preference === "Fabulous") {
+    return {
+      primary: COLORS.Fabulous.background,
+      secondary: COLORS.Fabulous.text.link,
     };
   }
   const theme = systemDark ? COLORS.Dark : COLORS.Light;

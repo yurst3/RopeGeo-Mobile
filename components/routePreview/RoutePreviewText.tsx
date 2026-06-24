@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 import { ScalingText } from "@/components/text/ScalingText";
 import { useTextStyle } from "@/context/TextContext";
 import { useUiScale } from "@/context/UIScaleContext";
+import { useFabulousTitle } from "@/utils/useFabulousTitle";
 import {
   formatPreviewAkaLine,
 } from "@/utils/previewLayout";
@@ -23,6 +24,7 @@ export function RoutePreviewTitle({
   const metrics = useRoutePreviewMetrics();
   const uiScale = useUiScale();
   const style = useTextStyle();
+  const displayTitle = useFabulousTitle(title);
 
   return (
     <ScalingText
@@ -42,7 +44,7 @@ export function RoutePreviewTitle({
         },
       ]}
     >
-      {title}
+      {displayTitle}
     </ScalingText>
   );
 }

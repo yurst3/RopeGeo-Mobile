@@ -1,7 +1,7 @@
 import type { FontProfileKey } from "@/constants/text/font/types";
 import type { UiScaleProfileKey } from "@/constants/uiScale/types";
 
-export type ThemePreference = "Auto" | "Light" | "Dark";
+export type ThemePreference = "Auto" | "Light" | "Dark" | "Fabulous";
 
 export type SettingsFontKey = FontProfileKey;
 export type SettingsUiScaleKey = UiScaleProfileKey;
@@ -10,6 +10,7 @@ export const THEME_PREFERENCES: readonly ThemePreference[] = [
   "Auto",
   "Light",
   "Dark",
+  "Fabulous",
 ];
 
 export const SETTINGS_FONT_KEYS: readonly SettingsFontKey[] = [

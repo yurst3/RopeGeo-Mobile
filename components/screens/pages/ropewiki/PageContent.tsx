@@ -5,8 +5,8 @@ import { useTextStyle } from "@/context/TextContext";
 import { useUiScale } from "@/context/UIScaleContext";
 import {
   useResolvedConstantSize,
-  useResolvedTypography,
 } from "@/utils/resolvers";
+import { useFabulousTitle } from "@/utils/useFabulousTitle";
 import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
 import {
   isCenteredRegionMiniMapType,
@@ -126,8 +126,8 @@ export function PageContent({
   const { background, text } = useColorTheme();
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
-  const starRatingLabelStyle = useResolvedTypography(textStyle.pageScreen.starRating);
   const starRatingFontSize = useResolvedConstantSize(uiScale.pageScreen.text.starRating);
+  const displayTitle = useFabulousTitle(data.name);
   const miniMapGateRef = useRef<View>(null);
   const miniMapUnlockedRef = useRef(false);
   const [mountMiniMapNative, setMountMiniMapNative] = useState(false);
@@ -278,7 +278,7 @@ export function PageContent({
               typography={textStyle.pageScreen.title}
               style={[styles.title, { color: text.primary }]}
             >
-              {data.name}
+              {displayTitle}
             </ConstantText>
             {data.aka != null && data.aka.length > 0 ? (
               <ConstantText
@@ -306,12 +306,13 @@ export function PageContent({
             <StarRating
               rating={rating}
               count={ratingCount}
+              labelTypography={textStyle.pageScreen.starRating}
+              labelFontSize={starRatingFontSize}
               style={styles.starRatingRow}
               allowFontScaling={false}
               textStyle={[
                 styles.starRatingText,
-                starRatingLabelStyle,
-                { color: text.secondary, fontSize: starRatingFontSize },
+                { color: text.secondary },
               ]}
             />
             <RappelInfoRow

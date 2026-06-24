@@ -75,13 +75,12 @@ export function RoutePreviewPlaceholder({
                   rating={0}
                   count={0}
                   size={metrics.starRatingSize}
+                  labelTypography={style.preview.starRating}
+                  labelFontSize={metrics.starRatingFontSize}
                   allowFontScaling={false}
                   placeholderColor
                   style={styles.starRatingRow}
-                  textStyle={[
-                    styles.starRatingText,
-                    { fontSize: metrics.starRatingFontSize },
-                  ]}
+                  textStyle={styles.starRatingText}
                 />
                 {isError ? (
                   <ConstantText

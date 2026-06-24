@@ -9,6 +9,7 @@ import {
   PREVIEW_TITLE_MAX_LINES,
   usePreviewLayoutMetrics,
 } from "@/utils/previewLayout";
+import { useFabulousTitle } from "@/utils/useFabulousTitle";
 import { useRouter } from "expo-router";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/models";
 import { useState } from "react";
@@ -59,6 +60,7 @@ export function RegionPreview({ preview }: Props) {
       ? preview.parents.slice(0, REGION_MAX).join(" • ")
       : "";
   const countsText = formatCounts(preview.pageCount, preview.regionCount);
+  const displayTitle = useFabulousTitle(preview.name);
   const icon = sourceIcon(preview.source);
 
   const onPress = () => {
@@ -150,7 +152,7 @@ export function RegionPreview({ preview }: Props) {
           measureTextStyle={styles.titleMeasure}
           style={[styles.title, { color: text.primary }]}
         >
-          {preview.name}
+          {displayTitle}
         </ScalingText>
         <View style={styles.middleRow}>
           <View style={styles.metaColumn}>

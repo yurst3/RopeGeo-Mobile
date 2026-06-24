@@ -51,6 +51,7 @@ import {
 import { BadgeRow } from "./BadgeRow";
 import { RoutePreviewAka, RoutePreviewLocation, RoutePreviewTitle } from "./RoutePreviewText";
 import { useColorTheme } from "@/context/ColorThemeContext";
+import { useTextStyle } from "@/context/TextContext";
 import { useRoutePreviewFloaterLayout } from "@/utils/buttonChromeLayout";
 import { RoutePreviewPlaceholder } from "./RoutePreviewPlaceholder";
 
@@ -101,6 +102,7 @@ function SinglePreviewCard({
   onPress?: (preview: PreviewCardData) => void;
 }) {
   const themeColors = useColorTheme();
+  const textStyle = useTextStyle();
   const metrics = useRoutePreviewMetrics();
   const { text, image, background } = themeColors;
   const previewImageUri =
@@ -184,12 +186,11 @@ function SinglePreviewCard({
               rating={rating}
               count={ratingCount}
               size={metrics.starRatingSize}
+              labelTypography={textStyle.preview.starRating}
+              labelFontSize={metrics.starRatingFontSize}
               allowFontScaling={false}
               style={styles.starRatingRow}
-              textStyle={[
-                styles.starRatingText,
-                { fontSize: metrics.starRatingFontSize },
-              ]}
+              textStyle={styles.starRatingText}
             />
             <RoutePreviewTitle title={preview.title} color={text.primary} />
             {akaNames.length > 0 ? (

@@ -1,4 +1,4 @@
-import { COLORS } from "@/constants/colors";
+import { COLORS, type ThemePaletteKey } from "@/constants/colors";
 import type { ThemeColors } from "@/constants/colors/types";
 import type { ThemePreference } from "@/constants/settings/types";
 import { useSettings } from "@/context/SettingsContext";
@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useColorScheme, type ColorSchemeName } from "react-native";
 
+/** Coarse light/dark bucket for system chrome when a named palette does not apply. */
 export type ColorTheme = "light" | "dark";
 
 type ColorThemeContextValue = {
@@ -29,8 +30,18 @@ function resolveColorTheme(
   systemScheme: ColorSchemeName | null,
 ): ColorTheme {
   if (preference === "Light") return "light";
-  if (preference === "Dark") return "dark";
+  if (preference === "Dark" || preference === "Fabulous") return "dark";
   return resolveSystemColorTheme(systemScheme);
+}
+
+function resolveThemePaletteKey(
+  preference: ThemePreference,
+  systemScheme: ColorSchemeName | null,
+): ThemePaletteKey {
+  if (preference === "Light") return "Light";
+  if (preference === "Dark") return "Dark";
+  if (preference === "Fabulous") return "Fabulous";
+  return systemScheme === "dark" ? "Dark" : "Light";
 }
 
 export function ColorThemeProvider({ children }: { children: ReactNode }) {
@@ -38,14 +49,15 @@ export function ColorThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const themePreference = settings.theme;
   const colorTheme = resolveColorTheme(themePreference, systemScheme);
+  const paletteKey = resolveThemePaletteKey(themePreference, systemScheme);
 
   const value = useMemo<ColorThemeContextValue>(
     () => ({
       colorTheme,
       themePreference,
-      colors: COLORS[colorTheme === "dark" ? "Dark" : "Light"],
+      colors: COLORS[paletteKey],
     }),
-    [colorTheme, themePreference],
+    [colorTheme, paletteKey, themePreference],
   );
 
   return (

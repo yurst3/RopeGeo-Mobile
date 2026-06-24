@@ -1,0 +1,62 @@
+export const FABULOUS_EMOJIS = [
+  "🩷",
+  "❤️",
+  "🧡",
+  "💛",
+  "💚",
+  "🩵",
+  "❤️‍🔥",
+  "❣️",
+  "💕",
+  "💞",
+  "💓",
+  "💖",
+  "💘",
+  "💝",
+  "🔅",
+  "🔆",
+  "💅",
+  "🦄",
+  "💫",
+  "⭐️",
+  "🌟",
+  "✨",
+  "💥",
+  "🔥",
+  "🌈",
+  "☀️",
+  "🫧",
+  "🌺",
+  "🌸",
+  "🌼",
+  "🌻",
+  "🌹",
+  "🌷",
+  "💐",
+  "🪷",
+  "🪻",
+  "👑",
+  "💍",
+  "👛",
+  "💄",
+  "🍭",
+  "🍬",
+  "🧁",
+  "🛍️",
+  "🎁",
+  "🎈",
+  "🎀",
+  "🪄",
+  "🪅",
+  "🎊",
+  "🎉",
+] as const;
+
+/** 4/5 chance of `null`; otherwise a random emoji from {@link FABULOUS_EMOJIS}. */
+export function getFabulousEmoji(): (typeof FABULOUS_EMOJIS)[number] | null {
+  if (Math.random() >= 0.2) {
+    return null;
+  }
+  const index = Math.floor(Math.random() * FABULOUS_EMOJIS.length);
+  return FABULOUS_EMOJIS[index] ?? null;
+}

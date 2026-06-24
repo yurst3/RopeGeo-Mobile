@@ -17,6 +17,7 @@ import {
   usePreviewLayoutMetrics,
 } from "@/utils/previewLayout";
 import { useResolvedTypography } from "@/utils/resolvers";
+import { useFabulousTitle } from "@/utils/useFabulousTitle";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Image } from "expo-image";
@@ -77,11 +78,13 @@ export function PagePreview({
   const uiScale = useUiScale();
   const style = useTextStyle();
   const { text, image, preview: previewColors, button } = themeColors;
+  const akaTypographyStyle = useResolvedTypography(style.preview.akaNames);
   const akaBoldTypography = useMemo(
     () => ({ ...style.preview.akaNames, fontWeight: "700" as const }),
     [style.preview.akaNames],
   );
   const akaBoldStyle = useResolvedTypography(akaBoldTypography);
+  const displayTitle = useFabulousTitle(preview.title);
   const { sourceIconBackground } = previewColors.page;
   const router = useRouter();
   const { savedEntries, removeDownloadBundle } = useSavedPages();
@@ -243,7 +246,7 @@ export function PagePreview({
               measureTextStyle={styles.titleMeasure}
               style={[styles.title, { color: text.primary }]}
             >
-              {preview.title}
+              {displayTitle}
             </ScalingTextGroup.Segment>
             {difficultyText ? (
               <ScalingTextGroup.Segment
@@ -279,10 +282,13 @@ export function PagePreview({
                         style={[
                           styles.meta,
                           styles.akaLine,
+                          akaTypographyStyle,
                           { color: text.secondary, fontSize },
                         ]}
                       >
-                        <Text>{PREVIEW_AKA_NAMES_TAB}AKA: </Text>
+                        <Text style={akaTypographyStyle}>
+                          {PREVIEW_AKA_NAMES_TAB}AKA:{" "}
+                        </Text>
                         <Text style={akaBoldStyle}>{akaNames}</Text>
                       </Text>
                     );
@@ -359,12 +365,11 @@ export function PagePreview({
             rating={rating}
             count={ratingCount}
             size={layoutMetrics.starRatingSize}
+            labelTypography={style.preview.starRating}
+            labelFontSize={layoutMetrics.starRatingFontSize}
             allowFontScaling={false}
             style={styles.stars}
-            textStyle={[
-              styles.starText,
-              { fontSize: layoutMetrics.starRatingFontSize },
-            ]}
+            textStyle={styles.starText}
           />
         </View>
     </Pressable>
