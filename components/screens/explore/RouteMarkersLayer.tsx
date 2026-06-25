@@ -16,20 +16,20 @@ import {
 } from "@rnmapbox/maps";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
-import { useMapMarkerTextFont } from "@/utils/resolvers";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
+import { useRouteMarkerMetrics } from "@/utils/layout/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/theme/resolvers";
 import {
   clusterRouteMarkerSymbolStyle,
   unclusteredRouteMarkerSymbolStyle,
-} from "./mapMarkerLayerStyles";
-import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+} from "@/utils/explore/mapMarkerLayerStyles";
+import { REQUEST_TIMEOUT_SECONDS } from "@/utils/network/requestTimeout";
 import {
   ROUTE_MARKER_NATIVE_ASSET_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
-} from "./routeMarkerIcons";
+} from "@/utils/explore/routeMarkerIcons";
 
 export type RoutesState = {
   /** True while all `/routes` pages are still merging (`data` is still null). */
@@ -47,7 +47,7 @@ export type RoutesState = {
 };
 
 /** @deprecated Use {@link ROUTE_MARKER_DESIGN_CLUSTER_RADIUS} from routeMarkerLayout. */
-export { ROUTE_MARKER_DESIGN_CLUSTER_RADIUS as CLUSTER_RADIUS } from "@/utils/routeMarkerLayout";
+export { ROUTE_MARKER_DESIGN_CLUSTER_RADIUS as CLUSTER_RADIUS } from "@/utils/layout/routeMarkerLayout";
 
 /** Zoom when focusing a route from a marker tap — matches `ExploreScreen` default map zoom (12.1). */
 export const ROUTE_MARKER_CAMERA_ZOOM = 12.1;

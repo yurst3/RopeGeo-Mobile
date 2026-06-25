@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 import { Badge } from "./Badge";
 

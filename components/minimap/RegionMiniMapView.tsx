@@ -2,20 +2,20 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
-import { RoutePreview } from "@/components/routePreview/RoutePreview";
+import { useForegroundUserLocation } from "@/utils/location/useForegroundUserLocation";
+import { RoutePreview } from "@/components/previews/route/RoutePreview";
 import {
   RouteMarkersLayer,
   type RoutesState,
 } from "@/components/screens/explore/RouteMarkersLayer";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import {
   routePreviewDockedPaddingBottom,
-} from "./shared/fullScreenMapLayout";
+} from "@/utils/minimap/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
-import { miniMapHostStyles } from "./shared/miniMapHostStyles";
+import { miniMapHostStyles } from "@/utils/minimap/miniMapHostStyles";
 import {
   CAMERA_PADDING,
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
@@ -23,9 +23,9 @@ import {
 } from "./shared/minimapShared";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
-import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
-import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
-import { useMiniMapCamera } from "./shared/useMiniMapCamera";
+import type { MiniMapReloadRegisterRef } from "@/utils/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "@/utils/minimap/useMiniMapViewportCameraOnLayout";
+import { useMiniMapCamera } from "@/utils/minimap/useMiniMapCamera";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";

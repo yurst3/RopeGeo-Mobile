@@ -4,17 +4,17 @@ import {
   ToastKeyCollisionError,
   ToastKeyNotFoundError,
   useToast,
-} from "@/context/ToastContext";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
+} from "@/context/ui/ToastContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
 import { SearchScreenHeader } from "@/components/screens/search/SearchScreenHeader";
 import { SearchScreenResults } from "@/components/screens/search/SearchScreenResults";
-import { useSavedFilters } from "@/context/SavedFiltersContext";
+import { useSavedFilters } from "@/context/data/SavedFiltersContext";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { RopeGeoPagedDataLoader, Method, Service } from "ropegeo-common/components";
-import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { REQUEST_TIMEOUT_SECONDS } from "@/utils/network/requestTimeout";
 import {
   Preview,
   SearchFilter,

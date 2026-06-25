@@ -1,8 +1,8 @@
-import { useText } from "@/context/TextContext";
-import { useResolvedTypography } from "@/utils/resolvers";
+import { useText } from "@/context/typography/TextContext";
+import { useResolvedTypography } from "@/utils/theme/resolvers";
 import { StyleSheet, Text, View } from "react-native";
-import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
-import { useFilterTheme } from "./useFilterTheme";
+import { useFilterCheckboxMetrics } from "@/utils/filters/useFilterCheckboxMetrics";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 
 export type FilterCheckboxProps = {
   checked: boolean;

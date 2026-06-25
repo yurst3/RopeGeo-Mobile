@@ -1,8 +1,8 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { RopewikiRegionScreen } from "@/components/screens/regions/ropewiki/RopewikiRegionScreen";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { useLocalSearchParams } from "expo-router";
 import { PageDataSource } from "ropegeo-common/models";
 import { View } from "react-native";

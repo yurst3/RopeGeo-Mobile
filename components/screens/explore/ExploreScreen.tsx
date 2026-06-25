@@ -1,15 +1,15 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { useExploreHeaderLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useExploreHeaderLayout, useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
-import { useSavedFilters } from "@/context/SavedFiltersContext";
-import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
+import { useSavedFilters } from "@/context/data/SavedFiltersContext";
+import { useNetworkRequestToasts } from "@/utils/toast/useNetworkRequestToasts";
+import { useRoutesProgressToast } from "@/utils/toast/useRoutesProgressToast";
 import { TOAST_KEY_ROUTES_ERROR } from "@/constants/toasts/toastArchetypes";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
 import { RouteMarkersLayer, type RoutesState } from "./RouteMarkersLayer";
 import { TrailsLayer } from "./TrailsLayer";
 import {
@@ -19,8 +19,8 @@ import {
   type OfflinePagePreview,
   type RoutesParams,
 } from "ropegeo-common/models";
-import { SearchBar } from "@/components/SearchBar";
-import { RoutePreview } from "@/components/routePreview/RoutePreview";
+import { SearchBar } from "@/components/search/SearchBar";
+import { RoutePreview } from "@/components/previews/route/RoutePreview";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { useIsFocused } from "@react-navigation/native";

@@ -4,7 +4,7 @@ import {
   useResolvedScalingBounds,
   useResolvedTypography,
   useTextMeasureKey,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -24,7 +24,7 @@ import {
   computeScalingTextFontSizeFromWidth,
   measureUnconstrainedTextWidth,
   scalingTextWords,
-} from "@/utils/scalingText";
+} from "@/utils/layout/scalingText";
 
 const UNCONSTRAINED_MEASURE_WIDTH = 10000;
 

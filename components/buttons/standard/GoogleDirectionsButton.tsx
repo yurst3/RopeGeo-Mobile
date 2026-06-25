@@ -1,15 +1,15 @@
 import { Image } from "expo-image";
 
 import { Button } from "@/components/buttons/Button";
-import { EXPAND_BUTTON_SIZE } from "@/components/minimap/shared/miniMapOverlayLayout";
+import { EXPAND_BUTTON_SIZE } from "@/utils/minimap/miniMapOverlayLayout";
 import { GOOGLE_DIRECTIONS_BUTTON_KEY } from "@/constants/buttons";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 
 const GOOGLE_DIRECTIONS_ICON = require("@/assets/images/icons/buttons/google-directions.png");
 

@@ -5,7 +5,7 @@ import {
   PAGE_BADGE_CELL_PADDING,
   PAGE_BADGE_ROW_GAP,
   usePageBadgeMetrics,
-} from "@/utils/pageBadgeLayout";
+} from "@/utils/layout/pageBadgeLayout";
 import { StyleSheet, View } from "react-native";
 
 /** Skeleton badge grid matching {@link PageBadges} layout. */

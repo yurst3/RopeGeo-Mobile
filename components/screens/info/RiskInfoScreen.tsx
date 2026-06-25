@@ -5,7 +5,7 @@ import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadg
 import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
 import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaRiskSubRating } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { type ImageLoadEventData } from "expo-image";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ExpandedImageZoomableImage } from "./ExpandedImageZoomableImage";
-import type { ExpandedImageGalleryPage } from "./types";
+import type { ExpandedImageGalleryPage } from "@/utils/expandedImage/types";
 
 export type ExpandedImageGallerySlideProps = {
   page: ExpandedImageGalleryPage;

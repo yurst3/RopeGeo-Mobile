@@ -3,7 +3,7 @@ import type { TypographySpec } from "@/constants/text/style/types";
 import {
   useResolvedConstantSize,
   useResolvedTypography,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import {
   Text,
   type StyleProp,

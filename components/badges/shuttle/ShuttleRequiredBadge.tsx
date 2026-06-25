@@ -1,6 +1,6 @@
 import { Badge } from "@/components/badges/Badge";
 import { SHUTTLE_REQUIRED_BADGE_KEY } from "@/constants/badges";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 export function ShuttleRequiredBadge({
   showLabel,

@@ -3,9 +3,9 @@ import { ExternalLinkButton } from "@/components/buttons/standard/ExternalLinkBu
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { PlaceholderPageBadges } from "@/components/screens/pages/ropewiki/PlaceholderPageBadges";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import {

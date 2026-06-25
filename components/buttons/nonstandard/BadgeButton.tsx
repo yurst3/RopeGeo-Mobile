@@ -1,10 +1,10 @@
 import { BADGE_BUTTON_KEY } from "@/constants/buttons";
 import type { BadgeButtonColors } from "@/constants/colors/types";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { usePageBadgeMetrics } from "@/utils/layout/pageBadgeLayout";
 import { Image } from "expo-image";
 import type { ReactNode } from "react";
 import { useMemo } from "react";

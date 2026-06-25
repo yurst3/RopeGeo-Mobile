@@ -1,6 +1,6 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
-import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/components/expandedImage/types";
+import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/utils/expandedImage/types";
 import { RegionBanner, type RegionBannerHandle } from "./RegionBanner";
 import { RegionContent } from "./RegionContent";
 import { RegionSeamButtons } from "./RegionSeamButtons";
@@ -23,17 +23,17 @@ import {
 } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { useRoutesProgressToast } from "@/components/toast/useRoutesProgressToast";
-import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useNetworkRequestToasts } from "@/utils/toast/useNetworkRequestToasts";
+import { useRoutesProgressToast } from "@/utils/toast/useRoutesProgressToast";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import {
   TOAST_KEY_REGION_ERROR,
   TOAST_KEY_ROUTES_ERROR,
 } from "@/constants/toasts/toastArchetypes";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
-import { isPageIdKeyInSavedPagesStorage } from "@/lib/savedPages/isPageIdKeyInSavedPagesStorage";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/utils/network/requestTimeout";
+import { isPageIdKeyInSavedPagesStorage } from "@/utils/savedPages/isPageIdKeyInSavedPagesStorage";
 import { type RoutesState } from "@/components/screens/explore/RouteMarkersLayer";
 import { PageDataSource, RopewikiRegionView } from "ropegeo-common/models";
 

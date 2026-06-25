@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react";
 import { Animated, StyleSheet } from "react-native";
 
 import { Button } from "@/components/buttons/Button";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { MAP_BUTTON_SIZE } from "@/utils/minimap/fullScreenMapLayout";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 
 const BASE_ICON_SIZE = 22;
 

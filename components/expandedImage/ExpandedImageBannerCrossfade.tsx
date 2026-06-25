@@ -7,8 +7,8 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import type { ExpandedImageGalleryPage } from "./types";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import type { ExpandedImageGalleryPage } from "@/utils/expandedImage/types";
 
 const BANNER_BLUR_RADIUS = 28;
 

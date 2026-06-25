@@ -2,10 +2,10 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
-import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
-import { useMapMarkerTextFont } from "@/utils/resolvers";
-import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
+import { useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
+import { useRouteMarkerMetrics } from "@/utils/layout/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/theme/resolvers";
+import { useForegroundUserLocation } from "@/utils/location/useForegroundUserLocation";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { PageMiniMapLegend } from "./shared/PageMiniMapLegend";
 import {
@@ -18,7 +18,7 @@ import {
   resolveLineLegendSelectionId,
   lineSelectionBounds,
   lineSelectionStyle,
-} from "./shared/pageMiniMapSegments";
+} from "@/utils/minimap/pageMiniMapSegments";
 import {
   CAMERA_PADDING,
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
@@ -26,16 +26,16 @@ import {
 } from "./shared/minimapShared";
 import { ConstantText } from "@/components/text/ConstantText";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { trailVectorLineStyle } from "./shared/trailVectorLineStyle";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { trailVectorLineStyle } from "@/utils/minimap/trailVectorLineStyle";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
-import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
-import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
-import { useMiniMapCamera } from "./shared/useMiniMapCamera";
-import { pagePointLabelSymbolStyle } from "@/components/screens/explore/mapMarkerLayerStyles";
-import { pageMiniMapPointIconSize } from "@/components/screens/explore/routeMarkerIcons";
+import type { MiniMapReloadRegisterRef } from "@/utils/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "@/utils/minimap/useMiniMapViewportCameraOnLayout";
+import { useMiniMapCamera } from "@/utils/minimap/useMiniMapCamera";
+import { pagePointLabelSymbolStyle } from "@/utils/explore/mapMarkerLayerStyles";
+import { pageMiniMapPointIconSize } from "@/utils/explore/routeMarkerIcons";
 import {
   Camera,
   Images,
@@ -50,11 +50,11 @@ import {
   ROUTE_MARKER_IMAGE,
   ROUTE_MARKER_NATIVE_ASSET_IMAGES,
   ROUTE_MARKER_SELECTED_IMAGE,
-} from "@/lib/mapbox/nativeMarkerImages";
+} from "@/utils/mapbox/nativeMarkerImages";
 import {
   offlineVectorTilesRootFromTemplate,
   prepareOfflineVectorTilesForMapbox,
-} from "@/lib/offline/prepareOfflineVectorTiles";
+} from "@/utils/offline/prepareOfflineVectorTiles";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { ComponentRef } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

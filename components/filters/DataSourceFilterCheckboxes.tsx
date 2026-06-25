@@ -1,12 +1,12 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import { PageDataSource } from "ropegeo-common/models";
 import { FilterCheckbox } from "./FilterCheckbox";
-import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
-import { useFilterTheme } from "./useFilterTheme";
+import { useFilterCheckboxMetrics } from "@/utils/filters/useFilterCheckboxMetrics";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 
 const SOURCE_DISPLAY: Record<PageDataSource, string> = {
   [PageDataSource.Ropewiki]: "Ropewiki",

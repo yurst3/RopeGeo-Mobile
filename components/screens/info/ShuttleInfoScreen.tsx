@@ -1,7 +1,7 @@
 import { NoShuttleBadge } from "@/components/badges/shuttle/NoShuttleBadge";
 import { ShuttleRequiredBadge } from "@/components/badges/shuttle/ShuttleRequiredBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import React from "react";
 import { Text, View } from "react-native";
 

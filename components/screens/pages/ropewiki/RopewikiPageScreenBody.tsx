@@ -1,17 +1,17 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { SaveButton } from "@/components/buttons/standard/SaveButton";
 import { ShareButton } from "@/components/buttons/standard/ShareButton";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
-import { useSavedTabHighlight } from "@/context/SavedTabHighlightContext";
-import { useSavedPages } from "@/context/SavedPagesContext";
-import { useShareSheetDimmer } from "@/context/ShareSheetDimmerContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useDownloadJobQueue } from "@/context/data/DownloadJobQueueContext";
+import { useSavedTabHighlight } from "@/context/ui/SavedTabHighlightContext";
+import { useSavedPages } from "@/context/data/SavedPagesContext";
+import { useShareSheetDimmer } from "@/context/ui/ShareSheetDimmerContext";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
-import type { ExpandedImageAnchorRect } from "@/components/expandedImage/types";
+import type { ExpandedImageAnchorRect } from "@/utils/expandedImage/types";
 import { PageBanner } from "./PageBanner";
 import { PageContent as PageScrollContent } from "./PageContent";
 import { PAGE_SEAM_FLOAT_OFFSET } from "./PageSeamButtons";
-import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import {
   TOAST_KEY_DOWNLOAD_CANCELLED,
   TOAST_KEY_PAGE_SAVED,
@@ -20,8 +20,8 @@ import { getToastArchetypeForKey } from "@/constants/toasts/helpers";
 import {
   pageDownloadUiFromJobSnapshot,
   useDownloadProgressToasts,
-} from "@/components/toast/useDownloadProgressToasts";
-import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
+} from "@/utils/toast/useDownloadProgressToasts";
+import { ToastKeyCollisionError, useToast } from "@/context/ui/ToastContext";
 import { usePathname, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

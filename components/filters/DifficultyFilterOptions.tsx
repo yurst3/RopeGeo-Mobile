@@ -26,9 +26,9 @@ import {
 } from "ropegeo-common/models";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { fullRangeAcaDifficultyFilterOptions } from "@/lib/defaultAcaDifficultyFilterOptions";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { fullRangeAcaDifficultyFilterOptions } from "@/utils/filters/defaultAcaDifficultyFilterOptions";
 import { AcaDiscreteRangeSlider } from "./AcaDiscreteRangeSlider";
 import {
   ACA_RISK_BADGES,
@@ -40,7 +40,7 @@ import {
   ACA_WATER_BADGES,
   ACA_WATER_THUMB_TITLES,
 } from "./acaDifficultyBadgeMaps";
-import { useFilterTheme } from "./useFilterTheme";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 
 function orderedEnum<T extends string>(
   values: readonly T[],

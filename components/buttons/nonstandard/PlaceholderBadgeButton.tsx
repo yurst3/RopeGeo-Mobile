@@ -1,6 +1,6 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { usePageBadgeMetrics } from "@/utils/pageBadgeLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { usePageBadgeMetrics } from "@/utils/layout/pageBadgeLayout";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 

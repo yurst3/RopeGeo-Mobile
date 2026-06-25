@@ -1,15 +1,15 @@
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   PAGE_PREVIEW_TRAILING_MARGIN,
   PREVIEW_META_MAX_LINES,
   PREVIEW_TITLE_MAX_LINES,
   usePreviewLayoutMetrics,
-} from "@/utils/previewLayout";
-import { useFabulousTitle } from "@/utils/useFabulousTitle";
+} from "@/utils/layout/previewLayout";
+import { useFabulousTitle } from "@/utils/theme/useFabulousTitle";
 import { useRouter } from "expo-router";
 import { PageDataSource, type RegionPreview as RegionPreviewData } from "ropegeo-common/models";
 import { useState } from "react";

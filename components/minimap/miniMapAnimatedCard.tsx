@@ -6,7 +6,7 @@ import {
 import {
   type MiniMapExpandLayout,
   useMiniMapAnimation,
-} from "@/components/minimap/shared/useMiniMapAnimation";
+} from "@/utils/minimap/useMiniMapAnimation";
 import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import {
   createContext,

@@ -2,13 +2,13 @@ import { RemoveDownloadButton } from "@/components/buttons/standard/RemoveDownlo
 import { ScalingText } from "@/components/text/ScalingText";
 import { DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 import type { DownloadButtonColors } from "@/constants/colors/types";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedButtonBackgroundScale,
   useResolvedButtonIconScale,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";

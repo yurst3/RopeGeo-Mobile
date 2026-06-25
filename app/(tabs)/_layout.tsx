@@ -1,17 +1,17 @@
-import { ExploreTabBarIcon } from "@/components/navigation/ExploreTabBarIcon";
-import { SavedTabBarIcon } from "@/components/navigation/SavedTabBarIcon";
-import { SettingsTabBarIcon } from "@/components/navigation/SettingsTabBarIcon";
-import { useTabFocusToastScreenListeners } from "@/components/navigation/useTabFocusToastScreenListeners";
-import { SavedTabHighlightProvider } from "@/context/SavedTabHighlightContext";
-import { ShareSheetDimmerOverlay } from "@/context/ShareSheetDimmerContext";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { ExploreTabBarIcon } from "@/components/tabs/ExploreTabBarIcon";
+import { SavedTabBarIcon } from "@/components/tabs/SavedTabBarIcon";
+import { SettingsTabBarIcon } from "@/components/tabs/SettingsTabBarIcon";
+import { useTabFocusToastScreenListeners } from "@/utils/navigation/useTabFocusToastScreenListeners";
+import { SavedTabHighlightProvider } from "@/context/ui/SavedTabHighlightContext";
+import { ShareSheetDimmerOverlay } from "@/context/ui/ShareSheetDimmerContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedButtonConstantTextSize,
   useResolvedButtonIconScale,
   useResolvedTypography,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import { Tabs, router } from "expo-router";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";

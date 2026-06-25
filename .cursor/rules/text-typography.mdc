@@ -32,8 +32,8 @@ Always pass **`size` + `typography`** together into `ConstantText` / `ScalingTex
 
 ```tsx
 import { ConstantText } from "@/components/text/ConstantText";
-import { useText } from "@/context/TextContext";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 export function ExampleTitle() {
   const { uiScale, style } = useText();
@@ -54,7 +54,7 @@ export function ExampleTitle() {
 
 ```tsx
 import { ScalingText } from "@/components/text/ScalingText";
-import { useText } from "@/context/TextContext";
+import { useText } from "@/context/typography/TextContext";
 
 export function ExampleLabel({ label }: { label: string }) {
   const { uiScale, style } = useText();

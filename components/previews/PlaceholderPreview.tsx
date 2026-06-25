@@ -1,6 +1,6 @@
 import { PlaceholderBadge } from "@/components/badges/PlaceholderBadge";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { usePreviewLayoutMetrics, PAGE_PREVIEW_TRAILING_MARGIN } from "@/utils/previewLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { usePreviewLayoutMetrics, PAGE_PREVIEW_TRAILING_MARGIN } from "@/utils/layout/previewLayout";
 import { Image } from "expo-image";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 

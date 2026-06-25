@@ -7,13 +7,13 @@ import {
   RopewikiRegionImageView,
 } from "ropegeo-common/models";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useToastChromeLayout } from "@/utils/buttonChromeLayout";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useToast } from "@/context/ToastContext";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useToast } from "@/context/ui/ToastContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/utils/network/requestTimeout";
 import { usePathname } from "expo-router";
 import React, {
   useCallback,

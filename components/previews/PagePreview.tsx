@@ -2,12 +2,12 @@ import { MiniDownloadButton } from "@/components/buttons/nonstandard/MiniDownloa
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingTextGroup } from "@/components/text/ScalingTextGroup";
 import { ScalingText } from "@/components/text/ScalingText";
-import { StarRating } from "@/components/StarRating";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useDownloadJobQueue } from "@/context/DownloadJobQueueContext";
-import { useSavedPages } from "@/context/SavedPagesContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { StarRating } from "@/components/starRating/StarRating";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useDownloadJobQueue } from "@/context/data/DownloadJobQueueContext";
+import { useSavedPages } from "@/context/data/SavedPagesContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   formatPreviewAkaLine,
   PAGE_PREVIEW_TRAILING_MARGIN,
@@ -15,9 +15,9 @@ import {
   PREVIEW_META_MAX_LINES,
   PREVIEW_TITLE_MAX_LINES,
   usePreviewLayoutMetrics,
-} from "@/utils/previewLayout";
-import { useResolvedTypography } from "@/utils/resolvers";
-import { useFabulousTitle } from "@/utils/useFabulousTitle";
+} from "@/utils/layout/previewLayout";
+import { useResolvedTypography } from "@/utils/theme/resolvers";
+import { useFabulousTitle } from "@/utils/theme/useFabulousTitle";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Image } from "expo-image";

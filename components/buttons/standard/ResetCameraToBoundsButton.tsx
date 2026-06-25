@@ -3,11 +3,11 @@ import { RESET_CAMERA_TO_BOUNDS_BUTTON_KEY } from "@/constants/buttons";
 import { Animated, StyleSheet } from "react-native";
 
 import { Button } from "@/components/buttons/Button";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
-import { useResolvedButtonDimensions } from "@/utils/resolvers";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { MAP_BUTTON_SIZE } from "@/utils/minimap/fullScreenMapLayout";
+import { useResolvedButtonDimensions } from "@/utils/theme/resolvers";
 
 const FADE_DURATION = 150;
 const ICON_SIZE = 26;

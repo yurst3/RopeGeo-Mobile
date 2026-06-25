@@ -1,20 +1,20 @@
 import { FilterBottomSheet, type FilterSheetMode } from "@/components/filters/FilterBottomSheet";
-import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { useSearchChromeStackedLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useNetworkRequestToasts } from "@/utils/toast/useNetworkRequestToasts";
+import { useSearchChromeStackedLayout, useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import {
   TOAST_KEY_SEARCH_ERROR,
   TOAST_KEY_SEARCH_NO_RESULTS,
 } from "@/constants/toasts/toastArchetypes";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useToast } from "@/context/ToastContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useToast } from "@/context/ui/ToastContext";
 import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMoreBlockedFooter";
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { RegionPreview } from "@/components/previews/RegionPreview";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { usePreviewTextMetrics } from "@/utils/previewLayout";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { usePreviewTextMetrics } from "@/utils/layout/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -26,7 +26,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { NO_NETWORK_MESSAGE } from "@/lib/network/messages";
+import { NO_NETWORK_MESSAGE } from "@/utils/network/messages";
 import { type OnlinePagePreview, Preview } from "ropegeo-common/models";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

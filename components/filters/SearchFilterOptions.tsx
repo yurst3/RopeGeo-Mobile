@@ -1,15 +1,15 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedScalingBounds,
   useResolvedTypography,
   useTextMeasureKey,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import {
   computeScalingTextFontSizeFromWidth,
   measureUnconstrainedTextWidth,
-} from "@/utils/scalingText";
+} from "@/utils/layout/scalingText";
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -26,10 +26,10 @@ import {
   type SearchParamsPosition,
 } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
-import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
+import { FILTER_SHEET_HORIZONTAL_INSET } from "@/utils/filters/filterSheetInsets";
 import { ScaledFilterSwitch } from "./ScaledFilterSwitch";
-import { useFilterRadioMetrics } from "./useFilterRadioMetrics";
-import { useFilterTheme } from "./useFilterTheme";
+import { useFilterRadioMetrics } from "@/utils/filters/useFilterRadioMetrics";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 
 const SEARCH_ORDERS: SearchOrder[] = ["similarity", "quality", "distance"];
 

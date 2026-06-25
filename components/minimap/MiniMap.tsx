@@ -11,7 +11,7 @@ import { PlaceholderMiniMap } from "@/components/minimap/PlaceholderMiniMap";
 import { RegionMiniMapView } from "@/components/minimap/RegionMiniMapView";
 import { minimapStyles } from "@/components/minimap/shared/minimapShared";
 import { forwardRef, useImperativeHandle, useRef, type RefObject } from "react";
-import type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+import type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/utils/minimap/miniMapHandle";
 import { View } from "react-native";
 import {
   MiniMapType,
@@ -48,7 +48,7 @@ export type MiniMapProps = MiniMapShellProps &
       }
   );
 
-export type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
+export type { MiniMapHandle, MiniMapReloadRegisterRef } from "@/utils/minimap/miniMapHandle";
 
 /**
  * Dispatches to the correct minimap implementation from {@link MiniMapType} and forwards shell props.

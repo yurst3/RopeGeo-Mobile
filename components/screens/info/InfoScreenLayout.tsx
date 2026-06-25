@@ -1,6 +1,6 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
+import { useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";

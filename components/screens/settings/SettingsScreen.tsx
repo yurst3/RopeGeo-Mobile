@@ -2,11 +2,11 @@ import { ConstantText } from "@/components/text/ConstantText";
 import { FontSettingsSection } from "@/components/screens/settings/FontSettingsSection";
 import { ThemeSettingsSection } from "@/components/screens/settings/ThemeSettingsSection";
 import { UiScaleSettingsSection } from "@/components/screens/settings/UiScaleSettingsSection";
-import { useFilterTheme } from "@/components/filters/useFilterTheme";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useSettings } from "@/context/SettingsContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useSettings } from "@/context/app/SettingsContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

@@ -43,7 +43,7 @@ import {
   PAGE_BADGE_CELL_PADDING,
   PAGE_BADGE_ROW_GAP,
   usePageBadgeMetrics,
-} from "@/utils/pageBadgeLayout";
+} from "@/utils/layout/pageBadgeLayout";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, View } from "react-native";

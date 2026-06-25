@@ -1,19 +1,19 @@
 import { NetworkStateDebugToasts } from "@/components/toast/NetworkStateDebugToasts";
-import { ToastStackAnchor } from "@/components/navigation/ToastStackAnchor";
-import { ColorThemeProvider } from "@/context/ColorThemeContext";
-import { TextProvider } from "@/context/TextContext";
-import { UIScaleProvider } from "@/context/UIScaleContext";
+import { ToastStackAnchor } from "@/components/toast/ToastStackAnchor";
+import { ColorThemeProvider } from "@/context/theme/ColorThemeContext";
+import { TextProvider } from "@/context/typography/TextContext";
+import { UIScaleProvider } from "@/context/typography/UIScaleContext";
 import {
   SettingsAppGate,
   SettingsProvider,
-} from "@/context/SettingsContext";
-import { NetworkStatusProvider, SHOW_NETWORK_STATE } from "@/context/NetworkStatusContext";
-import { ToastProvider } from "@/context/ToastContext";
-import { ShareSheetDimmerProvider } from "@/context/ShareSheetDimmerContext";
-import { SavedPagesProvider } from "@/context/SavedPagesContext";
-import { SavedFiltersProvider } from "@/context/SavedFiltersContext";
-import { DownloadJobQueueProvider } from "@/context/DownloadJobQueueContext";
-import { stackScreenOptions } from "@/lib/navigation/stackScreenOptions";
+} from "@/context/app/SettingsContext";
+import { NetworkStatusProvider, SHOW_NETWORK_STATE } from "@/context/app/NetworkStatusContext";
+import { ToastProvider } from "@/context/ui/ToastContext";
+import { ShareSheetDimmerProvider } from "@/context/ui/ShareSheetDimmerContext";
+import { SavedPagesProvider } from "@/context/data/SavedPagesContext";
+import { SavedFiltersProvider } from "@/context/data/SavedFiltersContext";
+import { DownloadJobQueueProvider } from "@/context/data/DownloadJobQueueContext";
+import { stackScreenOptions } from "@/utils/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native";

@@ -1,17 +1,17 @@
-import { SearchBar } from "@/components/SearchBar";
+import { SearchBar } from "@/components/search/SearchBar";
 import { FilterBottomSheet } from "@/components/filters/FilterBottomSheet";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
 import { PagePreview } from "@/components/previews/PagePreview";
 import { TOAST_KEY_NETWORK_OFFLINE } from "@/constants/toasts/toastArchetypes";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useSavedFilters } from "@/context/SavedFiltersContext";
-import { useSavedPages } from "@/context/SavedPagesContext";
-import { useToast } from "@/context/ToastContext";
-import { applySavedPagesFilter } from "@/lib/savedPagesFilterPipeline";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useSavedFilters } from "@/context/data/SavedFiltersContext";
+import { useSavedPages } from "@/context/data/SavedPagesContext";
+import { useToast } from "@/context/ui/ToastContext";
+import { applySavedPagesFilter } from "@/utils/savedPages/savedPagesFilterPipeline";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { usePreviewTextMetrics } from "@/utils/previewLayout";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { usePreviewTextMetrics } from "@/utils/layout/previewLayout";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -21,7 +21,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SavedPagesFilter } from "ropegeo-common/models";
-import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/layout/buttonChromeLayout";
 
 export function SavedScreen() {
   const { background, text } = useColorTheme();

@@ -1,0 +1,173 @@
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import {
+  useResolvedButtonBackgroundScale,
+  useResolvedButtonConstantTextSize,
+  useResolvedButtonIconScale,
+  useResolvedTypography,
+} from "@/utils/theme/resolvers";
+import {
+  SEARCH_BAR_GAP,
+  SEARCH_BAR_ICON_BASE_SIZE,
+  SEARCH_BAR_PADDING_HORIZONTAL,
+  SEARCH_BAR_PADDING_VERTICAL,
+} from "@/utils/search/searchBarMetrics";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { forwardRef, useMemo } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from "react-native";
+
+export type SearchBarProps = {
+  placeholder: string;
+  style?: StyleProp<ViewStyle>;
+  /** Tap-to-navigate mode (Explore). Omit when using {@link TextInput} props below. */
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  value?: string;
+  onChangeText?: (text: string) => void;
+  returnKeyType?: TextInputProps["returnKeyType"];
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  autoCorrect?: TextInputProps["autoCorrect"];
+};
+
+export const SearchBar = forwardRef<TextInput, SearchBarProps>(function SearchBar(
+  {
+    placeholder,
+    style,
+    onPress,
+    accessibilityLabel,
+    value,
+    onChangeText,
+    returnKeyType = "search",
+    autoCapitalize = "none",
+    autoCorrect = false,
+  },
+  ref,
+) {
+  const themeColors = useColorTheme();
+  const { searchBar, text } = themeColors;
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const searchBarSpec = uiScale.map.buttons.searchBar;
+  const fontSize = useResolvedButtonConstantTextSize(searchBarSpec) ?? 14;
+  const profileIconScale = useResolvedButtonIconScale(searchBarSpec);
+  const iconSize = Math.round(SEARCH_BAR_ICON_BASE_SIZE * profileIconScale);
+  const backgroundScale = useResolvedButtonBackgroundScale(searchBarSpec);
+  const typographyStyle = useResolvedTypography(textStyle.button.searchBar);
+
+  const barStyle = useMemo(
+    () => [
+      styles.bar,
+      {
+        backgroundColor: searchBar.background,
+        shadowColor: searchBar.shadow,
+        paddingVertical: SEARCH_BAR_PADDING_VERTICAL * backgroundScale,
+        paddingHorizontal: SEARCH_BAR_PADDING_HORIZONTAL * backgroundScale,
+        gap: SEARCH_BAR_GAP * backgroundScale,
+      },
+      style,
+    ],
+    [
+      searchBar.background,
+      searchBar.shadow,
+      backgroundScale,
+      style,
+    ],
+  );
+
+  const inputTextStyle = useMemo(
+    () => [
+      styles.text,
+      typographyStyle,
+      { color: text.primary, fontSize },
+    ],
+    [typographyStyle, text.primary, fontSize],
+  );
+
+  const placeholderTextStyle = useMemo(
+    () => [
+      styles.text,
+      typographyStyle,
+      { color: text.tertiary, fontSize },
+    ],
+    [typographyStyle, text.tertiary, fontSize],
+  );
+
+  const isPressable = onPress != null;
+
+  if (isPressable) {
+    return (
+      <Pressable
+        style={barStyle}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? placeholder}
+      >
+        <FontAwesome5
+          name="search"
+          size={iconSize}
+          color={searchBar.icon}
+        />
+        <Text
+          allowFontScaling={false}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={placeholderTextStyle}
+        >
+          {placeholder}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={barStyle}>
+      <FontAwesome5
+        name="search"
+        size={iconSize}
+        color={searchBar.icon}
+      />
+      <TextInput
+        ref={ref}
+        allowFontScaling={false}
+        multiline={false}
+        numberOfLines={1}
+        style={inputTextStyle}
+        placeholder={placeholder}
+        placeholderTextColor={text.tertiary}
+        value={value}
+        onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        returnKeyType={returnKeyType}
+      />
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    minWidth: 0,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  text: {
+    flex: 1,
+    paddingVertical: 0,
+    minWidth: 0,
+  },
+});

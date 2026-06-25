@@ -1,4 +1,4 @@
-import { stackScreenOptions } from "@/lib/navigation/stackScreenOptions";
+import { stackScreenOptions } from "@/utils/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 
 export default function SettingsStackLayout() {

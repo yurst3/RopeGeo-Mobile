@@ -3,19 +3,19 @@ import {
   RopeGeoDataLoader,
   Service,
 } from "ropegeo-common/components";
-import { deleteOfflineBundleFiles } from "@/lib/offline/deleteOfflineBundle";
+import { deleteOfflineBundleFiles } from "@/utils/offline/deleteOfflineBundle";
 import { RopewikiPagePlaceholder } from "./RopewikiPagePlaceholder";
-import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/buttonChromeLayout";
+import { useHeaderChromeLayout, useToastChromeLayout } from "@/utils/layout/buttonChromeLayout";
 import { RopewikiPageScreenBody } from "./RopewikiPageScreenBody";
 import {
   TOAST_KEY_NETWORK_OFFLINE,
   TOAST_KEY_PAGE_ERROR,
 } from "@/constants/toasts/toastArchetypes";
-import { useNetworkRequestToasts } from "@/components/toast/useNetworkRequestToasts";
-import { ToastKeyCollisionError, useToast } from "@/context/ToastContext";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
-import { useSavedPages } from "@/context/SavedPagesContext";
-import { REQUEST_TIMEOUT_SECONDS } from "@/lib/network/requestTimeout";
+import { useNetworkRequestToasts } from "@/utils/toast/useNetworkRequestToasts";
+import { ToastKeyCollisionError, useToast } from "@/context/ui/ToastContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
+import { useSavedPages } from "@/context/data/SavedPagesContext";
+import { REQUEST_TIMEOUT_SECONDS } from "@/utils/network/requestTimeout";
 import { useFocusEffect } from "@react-navigation/native";
 import { usePathname } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";

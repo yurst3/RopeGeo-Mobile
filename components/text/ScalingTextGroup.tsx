@@ -4,7 +4,7 @@ import {
   useResolvedScalingBounds,
   useResolvedTypography,
   useTextMeasureKey,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import {
   Children,
   isValidElement,
@@ -28,7 +28,7 @@ import {
 import {
   computeScalingTextFontSizeFromCombinedWidth,
   measureUnconstrainedTextWidth,
-} from "@/utils/scalingText";
+} from "@/utils/layout/scalingText";
 
 const UNCONSTRAINED_MEASURE_WIDTH = 10000;
 

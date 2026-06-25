@@ -5,7 +5,7 @@ import { FourWDVeryHighClearanceBadge } from "@/components/badges/vehicle/4WDVer
 import { HighClearanceBadge } from "@/components/badges/vehicle/HighClearanceBadge";
 import { PassengerBadge } from "@/components/badges/vehicle/PassengerBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { RopewikiVehicleType } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

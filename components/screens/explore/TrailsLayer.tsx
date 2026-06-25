@@ -1,5 +1,5 @@
-import { trailVectorLineStyle } from "@/components/minimap/shared/trailVectorLineStyle";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { trailVectorLineStyle } from "@/utils/minimap/trailVectorLineStyle";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { LineLayer, VectorSource, type LineLayerStyle } from "@rnmapbox/maps";
 import { useMemo } from "react";
 

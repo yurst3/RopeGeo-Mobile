@@ -1,7 +1,7 @@
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { FilterButton } from "@/components/buttons/standard/FilterButton";
-import { SearchBar } from "@/components/SearchBar";
-import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/buttonChromeLayout";
+import { SearchBar } from "@/components/search/SearchBar";
+import { useHeaderChromeLayout, useSearchChromeStackedLayout } from "@/utils/layout/buttonChromeLayout";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   forwardRef,

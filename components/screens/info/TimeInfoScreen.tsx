@@ -5,7 +5,7 @@ import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBa
 import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
 import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaTimeSubRating } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

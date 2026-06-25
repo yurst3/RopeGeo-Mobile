@@ -6,7 +6,7 @@ import { FlowingWaterBadge } from "@/components/badges/difficulty/FlowingWaterBa
 import { MinimalWaterBadge } from "@/components/badges/difficulty/MinimalWaterBadge";
 import { SwimmingWaterBadge } from "@/components/badges/difficulty/SwimmingWaterBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaWaterSubRating } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

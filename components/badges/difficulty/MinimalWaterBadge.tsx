@@ -1,6 +1,6 @@
 import { AcaWaterSubRating, DifficultyRatingSystem } from "ropegeo-common/models";
 import { Badge } from "@/components/badges/Badge";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 export function MinimalWaterBadge({ showLabel }: { showLabel?: boolean } = {}) {
   const themeColors = useColorTheme();

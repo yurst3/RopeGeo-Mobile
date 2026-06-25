@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { SAVED_PAGE_GLYPH_KEY } from "@/constants/buttons";
 import { StyleSheet, View } from "react-native";
 
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 
 const GLYPH_SIZE = 22;

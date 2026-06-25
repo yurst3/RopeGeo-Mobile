@@ -2,10 +2,10 @@ import type { StyleProp, ViewStyle } from "react-native";
 import { REMOVE_DOWNLOAD_BUTTON_KEY } from "@/constants/buttons";
 
 import { Button } from "@/components/buttons/Button";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useResolvedButtonDimensions } from "@/utils/resolvers";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useResolvedButtonDimensions } from "@/utils/theme/resolvers";
 
 const REMOVE_BUTTON_SIZE = 40;
 const REMOVE_ICON_SIZE = 20;

@@ -2,8 +2,8 @@ import { OptionChip } from "@/components/settings/OptionChip";
 import { FONT_PROFILES } from "@/constants/text/font";
 import type { FontProfileKey } from "@/constants/text/font/types";
 import { SETTINGS_FONT_KEYS } from "@/constants/settings";
-import { useTextStyle } from "@/context/TextContext";
-import { resolveTypographyStyle } from "@/utils/resolvers";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { resolveTypographyStyle } from "@/utils/theme/resolvers";
 import { StyleSheet, View } from "react-native";
 
 const FONT_LABELS: Record<FontProfileKey, string> = {

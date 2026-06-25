@@ -3,7 +3,7 @@ import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge"
 import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
 import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaTechnicalSubRating } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

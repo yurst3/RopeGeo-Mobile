@@ -3,7 +3,7 @@ import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
 import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
 import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
-import { useInfoScreenStyles } from "@/components/screens/info/infoScreenTheme";
+import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { PermitStatus } from "ropegeo-common/models";
 import React from "react";
 import { Text, View } from "react-native";

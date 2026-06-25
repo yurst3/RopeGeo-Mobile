@@ -1,13 +1,13 @@
 import { DEFAULT_BADGE_SIZE } from "@/components/badges/Badge";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useFilterTheme } from "@/components/filters/useFilterTheme";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedMultiSliderThumbScale,
   useResolvedScalingBounds,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import React, { type ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -18,7 +18,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import type { BadgeThumbProps } from "./acaDifficultyBadgeMaps";
-import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
+import { FILTER_SHEET_HORIZONTAL_INSET } from "@/utils/filters/filterSheetInsets";
 
 const THUMB_HIT = 48;
 const TRACK_HEIGHT = 10;

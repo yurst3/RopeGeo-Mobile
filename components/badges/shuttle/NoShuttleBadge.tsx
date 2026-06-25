@@ -1,6 +1,6 @@
 import { Badge } from "@/components/badges/Badge";
 import { NO_SHUTTLE_BADGE_KEY } from "@/constants/badges";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 export function NoShuttleBadge({ showLabel }: { showLabel?: boolean } = {}) {
   const themeColors = useColorTheme();

@@ -1,13 +1,13 @@
 import type { TypographySpec } from "@/constants/text/style/types";
 import type { ConstantTextSizeSpec, UiScaleGlobal } from "@/constants/uiScale/types";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   resolveConstantTextSize,
   useResolvedButtonBackgroundScale,
   useResolvedTypography,
-} from "@/utils/resolvers";
-import { useFilterTheme } from "@/components/filters/useFilterTheme";
+} from "@/utils/theme/resolvers";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 import { useWindowDimensions, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { ReactNode } from "react";
 import type { StyleProp, TextStyle } from "react-native";

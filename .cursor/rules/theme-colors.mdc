@@ -21,7 +21,7 @@ alwaysApply: false
 ### ✅ GOOD (component uses theme colors)
 
 ```tsx
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { Text, View } from "react-native";
 
 export function Example() {
@@ -58,7 +58,7 @@ When building a new screen or component, **reuse existing semantic colors** (`te
 ### ✅ GOOD (new page screen uses shared `text` tokens)
 
 ```tsx
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { Text, View } from "react-native";
 
 export function NewPageScreen() {
@@ -101,7 +101,7 @@ For families of similar components with a shared prototype (e.g. **Buttons**, **
 ### ✅ GOOD (component picks a theme entry by key)
 
 ```tsx
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { SOME_BUTTON_KEY } from "@/constants/buttons";
 import { Pressable, Text } from "react-native";
 

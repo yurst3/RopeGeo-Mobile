@@ -1,4 +1,4 @@
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   Dimensions,
@@ -11,8 +11,8 @@ import {
   View,
 } from "react-native";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -34,7 +34,7 @@ import {
   SavedPagesFilterOptions,
 } from "./SavedPagesFilterOptions";
 import { SearchFilterOptions } from "./SearchFilterOptions";
-import { FILTER_SHEET_HORIZONTAL_INSET } from "./filterSheetInsets";
+import { FILTER_SHEET_HORIZONTAL_INSET } from "@/utils/filters/filterSheetInsets";
 
 const SHEET_MAX_HEIGHT_RATIO = 0.88;
 /** Grab pill + title; used so ScrollView gets a real height (flex:1 inside maxHeight-only parents collapses). */

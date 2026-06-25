@@ -20,11 +20,11 @@ import type {
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle, useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useFabulousTitle } from "@/utils/useFabulousTitle";
-import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle, useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useFabulousTitle } from "@/utils/theme/useFabulousTitle";
+import { replaceEmbeddedImgTagsWithLinks } from "@/utils/ropewiki/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
@@ -32,11 +32,11 @@ import {
   ROPEWIKI_HTML_IGNORED_STYLES,
   RENDER_HTML_SYSTEM_FONTS,
   toRenderHtmlTypographyStyle,
-} from "@/utils/ropewikiRenderHtml";
+} from "@/utils/ropewiki/ropewikiRenderHtml";
 import {
   useResolvedConstantSize,
   useResolvedTypography,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 import { BetaSectionImages } from "./BetaSectionImages";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");

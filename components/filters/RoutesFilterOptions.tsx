@@ -12,10 +12,10 @@ import { PoiBadge } from "@/components/badges/routeType/PoiBadge";
 import { RouteFilter, RouteType } from "ropegeo-common/models";
 import { DataSourceFilterCheckboxes } from "./DataSourceFilterCheckboxes";
 import { FilterCheckbox } from "./FilterCheckbox";
-import { useFilterCheckboxMetrics } from "./useFilterCheckboxMetrics";
-import { useFilterTheme } from "./useFilterTheme";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useFilterCheckboxMetrics } from "@/utils/filters/useFilterCheckboxMetrics";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 
 const ROUTE_TYPE_ORDER: RouteType[] = [
   RouteType.Canyon,

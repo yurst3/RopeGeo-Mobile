@@ -37,14 +37,14 @@ import {
   ExpandedImageHeader,
   type ExpandedImageSectionImagePosition,
 } from "./ExpandedImageHeader";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
-import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "./types";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
+import type { ExpandedImageAnchorRect, ExpandedImageGalleryPage } from "@/utils/expandedImage/types";
 import {
   anchorRectToExpandLayout,
   type ExpandedImageExpandLayout,
   useExpandedImageExpandAnimation,
-} from "./useExpandedImageExpandAnimation";
+} from "@/utils/expandedImage/useExpandedImageExpandAnimation";
 
 const CHROME_FADE_MS = 220;
 

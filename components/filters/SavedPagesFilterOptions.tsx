@@ -1,11 +1,11 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SavedPagesFilter, type SavedPagesOrder } from "ropegeo-common/models";
 import { ScaledFilterSwitch } from "./ScaledFilterSwitch";
-import { useFilterRadioMetrics } from "./useFilterRadioMetrics";
-import { useFilterTheme } from "./useFilterTheme";
+import { useFilterRadioMetrics } from "@/utils/filters/useFilterRadioMetrics";
+import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 
 function cloneFilter(f: SavedPagesFilter): SavedPagesFilter {
   return SavedPagesFilter.fromJsonString(f.toString());

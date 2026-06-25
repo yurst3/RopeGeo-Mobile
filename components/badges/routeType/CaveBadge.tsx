@@ -1,6 +1,6 @@
 import { RouteType } from "ropegeo-common/models";
 import { Badge } from "@/components/badges/Badge";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 
 export function CaveBadge({ showLabel }: { showLabel?: boolean } = {}) {

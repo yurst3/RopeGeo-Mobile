@@ -1,12 +1,12 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
 import { ConstantText } from "@/components/text/ConstantText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   useResolvedConstantSize,
-} from "@/utils/resolvers";
-import { useFabulousTitle } from "@/utils/useFabulousTitle";
+} from "@/utils/theme/resolvers";
+import { useFabulousTitle } from "@/utils/theme/useFabulousTitle";
 import { MiniMap, type MiniMapProps } from "@/components/minimap/MiniMap";
 import {
   isCenteredRegionMiniMapType,
@@ -14,9 +14,9 @@ import {
   MINI_MAP_BORDER_RADIUS,
   MINI_MAP_EXPANDED_Z_INDEX,
 } from "@/components/minimap/shared/minimapShared";
-import { RegionLinks } from "@/components/RegionLinks";
-import { RappelInfoRow } from "@/components/RappelInfoRow";
-import { StarRating } from "@/components/StarRating";
+import { RegionLinks } from "@/components/screens/pages/ropewiki/RegionLinks";
+import { RappelInfoRow } from "@/components/screens/pages/ropewiki/RappelInfoRow";
+import { StarRating } from "@/components/starRating/StarRating";
 import { ElevationGains } from "./ElevationGains";
 import { Lengths } from "./Lengths";
 import { PageBadges } from "./PageBadges";

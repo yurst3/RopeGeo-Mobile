@@ -1,0 +1,150 @@
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useSavedTabHighlight } from "@/context/ui/SavedTabHighlightContext";
+import { colorWithAlpha } from "@/utils/color/colorWithAlpha";
+import { Image } from "expo-image";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, StyleSheet, View } from "react-native";
+
+type Props = {
+  size?: number;
+  focused: boolean;
+};
+
+/** Halo diameter — matches prior layout. */
+const HALO_SIZE = 56;
+const HALO_LAYER_SIZES = [HALO_SIZE, 40, 26] as const;
+const HALO_LAYER_ALPHAS = [0.32, 0.42, 0.55] as const;
+
+const HALO_SHRINK_MS = 240;
+
+function SavedTabHalo({ layers }: { layers: readonly { size: number; color: string }[] }) {
+  return (
+    <View style={styles.haloSlot} pointerEvents="none">
+      {layers.map(({ size, color }) => {
+        const offset = (HALO_SIZE - size) / 2;
+        return (
+          <View
+            key={size}
+            style={[
+              styles.haloDisc,
+              {
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                backgroundColor: color,
+                top: offset,
+                left: offset,
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Saved tab icon; shows a layered circular halo when {@link SavedTabHighlightContext} is active
+ * (e.g. “Page saved” toast on RopewikiPageScreen).
+ */
+export function SavedTabBarIcon({ size, focused }: Props) {
+  const themeColors = useColorTheme();
+  const { tabBar } = themeColors;
+  const iconColor = focused ? tabBar.iconFocused : tabBar.iconUnfocused;
+  const haloLayers = useMemo(
+    () =>
+      HALO_LAYER_SIZES.map((layerSize, index) => ({
+        size: layerSize,
+        color: colorWithAlpha(
+          tabBar.iconHighlight,
+          HALO_LAYER_ALPHAS[index] ?? HALO_LAYER_ALPHAS[0],
+        ),
+      })),
+    [tabBar.iconHighlight],
+  );
+  const { highlightSavedTab } = useSavedTabHighlight();
+  const dim = size ?? 26;
+  const [renderHalo, setRenderHalo] = useState(false);
+  const haloScale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (highlightSavedTab) {
+      haloScale.stopAnimation();
+      setRenderHalo(true);
+      haloScale.setValue(0);
+      Animated.spring(haloScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 88,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      haloScale.stopAnimation();
+      Animated.timing(haloScale, {
+        toValue: 0,
+        duration: HALO_SHRINK_MS,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setRenderHalo(false);
+      });
+    }
+  }, [highlightSavedTab]);
+
+  return (
+    <View
+      style={[
+        styles.wrap,
+        renderHalo && styles.wrapWithHalo,
+      ]}
+    >
+      {renderHalo ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.haloAnimatedWrap,
+            { transform: [{ scale: haloScale }] },
+          ]}
+        >
+          <SavedTabHalo layers={haloLayers} />
+        </Animated.View>
+      ) : null}
+      <Image
+        source={
+          focused
+            ? require("@/assets/images/icons/buttons/saved-solid.png")
+            : require("@/assets/images/icons/buttons/saved.png")
+        }
+        style={[styles.icon, { width: dim, height: dim, tintColor: iconColor }]}
+        contentFit="contain"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 999,
+    padding: 4,
+  },
+  wrapWithHalo: {
+    width: HALO_SIZE,
+    height: HALO_SIZE,
+    padding: 0,
+  },
+  haloSlot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  haloAnimatedWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  haloDisc: {
+    position: "absolute",
+  },
+  icon: {
+    zIndex: 1,
+  },
+});

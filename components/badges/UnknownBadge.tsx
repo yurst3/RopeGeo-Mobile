@@ -1,5 +1,5 @@
 import { Badge } from "@/components/badges/Badge";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 
 
 export function UnknownBadge({ showLabel }: { showLabel?: boolean } = {}) {

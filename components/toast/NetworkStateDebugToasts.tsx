@@ -3,9 +3,9 @@ import {
   TOAST_KEY_DEV_NETWORK_INTERNET_REACHABLE,
   TOAST_KEY_DEV_NETWORK_IS_CONNECTED,
 } from "@/constants/toasts/toastArchetypes";
-import { useNetworkStatus } from "@/context/NetworkStatusContext";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
 import type { ToastStyle } from "@/constants/colors/types";
-import { useToast } from "@/context/ToastContext";
+import { useToast } from "@/context/ui/ToastContext";
 import { useEffect } from "react";
 
 function formatNetworkFlag(

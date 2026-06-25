@@ -1,13 +1,13 @@
-import { parseStrokeColor, parseStrokeWidth } from "@/components/minimap/shared/pageMiniMapSegments";
+import { parseStrokeColor, parseStrokeWidth } from "@/utils/minimap/pageMiniMapSegments";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useResolvedIconSizeScale } from "@/utils/resolvers";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
 import type { LegendItem } from "ropegeo-common/models";
 import { LegendFeatureType, LineLegendItem, PolygonLegendItem } from "ropegeo-common/models";
-import { useBundledImageSource } from "@/lib/assets/useBundledImageSource";
+import { useBundledImageSource } from "@/utils/assets/useBundledImageSource";
 import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import {

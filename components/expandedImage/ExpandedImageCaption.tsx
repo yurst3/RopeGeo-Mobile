@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import RenderHtml from "react-native-render-html";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle, useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { replaceEmbeddedImgTagsWithLinks } from "@/utils/replaceEmbeddedImgTagsWithLinks";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle, useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { replaceEmbeddedImgTagsWithLinks } from "@/utils/ropewiki/replaceEmbeddedImgTagsWithLinks";
 import {
   buildRopewikiHtmlTagsStyles,
   ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS,
@@ -13,11 +13,11 @@ import {
   ROPEWIKI_HTML_IGNORED_STYLES,
   RENDER_HTML_SYSTEM_FONTS,
   toRenderHtmlTypographyStyle,
-} from "@/utils/ropewikiRenderHtml";
+} from "@/utils/ropewiki/ropewikiRenderHtml";
 import {
   useResolvedConstantSize,
   useResolvedTypography,
-} from "@/utils/resolvers";
+} from "@/utils/theme/resolvers";
 
 const HORIZONTAL_INSET = 16;
 const CAPTION_PILL_PADDING_H = 12;

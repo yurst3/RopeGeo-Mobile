@@ -2,12 +2,12 @@ import type { ImageSourcePropType } from "react-native";
 import { EXTERNAL_LINK_BUTTON_KEY } from "@/constants/buttons";
 import * as WebBrowser from "expo-web-browser";
 
-import { MAP_BUTTON_SIZE } from "@/components/minimap/shared/fullScreenMapLayout";
+import { MAP_BUTTON_SIZE } from "@/utils/minimap/fullScreenMapLayout";
 import { Button } from "@/components/buttons/Button";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useResolvedButtonDimensions } from "@/utils/resolvers";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useResolvedButtonDimensions } from "@/utils/theme/resolvers";
 
 const EXTERNAL_LINK_ICON_DESIGN_SCALE = 28 / (MAP_BUTTON_SIZE * 0.5);
 

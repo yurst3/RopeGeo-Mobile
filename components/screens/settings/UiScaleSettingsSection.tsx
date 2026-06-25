@@ -4,7 +4,7 @@ import {
   UI_SCALE_OPTION_PREVIEW,
 } from "@/constants/settings";
 import type { UiScaleProfileKey } from "@/constants/uiScale/types";
-import { useTextStyle } from "@/context/TextContext";
+import { useTextStyle } from "@/context/typography/TextContext";
 import { StyleSheet, View } from "react-native";
 
 const UI_SCALE_LABELS: Record<UiScaleProfileKey, string> = {

@@ -2,8 +2,8 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
-import { useForegroundUserLocation } from "@/lib/location/useForegroundUserLocation";
-import { RoutePreview } from "@/components/routePreview/RoutePreview";
+import { useForegroundUserLocation } from "@/utils/location/useForegroundUserLocation";
+import { RoutePreview } from "@/components/previews/route/RoutePreview";
 import {
   ROUTE_MARKER_CAMERA_ZOOM,
   RouteMarkersLayer,
@@ -13,29 +13,29 @@ import {
   ROUTE_MARKER_NATIVE_ASSET_IMAGES,
   unclusteredRouteMarkerIconImage,
   unclusteredRouteMarkerIconSize,
-} from "@/components/screens/explore/routeMarkerIcons";
+} from "@/utils/explore/routeMarkerIcons";
 import {
   clusterRouteMarkerSymbolStyle,
   unclusteredRouteMarkerSymbolStyle,
-} from "@/components/screens/explore/mapMarkerLayerStyles";
+} from "@/utils/explore/mapMarkerLayerStyles";
 import { TrailsLayer } from "@/components/screens/explore/TrailsLayer";
 import { MAPBOX_STYLE_URL } from "@/constants/mapbox";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useText } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { expandedMiniMapButtonStackTopScaled, useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
-import { routePreviewDockedPaddingBottom } from "./shared/fullScreenMapLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useText } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { expandedMiniMapButtonStackTopScaled, useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
+import { routePreviewDockedPaddingBottom } from "@/utils/minimap/fullScreenMapLayout";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { MiniMapHeader, MiniMapHeaderSideSlot } from "./shared/MiniMapHeader";
-import { miniMapHostStyles } from "./shared/miniMapHostStyles";
+import { miniMapHostStyles } from "@/utils/minimap/miniMapHostStyles";
 import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
 import { useMiniMapShell } from "@/components/minimap/miniMapAnimatedCard";
-import type { MiniMapReloadRegisterRef } from "@/components/minimap/miniMapHandle";
-import { useMiniMapViewportCameraOnLayout } from "./shared/useMiniMapViewportCameraOnLayout";
-import { useMiniMapCamera } from "./shared/useMiniMapCamera";
+import type { MiniMapReloadRegisterRef } from "@/utils/minimap/miniMapHandle";
+import { useMiniMapViewportCameraOnLayout } from "@/utils/minimap/useMiniMapViewportCameraOnLayout";
+import { useMiniMapCamera } from "@/utils/minimap/useMiniMapCamera";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
 import {
@@ -47,8 +47,8 @@ import {
   type ComponentRef,
 } from "react";
 import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useRouteMarkerMetrics } from "@/utils/routeMarkerLayout";
-import { useMapMarkerTextFont } from "@/utils/resolvers";
+import { useRouteMarkerMetrics } from "@/utils/layout/routeMarkerLayout";
+import { useMapMarkerTextFont } from "@/utils/theme/resolvers";
 import Animated from "react-native-reanimated";
 import {
   Camera,

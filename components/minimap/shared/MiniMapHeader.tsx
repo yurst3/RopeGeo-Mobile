@@ -3,10 +3,10 @@ import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { BackButton } from "@/components/buttons/standard/BackButton";
 import { ScalingText } from "@/components/text/ScalingText";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useHeaderChromeLayout } from "@/utils/buttonChromeLayout";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useHeaderChromeLayout } from "@/utils/layout/buttonChromeLayout";
 
 /** Wraps one control in the expanded minimap header row (mirrors the back-button slot). */
 export function MiniMapHeaderSideSlot({ children }: { children: ReactNode }) {

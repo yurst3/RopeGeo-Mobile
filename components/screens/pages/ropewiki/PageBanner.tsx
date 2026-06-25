@@ -1,7 +1,7 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
-import { useColorTheme } from "@/context/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { Image } from "expo-image";
 import React from "react";
 import {

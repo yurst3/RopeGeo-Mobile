@@ -8,9 +8,9 @@ import {
 } from "react-native";
 import { ToastTextLine } from "@/components/toast/ToastTextLine";
 import type { ToastStyle } from "@/constants/colors/types";
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useTextStyle } from "@/context/TextContext";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useTextStyle } from "@/context/typography/TextContext";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import {
   DOWNLOAD_TOAST_FADE_IN_MS,
   DOWNLOAD_TOAST_FADE_OUT_MS,

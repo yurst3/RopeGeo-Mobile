@@ -1,6 +1,6 @@
 import { AppleDirectionsButton } from "@/components/buttons/standard/AppleDirectionsButton";
 import { GoogleDirectionsButton } from "@/components/buttons/standard/GoogleDirectionsButton";
-import { openAppleMaps, openGoogleMaps } from "@/lib/openExternalMaps";
+import { openAppleMaps, openGoogleMaps } from "@/utils/navigation/openExternalMaps";
 import { useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 import { MiniMapType } from "ropegeo-common/models";
@@ -8,13 +8,13 @@ import { MiniMapType } from "ropegeo-common/models";
 import {
   EXPAND_BUTTON_INSET,
   MAP_OVERLAY_BUTTON_GAP,
-} from "./miniMapOverlayLayout";
+} from "@/utils/minimap/miniMapOverlayLayout";
 
 export {
   EXPAND_BUTTON_SIZE,
   EXPAND_BUTTON_INSET,
   MAP_OVERLAY_BUTTON_GAP,
-} from "./miniMapOverlayLayout";
+} from "@/utils/minimap/miniMapOverlayLayout";
 
 /** True when the minimap is a page tile map ({@link MiniMapType.Page}). */
 export function isPageMiniMapType(t: MiniMapType): boolean {

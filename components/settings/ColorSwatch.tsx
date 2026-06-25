@@ -1,6 +1,6 @@
-import { useColorTheme } from "@/context/ColorThemeContext";
-import { useResolvedButtonBackgroundScale } from "@/utils/resolvers";
-import { useUiScale } from "@/context/UIScaleContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { useResolvedButtonBackgroundScale } from "@/utils/theme/resolvers";
+import { useUiScale } from "@/context/typography/UIScaleContext";
 import { StyleSheet, View } from "react-native";
 
 export type ColorSwatchProps = {
