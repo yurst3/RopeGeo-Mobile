@@ -14,6 +14,11 @@ export function getOfflinePageJsonUri(pageId: string): string {
   return `${getOfflinePageRootUri(pageId)}page-response.json`;
 }
 
+/** Temporary path for a downloaded page bundle ZIP before extraction. */
+export function getOfflinePageZipTempUri(pageId: string): string {
+  return `${getOfflinePageRootUri(pageId)}download.zip.tmp`;
+}
+
 /** Directory root for vector tiles (trailing slash). */
 export function getOfflineMapDataRootUri(pageId: string): string {
   return `${getOfflinePageRootUri(pageId)}mapdata/`;

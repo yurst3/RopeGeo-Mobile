@@ -5,8 +5,10 @@ import {
   getOfflineMapDataRootUri,
   getOfflinePageJsonUri,
   getOfflinePageRootUri,
+  getOfflinePageZipTempUri,
   getOfflineRegionRoutesGeojsonUri,
 } from "@/utils/offline/paths";
+import { extractZipArchive } from "./extractZipArchive";
 import { gunzipVectorTileFileIfNeeded } from "@/utils/offline/prepareOfflineVectorTiles";
 import { offlineManager } from "@rnmapbox/maps";
 import * as FileSystem from "expo-file-system/legacy";
@@ -94,10 +96,12 @@ export function createMobileDownloadPlatformHarness(): DownloadPlatformHarness {
     async gunzipTileIfNeeded(path) {
       await gunzipVectorTileFileIfNeeded(path);
     },
+    extractZipArchive,
     paths: {
       pageRoot: getOfflinePageRootUri,
       pageJson: getOfflinePageJsonUri,
       pageJsonTemp: (pageId) => `${getOfflinePageJsonUri(pageId)}.tmp`,
+      zipTemp: getOfflinePageZipTempUri,
       imageDest(pageId, imageId, slot, ext) {
         return `${getOfflineImageFileUri(pageId, imageId, slot)}${ext}`;
       },
