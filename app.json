@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "ropegeo",
+    "platforms": ["ios", "android"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -39,10 +40,6 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.yurst3.RopeGeo"
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
       "expo-router",
