@@ -146,7 +146,7 @@ export function DownloadJobQueueProvider({ children }: { children: ReactNode }) 
       const saved = savedEntriesRef.current.find(
         (entry) => entry.preview.id === input.pageId,
       );
-      if (saved == null || saved.preview.fetchType !== "online") {
+      if (saved == null) {
         return;
       }
 
