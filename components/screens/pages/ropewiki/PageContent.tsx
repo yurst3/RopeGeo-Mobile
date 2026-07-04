@@ -17,15 +17,13 @@ import {
 import { RegionLinks } from "@/components/screens/pages/ropewiki/RegionLinks";
 import { RappelInfoRow } from "@/components/screens/pages/ropewiki/RappelInfoRow";
 import { StarRating } from "@/components/starRating/StarRating";
-import { ElevationGains } from "./ElevationGains";
-import { Lengths } from "./Lengths";
 import { PageBadges } from "./PageBadges";
+import { PageStats } from "./PageStats";
 import {
   PAGE_SEAM_FLOAT_HEIGHT,
   PAGE_SEAM_FLOAT_OFFSET,
   PageSeamButtons,
 } from "./PageSeamButtons";
-import { TimeEstimates } from "./TimeEstimates";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
@@ -324,20 +322,16 @@ export function PageContent({
               }
             />
             <PageBadges data={data} routeType={routeTypeResolved} />
-            <TimeEstimates
+            <PageStats
               overallTime={data.overallTime}
               approachTime={data.approachTime}
               descentTime={data.descentTime}
               exitTime={data.exitTime}
               shuttleTime={data.shuttleTime}
-            />
-            <Lengths
               overallLength={data.overallLength}
               approachLength={data.approachLength}
               descentLength={data.descentLength}
               exitLength={data.exitLength}
-            />
-            <ElevationGains
               approachElevGain={data.approachElevGain}
               descentElevGain={data.descentElevGain}
               exitElevGain={data.exitElevGain}

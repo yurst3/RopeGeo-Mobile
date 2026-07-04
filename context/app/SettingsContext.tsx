@@ -1,7 +1,7 @@
 import { Settings } from "@/constants/settings";
 import type { FontProfileKey } from "@/constants/text/font/types";
 import type { UiScaleProfileKey } from "@/constants/uiScale/types";
-import type { ThemePreference } from "@/constants/settings/types";
+import type { ThemePreference, UnitsPreference } from "@/constants/settings/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -51,6 +51,7 @@ type SettingsContextValue = {
   setTheme: (theme: ThemePreference) => void;
   setFont: (font: FontProfileKey) => void;
   setUiScale: (uiScale: UiScaleProfileKey) => void;
+  setUnits: (units: UnitsPreference) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -129,6 +130,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [schedulePersist],
   );
 
+  const setUnits = useCallback(
+    (units: UnitsPreference) => {
+      setSettings((prev) => {
+        const next = cloneSettings(prev);
+        next.setUnits(units);
+        schedulePersist(next);
+        return next;
+      });
+    },
+    [schedulePersist],
+  );
+
   const value = useMemo<SettingsContextValue>(
     () => ({
       settings,
@@ -136,8 +149,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTheme,
       setFont,
       setUiScale,
+      setUnits,
     }),
-    [settings, isLoaded, setTheme, setFont, setUiScale],
+    [settings, isLoaded, setTheme, setFont, setUiScale, setUnits],
   );
 
   return (

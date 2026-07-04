@@ -189,6 +189,11 @@ export type InfoScreenTextSizes = {
   badgeDescriptionHeader: ConstantTextSizeSpec;
 };
 
+export type SettingsScreenTextSizes = {
+  /** Unit conversion preview values shown under the Units control. */
+  unitConversion: ScalingTextSizeSpec;
+};
+
 export type UiScaleProfile = {
   global: UiScaleGlobal;
   common: { buttons: CommonButtonSizes };
@@ -201,6 +206,7 @@ export type UiScaleProfile = {
   toast: { text: ToastTextSizes; buttons: ToastButtonSizes };
   regionScreen: { text: RegionScreenTextSizes };
   infoScreen: { text: InfoScreenTextSizes };
+  settingsScreen: { text: SettingsScreenTextSizes };
 };
 
 export type UiScaleProfileKey = "Auto" | "Small" | "Medium" | "Large";

@@ -311,12 +311,12 @@ export function PageBadges({ data, routeType }: PageBadgesProps) {
         if (shuttleVal == null) {
           return { node: <UnknownBadge showLabel />, value: null };
         }
-        if (shuttleVal === 0) {
+        if (shuttleVal.value === 0) {
           return { node: <NoShuttleBadge showLabel />, value: 0 };
         }
         return {
           node: <ShuttleRequiredBadge showLabel />,
-          value: shuttleVal,
+          value: shuttleVal.value,
         };
       }
       case "vehicle": {

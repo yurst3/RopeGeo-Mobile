@@ -1,25 +1,38 @@
 import type { FontProfileKey } from "@/constants/text/font/types";
 import type { UiScaleProfileKey } from "@/constants/uiScale/types";
+import type {
+  LengthMeasurementSystem,
+  TimeMeasurementSystem,
+} from "ropegeo-common/models";
 import {
+  LENGTH_MEASUREMENT_SYSTEMS,
   SETTINGS_FONT_KEYS,
   SETTINGS_UI_SCALE_KEYS,
   THEME_PREFERENCES,
+  TIME_MEASUREMENT_SYSTEMS,
   type ThemePreference,
+  type UnitsPreference,
 } from "./types";
 
 export class Settings {
   theme: ThemePreference;
   font: FontProfileKey;
   uiScale: UiScaleProfileKey;
+  lengthMeasurementSystem: LengthMeasurementSystem;
+  timeMeasurementSystem: TimeMeasurementSystem;
 
   constructor(
     theme: ThemePreference = "Auto",
     font: FontProfileKey = "Auto",
     uiScale: UiScaleProfileKey = "Auto",
+    lengthMeasurementSystem: LengthMeasurementSystem = "Imperial",
+    timeMeasurementSystem: TimeMeasurementSystem = "Standard",
   ) {
     this.theme = theme;
     this.font = font;
     this.uiScale = uiScale;
+    this.lengthMeasurementSystem = lengthMeasurementSystem;
+    this.timeMeasurementSystem = timeMeasurementSystem;
   }
 
   setTheme(v: ThemePreference): void {
@@ -34,11 +47,22 @@ export class Settings {
     this.uiScale = v;
   }
 
+  /**
+   * Applies a "Units" selection: the length system matches the choice, and the
+   * time system is Freedom only when Freedom units are selected (otherwise Standard).
+   */
+  setUnits(units: UnitsPreference): void {
+    this.lengthMeasurementSystem = units;
+    this.timeMeasurementSystem = units === "Freedom" ? "Freedom" : "Standard";
+  }
+
   toJSON(): Record<string, unknown> {
     return {
       theme: this.theme,
       font: this.font,
       uiScale: this.uiScale,
+      lengthMeasurementSystem: this.lengthMeasurementSystem,
+      timeMeasurementSystem: this.timeMeasurementSystem,
     };
   }
 
@@ -67,6 +91,8 @@ export class Settings {
       Settings.parseTheme(o.theme),
       Settings.parseFont(o.font),
       Settings.parseUiScale(o.uiScale),
+      Settings.parseLengthMeasurementSystem(o.lengthMeasurementSystem),
+      Settings.parseTimeMeasurementSystem(o.timeMeasurementSystem),
     );
   }
 
@@ -92,5 +118,23 @@ export class Settings {
       return v as UiScaleProfileKey;
     }
     throw new Error(`Invalid Settings.uiScale: ${JSON.stringify(v)}`);
+  }
+
+  private static parseLengthMeasurementSystem(
+    v: unknown,
+  ): LengthMeasurementSystem {
+    if (v === undefined) return "Imperial";
+    if (LENGTH_MEASUREMENT_SYSTEMS.includes(v as LengthMeasurementSystem)) {
+      return v as LengthMeasurementSystem;
+    }
+    throw new Error(`Invalid Settings.lengthMeasurementSystem: ${JSON.stringify(v)}`);
+  }
+
+  private static parseTimeMeasurementSystem(v: unknown): TimeMeasurementSystem {
+    if (v === undefined) return "Standard";
+    if (TIME_MEASUREMENT_SYSTEMS.includes(v as TimeMeasurementSystem)) {
+      return v as TimeMeasurementSystem;
+    }
+    throw new Error(`Invalid Settings.timeMeasurementSystem: ${JSON.stringify(v)}`);
   }
 }

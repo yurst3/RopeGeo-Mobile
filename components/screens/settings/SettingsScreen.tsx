@@ -2,6 +2,7 @@ import { ConstantText } from "@/components/text/ConstantText";
 import { FontSettingsSection } from "@/components/screens/settings/FontSettingsSection";
 import { ThemeSettingsSection } from "@/components/screens/settings/ThemeSettingsSection";
 import { UiScaleSettingsSection } from "@/components/screens/settings/UiScaleSettingsSection";
+import { UnitsSettingsSection } from "@/components/screens/settings/UnitsSettingsSection";
 import { useFilterTheme } from "@/utils/filters/useFilterTheme";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useSettings } from "@/context/app/SettingsContext";
@@ -16,7 +17,7 @@ export function SettingsScreen() {
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
   const insets = useSafeAreaInsets();
-  const { settings, setTheme, setFont, setUiScale } = useSettings();
+  const { settings, setTheme, setFont, setUiScale, setUnits } = useSettings();
 
   return (
     <View style={[styles.screen, { backgroundColor: background }]}>
@@ -65,6 +66,18 @@ export function SettingsScreen() {
           UI Scale
         </ConstantText>
         <UiScaleSettingsSection value={settings.uiScale} onChange={setUiScale} />
+
+        <ConstantText
+          size={uiScale.filter.text.sectionTitle}
+          typography={textStyle.filter.sectionTitle}
+          style={[styles.sectionLabel, sectionLabel]}
+        >
+          Units
+        </ConstantText>
+        <UnitsSettingsSection
+          value={settings.lengthMeasurementSystem}
+          onChange={setUnits}
+        />
       </ScrollView>
     </View>
   );

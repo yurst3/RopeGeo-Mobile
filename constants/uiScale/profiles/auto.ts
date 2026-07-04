@@ -360,4 +360,13 @@ export const autoUiScaleProfile: UiScaleProfile = {
       },
     },
   },
+  settingsScreen: {
+    text: {
+      unitConversion: {
+        default: FontSizeStep.LARGE,
+        computeFloorFromAccessibilityScaling: true,
+        computedFloorConstant: 17,
+      },
+    },
+  },
 };

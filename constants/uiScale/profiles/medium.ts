@@ -249,4 +249,13 @@ export const mediumUiScaleProfile: UiScaleProfile = {
       },
     },
   },
+  settingsScreen: {
+    text: {
+      unitConversion: {
+        default: FontSizeStep.LARGE,
+        computedFloorConstant: 20,
+        floor: FontSizeStep.SMALL
+      },
+    },
+  },
 };

@@ -256,4 +256,13 @@ export const largeUiScaleProfile: UiScaleProfile = {
       },
     },
   },
+  settingsScreen: {
+    text: {
+      unitConversion: {
+        default: FontSizeStep.XLARGE,
+        computedFloorConstant: 20,
+        floor: FontSizeStep.SMALL
+      },
+    },
+  },
 };
