@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yurst3.RopeGeo",
+      "associatedDomains": ["applinks:mobile.ropegeo.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["comgooglemaps", "maps"],
