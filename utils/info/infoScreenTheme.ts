@@ -1,12 +1,6 @@
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
-import { useTextStyle } from "@/context/typography/TextContext";
-import { useUiScale } from "@/context/typography/UIScaleContext";
-import {
-  useResolvedConstantSize,
-  useResolvedTypography,
-} from "@/utils/theme/resolvers";
 import { useMemo } from "react";
-import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";
+import { StyleSheet, type ViewStyle } from "react-native";
 
 /** Fixed width for the badge column on info screens. */
 export const INFO_BADGE_COLUMN_WIDTH = 80;
@@ -63,39 +57,17 @@ export type InfoScreenStyles = {
   scroll: ViewStyle;
   content: ViewStyle;
   titleRow: ViewStyle;
-  title: TextStyle;
-  subtitle: TextStyle;
+  subtitle: ViewStyle;
   cClassNote: ViewStyle;
-  cClassNoteText: TextStyle;
   row: ViewStyle;
   rowHighlighted: ViewStyle;
   badgeWrap: ViewStyle;
   descriptionWrap: ViewStyle;
-  body: TextStyle;
-  minimumFor: TextStyle;
+  minimumFor: ViewStyle;
 };
 
 export function useInfoScreenStyles(): InfoScreenStyles {
-  const { background, cardHighlight, text } = useColorTheme();
-  const uiScale = useUiScale();
-  const style = useTextStyle();
-
-  const titleSize = useResolvedConstantSize(uiScale.infoScreen.text.title);
-  const titleTypography = useResolvedTypography(style.infoScreen.title);
-  const descriptionSize = useResolvedConstantSize(uiScale.infoScreen.text.description);
-  const descriptionTypography = useResolvedTypography(style.infoScreen.description);
-  const badgeDescriptionSize = useResolvedConstantSize(
-    uiScale.infoScreen.text.badgeDescription,
-  );
-  const badgeDescriptionTypography = useResolvedTypography(
-    style.infoScreen.badgeDescription,
-  );
-  const badgeDescriptionHeaderSize = useResolvedConstantSize(
-    uiScale.infoScreen.text.badgeDescriptionHeader,
-  );
-  const badgeDescriptionHeaderTypography = useResolvedTypography(
-    style.infoScreen.badgeDescriptionHeader,
-  );
+  const { background, cardHighlight } = useColorTheme();
 
   return useMemo(
     () => ({
@@ -103,23 +75,8 @@ export function useInfoScreenStyles(): InfoScreenStyles {
       scroll: { ...layout.scroll, backgroundColor: background },
       content: layout.content,
       titleRow: layout.titleRow,
-      title: {
-        ...titleTypography,
-        fontSize: titleSize,
-        color: text.primary,
-      },
-      subtitle: {
-        ...descriptionTypography,
-        fontSize: descriptionSize,
-        color: text.secondary,
-        ...layout.subtitle,
-      },
+      subtitle: layout.subtitle,
       cClassNote: layout.cClassNote,
-      cClassNoteText: {
-        ...descriptionTypography,
-        fontSize: descriptionSize,
-        color: text.secondary,
-      },
       row: layout.row,
       rowHighlighted: {
         ...layout.row,
@@ -128,31 +85,8 @@ export function useInfoScreenStyles(): InfoScreenStyles {
       },
       badgeWrap: layout.badgeWrap,
       descriptionWrap: layout.descriptionWrap,
-      body: {
-        ...badgeDescriptionTypography,
-        fontSize: badgeDescriptionSize,
-        color: text.secondary,
-      },
-      minimumFor: {
-        ...badgeDescriptionHeaderTypography,
-        fontSize: badgeDescriptionHeaderSize,
-        color: text.primary,
-        ...layout.minimumFor,
-      },
+      minimumFor: layout.minimumFor,
     }),
-    [
-      background,
-      badgeDescriptionHeaderSize,
-      badgeDescriptionHeaderTypography,
-      badgeDescriptionSize,
-      badgeDescriptionTypography,
-      cardHighlight,
-      descriptionSize,
-      descriptionTypography,
-      text.primary,
-      text.secondary,
-      titleSize,
-      titleTypography,
-    ],
+    [background, cardHighlight],
   );
 }

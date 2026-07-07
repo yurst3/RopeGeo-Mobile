@@ -5,10 +5,14 @@ import { FourWDVeryHighClearanceBadge } from "@/components/badges/vehicle/4WDVer
 import { HighClearanceBadge } from "@/components/badges/vehicle/HighClearanceBadge";
 import { PassengerBadge } from "@/components/badges/vehicle/PassengerBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { RopewikiVehicleType } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const VEHICLE_ORDER: RopewikiVehicleType[] = [
   RopewikiVehicleType.passenger,
@@ -58,10 +62,10 @@ export function VehicleInfoScreen({
 
   return (
     <InfoScreenLayout title="Vehicle type">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         Vehicle type indicates the kind of vehicle required to access the start
         or exit of the canyon. Definitions follow RopeWiki and NPS guidelines.
-      </Text>
+      </InfoScreenSubtitle>
       {VEHICLE_ORDER.map((vehicleType) => {
         const BadgeComponent = VEHICLE_BADGES[vehicleType];
         const { body } = VEHICLE_DESCRIPTIONS[vehicleType];
@@ -77,7 +81,7 @@ export function VehicleInfoScreen({
               <BadgeComponent showLabel />
             </View>
             <View style={styles.descriptionWrap}>
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

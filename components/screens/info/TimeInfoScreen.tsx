@@ -5,10 +5,14 @@ import { MultipleDaysBadge } from "@/components/badges/difficulty/MultipleDaysBa
 import { OvernightBadge } from "@/components/badges/difficulty/OvernightBadge";
 import { ShortBadge } from "@/components/badges/difficulty/ShortBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaTimeSubRating } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const TIME_ORDER: AcaTimeSubRating[] = Object.values(AcaTimeSubRating);
 
@@ -63,13 +67,13 @@ export function TimeInfoScreen({ highlightedTime }: TimeInfoScreenProps) {
 
   return (
     <InfoScreenLayout title="Time ratings">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         The Roman numerals in an ACA rating indicate approximately how long the
         entire canyon trip generally takes a typical group. Actual time can vary
         substantially; this is a guideline for distinguishing long canyons from
         short ones. Times assume a small (4–6 person) team of experienced, fit
         adults.
-      </Text>
+      </InfoScreenSubtitle>
       {TIME_ORDER.map((time) => {
         const BadgeComponent = TIME_BADGES[time];
         const { body } = TIME_DESCRIPTIONS[time];
@@ -84,7 +88,7 @@ export function TimeInfoScreen({ highlightedTime }: TimeInfoScreenProps) {
               <BadgeComponent showLabel />
             </View>
             <View style={styles.descriptionWrap}>
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

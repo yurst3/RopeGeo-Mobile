@@ -3,10 +3,14 @@ import { ScramblingBadge } from "@/components/badges/difficulty/ScramblingBadge"
 import { TechnicalBadge } from "@/components/badges/difficulty/TechnicalBadge";
 import { VeryTechnicalBadge } from "@/components/badges/difficulty/VeryTechnicalBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaTechnicalSubRating } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const TECHNICAL_ORDER: AcaTechnicalSubRating[] = Object.values(AcaTechnicalSubRating);
 
@@ -58,10 +62,10 @@ export function TechnicalInfoScreen({
 
   return (
     <InfoScreenLayout title="Technical ratings">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         The first number in an ACA rating denotes the degree of technical skill
         (especially rope work) required to complete the canyon successfully.
-      </Text>
+      </InfoScreenSubtitle>
       {TECHNICAL_ORDER.map((technical) => {
         const BadgeComponent = TECHNICAL_BADGES[technical];
         const { body } = TECHNICAL_DESCRIPTIONS[technical];
@@ -76,7 +80,7 @@ export function TechnicalInfoScreen({
               <BadgeComponent showLabel />
             </View>
             <View style={styles.descriptionWrap}>
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

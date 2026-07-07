@@ -3,10 +3,14 @@ import { NoPermitBadge } from "@/components/badges/permit/NoPermitBadge";
 import { PermitRequiredBadge } from "@/components/badges/permit/PermitRequiredBadge";
 import { RestrictedBadge } from "@/components/badges/permit/RestrictedBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { PermitStatus } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const PERMIT_ORDER: PermitStatus[] = [
   PermitStatus.No,
@@ -58,11 +62,11 @@ export function PermitInfoScreen({
 
   return (
     <InfoScreenLayout title="Permit status">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         Permit status indicates whether access to the canyon requires a permit or
         is restricted. Requirements can change; always confirm with the
         managing agency before your trip.
-      </Text>
+      </InfoScreenSubtitle>
       {PERMIT_ORDER.map((permit) => {
         const BadgeComponent = PERMIT_BADGES[permit];
         const { body } = PERMIT_DESCRIPTIONS[permit];
@@ -77,7 +81,7 @@ export function PermitInfoScreen({
               <BadgeComponent showLabel />
             </View>
             <View style={styles.descriptionWrap}>
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

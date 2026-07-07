@@ -1,9 +1,13 @@
 import { NoShuttleBadge } from "@/components/badges/shuttle/NoShuttleBadge";
 import { ShuttleRequiredBadge } from "@/components/badges/shuttle/ShuttleRequiredBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 type ShuttleStatus = "0" | "1";
 
@@ -40,10 +44,10 @@ export function ShuttleInfoScreen({
 
   return (
     <InfoScreenLayout title="Shuttle">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         Shuttle status indicates whether the canyon exit returns you to the
         start. Plan your vehicles or shuttle accordingly before your trip.
-      </Text>
+      </InfoScreenSubtitle>
       {SHUTTLE_ORDER.map((status) => {
         const BadgeComponent = SHUTTLE_BADGES[status];
         const { body } = SHUTTLE_DESCRIPTIONS[status];
@@ -61,7 +65,7 @@ export function ShuttleInfoScreen({
               <BadgeComponent showLabel />
             </View>
             <View style={styles.descriptionWrap}>
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

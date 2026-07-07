@@ -6,10 +6,14 @@ import { FlowingWaterBadge } from "@/components/badges/difficulty/FlowingWaterBa
 import { MinimalWaterBadge } from "@/components/badges/difficulty/MinimalWaterBadge";
 import { SwimmingWaterBadge } from "@/components/badges/difficulty/SwimmingWaterBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaWaterSubRating } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const WATER_ORDER: AcaWaterSubRating[] = Object.values(AcaWaterSubRating);
 
@@ -73,12 +77,12 @@ export function WaterInfoScreen({ highlightedWater }: WaterInfoScreenProps) {
 
   return (
     <InfoScreenLayout title="Water ratings">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         The letter in an ACA rating denotes the type of challenge presented by
         water in the canyon. Water level can fluctuate greatly; if you find
         more water or current than indicated, reevaluate your decision to
         attempt the descent.
-      </Text>
+      </InfoScreenSubtitle>
       {WATER_ORDER.map((water) => {
         const BadgeComponent = WATER_BADGES[water];
         const { body } = WATER_DESCRIPTIONS[water];
@@ -88,12 +92,12 @@ export function WaterInfoScreen({ highlightedWater }: WaterInfoScreenProps) {
           <React.Fragment key={water}>
             {water === AcaWaterSubRating.C1 && (
               <View style={styles.cClassNote}>
-                <Text style={styles.cClassNoteText}>
+                <InfoScreenSubtitle>
                   Class C canyons can be described more precisely with the C1
                   through C4 ratings. Water flow rates change throughout the
                   year, and a canyon's actual flow may be higher or lower than
                   what's described by the rating.
-                </Text>
+                </InfoScreenSubtitle>
               </View>
             )}
             <View
@@ -103,7 +107,7 @@ export function WaterInfoScreen({ highlightedWater }: WaterInfoScreenProps) {
                 <BadgeComponent showLabel />
               </View>
               <View style={styles.descriptionWrap}>
-                <Text style={styles.body}>{body}</Text>
+                <InfoScreenBody>{body}</InfoScreenBody>
               </View>
             </View>
           </React.Fragment>

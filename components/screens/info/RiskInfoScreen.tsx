@@ -5,10 +5,15 @@ import { MinimalRiskBadge } from "@/components/badges/difficulty/MinimalRiskBadg
 import { SomeRiskBadge } from "@/components/badges/difficulty/SomeRiskBadge";
 import { VeryHighRiskBadge } from "@/components/badges/difficulty/VeryHighRiskBadge";
 import { InfoScreenLayout } from "@/components/screens/info/InfoScreenLayout";
+import {
+  InfoScreenBody,
+  InfoScreenSectionHeader,
+  InfoScreenSubtitle,
+} from "@/components/screens/info/InfoScreenText";
 import { useInfoScreenStyles } from "@/utils/info/infoScreenTheme";
 import { AcaRiskSubRating } from "ropegeo-common/models";
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const RISK_ORDER: AcaRiskSubRating[] = Object.values(AcaRiskSubRating);
 
@@ -75,12 +80,12 @@ export function RiskInfoScreen({ highlightedRisk }: RiskInfoScreenProps) {
 
   return (
     <InfoScreenLayout title="Effective Risk">
-      <Text style={styles.subtitle}>
+      <InfoScreenSubtitle style={styles.subtitle}>
         The ACA rating system uses &quot;additional risk&quot; to denote elevated risk factors above the norm.
         &quot;Effective risk&quot; takes into account the technical rating
         and additional risk rating to reflect the true expected risk of a route.
         Each technical rating has a minimum effective risk which the ACA additional risk rating can increase.
-      </Text>
+      </InfoScreenSubtitle>
       {RISK_ORDER.map((risk) => {
         const BadgeComponent = RISK_BADGES[risk];
         const { minimumFor, body } = RISK_DESCRIPTIONS[risk];
@@ -96,11 +101,11 @@ export function RiskInfoScreen({ highlightedRisk }: RiskInfoScreenProps) {
             </View>
             <View style={styles.descriptionWrap}>
               {minimumFor != null && (
-                <Text style={styles.minimumFor}>
+                <InfoScreenSectionHeader style={styles.minimumFor}>
                   Minimum for {minimumFor}.
-                </Text>
+                </InfoScreenSectionHeader>
               )}
-              <Text style={styles.body}>{body}</Text>
+              <InfoScreenBody>{body}</InfoScreenBody>
             </View>
           </View>
         );

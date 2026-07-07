@@ -1,6 +1,8 @@
 # Builds production binaries and submits to the App Store / Google Play.
 # Mutually exclusive with update.yml on branch pushes: runs only when native or
 # build config paths change, on version tags, or when started manually.
+# Requires expo.version in app.json to be bumped on push (manual runs skip bump check).
+# Always requires app.json expo.version and package.json version to match.
 name: Build and Submit
 
 on:
@@ -22,7 +24,67 @@ on:
       - 'v*'
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify app version
+        run: |
+          set -euo pipefail
+          CURRENT=$(jq -r '.expo.version' app.json)
+          PACKAGE_VERSION=$(jq -r '.version' package.json)
+
+          if [ "$CURRENT" != "$PACKAGE_VERSION" ]; then
+            echo "::error::expo.version in app.json ($CURRENT) does not match package.json version ($PACKAGE_VERSION)."
+            exit 1
+          fi
+          echo "app.json and package.json versions aligned: $CURRENT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run; skipping version bump check."
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$TAG_VERSION" != "$CURRENT" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match expo.version ($CURRENT) in app.json."
+              exit 1
+            fi
+            echo "Tag matches expo.version: $CURRENT"
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous commit; skipping version bump check."
+            exit 0
+          fi
+
+          PREVIOUS=$(git show "${BEFORE}:app.json" 2>/dev/null | jq -r '.expo.version // empty' || true)
+          if [ -z "$PREVIOUS" ]; then
+            echo "Previous commit had no app.json version; skipping version bump check."
+            exit 0
+          fi
+
+          if [ "$CURRENT" = "$PREVIOUS" ]; then
+            echo "::error::expo.version in app.json is still $CURRENT. Bump expo.version before starting a store build."
+            exit 1
+          fi
+
+          HIGHER=$(printf '%s\n' "$PREVIOUS" "$CURRENT" | sort -V | tail -n1)
+          if [ "$HIGHER" != "$CURRENT" ]; then
+            echo "::error::expo.version ($CURRENT) is not greater than the previous version ($PREVIOUS)."
+            exit 1
+          fi
+
+          echo "Version bumped: $PREVIOUS -> $CURRENT"
+
   build-ios:
+    needs: check-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +128,7 @@ jobs:
         run: eas submit --platform ios --profile production --latest --non-interactive --wait
 
   build-android:
+    needs: check-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
