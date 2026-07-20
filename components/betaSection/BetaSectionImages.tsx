@@ -21,6 +21,7 @@ import type {
   OnlineBetaSectionImage,
 } from "ropegeo-common/models";
 import { ConstantText } from "@/components/text/ConstantText";
+import { AttributionAuthorsText } from "@/components/attribution/AttributionAuthorsText";
 import { ExpandedImageModal } from "@/components/expandedImage/ExpandedImageModal";
 import { useTextStyle, useText } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
@@ -64,6 +65,8 @@ type BetaSectionImageSlideProps = {
   item: OnlineBetaSectionImage | OfflineBetaSectionImage;
   onOpenExpand: (item: OnlineBetaSectionImage | OfflineBetaSectionImage) => void;
   onLayoutRef: (key: string, el: View | null) => void;
+  /** When set, shows the 1/N pill anchored to the bottom of this slide's image. */
+  imageIndicatorLabel: string | null;
 };
 
 /**
@@ -73,6 +76,7 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
   item,
   onOpenExpand,
   onLayoutRef,
+  imageIndicatorLabel,
 }: BetaSectionImageSlideProps) {
   const themeColors = useColorTheme();
   const uiScale = useUiScale();
@@ -129,55 +133,80 @@ const BetaSectionImageSlide = React.memo(function BetaSectionImageSlide({
 
   return (
     <View style={styles.imageSlide}>
-      <Pressable
-        disabled={!canExpand}
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.imageContainer,
-          { backgroundColor: themeColors.image.background },
-          canExpand && pressed && styles.imageContainerPressed,
-        ]}
-      >
-        <View
-          ref={setLayoutRef}
-          style={styles.imageContainerInner}
-          collapsable={false}
+      <AttributionAuthorsText
+        authors={item.authors}
+        kind="image"
+        textAlign="right"
+        style={styles.imageAuthors}
+      />
+      <View style={styles.imageFrame}>
+        <Pressable
+          disabled={!canExpand}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.imageContainer,
+            { backgroundColor: themeColors.image.background },
+            canExpand && pressed && styles.imageContainerPressed,
+          ]}
         >
-          {bannerUrl != null ? (
-            <Image
-              source={bannerUrl}
-              style={styles.image}
-              contentFit="cover"
-            />
-          ) : (
-            <View
-              style={[
-                styles.missingImageWrap,
-                { backgroundColor: themeColors.image.background },
-              ]}
-            >
+          <View
+            ref={setLayoutRef}
+            style={styles.imageContainerInner}
+            collapsable={false}
+          >
+            {bannerUrl != null ? (
               <Image
-                source={MISSING_IMAGE}
-                style={[
-                  styles.missingImageIcon,
-                  { tintColor: themeColors.image.missingIcon },
-                ]}
-                contentFit="contain"
+                source={bannerUrl}
+                style={styles.image}
+                contentFit="cover"
               />
-              <ConstantText
-                size={uiScale.pageScreen.text.metaData}
-                typography={textStyle.map.markerTooltip}
+            ) : (
+              <View
                 style={[
-                  styles.missingImageText,
-                  { color: themeColors.image.missingText },
+                  styles.missingImageWrap,
+                  { backgroundColor: themeColors.image.background },
                 ]}
               >
-                Missing Image
-              </ConstantText>
-            </View>
-          )}
-        </View>
-      </Pressable>
+                <Image
+                  source={MISSING_IMAGE}
+                  style={[
+                    styles.missingImageIcon,
+                    { tintColor: themeColors.image.missingIcon },
+                  ]}
+                  contentFit="contain"
+                />
+                <ConstantText
+                  size={uiScale.pageScreen.text.metaData}
+                  typography={textStyle.map.markerTooltip}
+                  style={[
+                    styles.missingImageText,
+                    { color: themeColors.image.missingText },
+                  ]}
+                >
+                  Missing Image
+                </ConstantText>
+              </View>
+            )}
+          </View>
+        </Pressable>
+        {imageIndicatorLabel != null ? (
+          <View style={styles.imageIndicator} pointerEvents="none">
+            <ConstantText
+              size={uiScale.pageScreen.text.metaData}
+              typography={textStyle.pageScreen.metaData}
+              style={[
+                styles.imageIndicatorText,
+                {
+                  color: themeColors.image.text,
+                  backgroundColor: themeColors.image.textBackground,
+                },
+              ]}
+            >
+              {imageIndicatorLabel}
+            </ConstantText>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.captionWrap}>
         {captionSource != null ? (
           <RenderHtml
@@ -224,9 +253,6 @@ export function BetaSectionImages({
   pageTitle,
   sectionTitle,
 }: BetaSectionImagesProps) {
-  const themeColors = useColorTheme();
-  const uiScale = useUiScale();
-  const textStyle = useTextStyle();
   const [currentIndex, setCurrentIndex] = useState(0);
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.order - b.order),
@@ -316,6 +342,7 @@ export function BetaSectionImages({
         bannerUrl,
         linkUrl: img.linkUrl,
         captionHtml: img.caption ?? null,
+        authors: img.authors ?? null,
       });
     }
     return out;
@@ -383,17 +410,30 @@ export function BetaSectionImages({
     viewAreaCoveragePercentThreshold: 50,
   }).current;
 
+  const showImageIndicator = sortedImages.length > 1;
   const renderItem = useCallback(
     ({
       item,
+      index,
     }: ListRenderItemInfo<OnlineBetaSectionImage | OfflineBetaSectionImage>) => (
       <BetaSectionImageSlide
         item={item}
         onOpenExpand={handleOpenExpand}
         onLayoutRef={handleLayoutRef}
+        imageIndicatorLabel={
+          showImageIndicator && index === currentIndex
+            ? `${currentIndex + 1}/${sortedImages.length}`
+            : null
+        }
       />
     ),
-    [handleLayoutRef, handleOpenExpand]
+    [
+      currentIndex,
+      handleLayoutRef,
+      handleOpenExpand,
+      showImageIndicator,
+      sortedImages.length,
+    ]
   );
 
   return (
@@ -416,23 +456,6 @@ export function BetaSectionImages({
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
       />
-      {sortedImages.length > 1 ? (
-        <View style={styles.imageIndicator} pointerEvents="none">
-          <ConstantText
-            size={uiScale.pageScreen.text.metaData}
-            typography={textStyle.pageScreen.metaData}
-            style={[
-              styles.imageIndicatorText,
-              {
-                color: themeColors.image.text,
-                backgroundColor: themeColors.image.textBackground,
-              },
-            ]}
-          >
-            {currentIndex + 1}/{sortedImages.length}
-          </ConstantText>
-        </View>
-      ) : null}
 
       {modalVisible &&
       anchorRect != null &&
@@ -498,12 +521,17 @@ const styles = StyleSheet.create({
   captionWrap: {
     marginTop: CAPTION_MARGIN_TOP,
   },
+  imageAuthors: {
+    marginBottom: 4,
+  },
+  imageFrame: {
+    position: "relative",
+  },
   imageIndicator: {
     position: "absolute",
     left: 0,
     right: 0,
-    top: IMAGE_HEIGHT - IMAGE_INDICATOR_BOTTOM_INSET,
-    transform: [{ translateY: "-100%" }],
+    bottom: IMAGE_INDICATOR_BOTTOM_INSET,
     alignItems: "center",
     zIndex: 2,
   },

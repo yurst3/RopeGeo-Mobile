@@ -1,5 +1,13 @@
 import { BetaSection } from "@/components/betaSection/BetaSection";
+import { AttributionAuthorsText } from "@/components/attribution/AttributionAuthorsText";
+import { RopewikiPageAttributionFooter } from "@/components/attribution/RopewikiPageAttributionFooter";
 import { ConstantText } from "@/components/text/ConstantText";
+import {
+  ROPEWIKI_ATTRIBUTION_COURTESY_LINK_LABEL,
+  ROPEWIKI_ATTRIBUTION_COURTESY_PREFIX,
+  ROPEWIKI_ATTRIBUTION_COURTESY_SUFFIX,
+} from "@/constants/ropewikiAttribution";
+import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
@@ -24,6 +32,7 @@ import {
   PAGE_SEAM_FLOAT_OFFSET,
   PageSeamButtons,
 } from "./PageSeamButtons";
+import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
@@ -134,6 +143,10 @@ export function PageContent({
 
   const minimapForUi = data.miniMap;
   const hasMiniMap = minimapForUi != null;
+  const pageMiniMapAuthors =
+    minimapForUi != null && isPageMiniMapType(minimapForUi.miniMapType)
+      ? ("authors" in minimapForUi ? minimapForUi.authors : null)
+      : null;
   const directionsFromPageCoords =
     data.coordinates != null
       ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
@@ -207,6 +220,14 @@ export function PageContent({
     [checkMiniMapInView, onMomentumScrollEnd],
   );
 
+  const openRopewikiHome = useCallback(async () => {
+    try {
+      await WebBrowser.openBrowserAsync(ROPEWIKI_ORIGIN);
+    } catch {
+      // Ignore cancel / open failures
+    }
+  }, []);
+
   const displayRegions =
     (data.regions?.length ?? 0) > 0 ? (data.regions ?? []).slice(0, -1) : [];
   const rating = data.quality ?? 0;
@@ -271,6 +292,14 @@ export function PageContent({
               },
             ]}
           >
+            {data.bannerImage != null ? (
+              <AttributionAuthorsText
+                authors={data.bannerImage.authors}
+                kind="banner"
+                textAlign="right"
+                style={styles.bannerAuthors}
+              />
+            ) : null}
             <ConstantText
               size={uiScale.pageScreen.text.title}
               typography={textStyle.pageScreen.title}
@@ -313,6 +342,22 @@ export function PageContent({
                 { color: text.secondary },
               ]}
             />
+            <ConstantText
+              size={uiScale.pageScreen.text.metaData}
+              typography={textStyle.pageScreen.metaData}
+              style={[styles.courtesy, { color: text.secondary }]}
+            >
+              {ROPEWIKI_ATTRIBUTION_COURTESY_PREFIX}
+              <ConstantText
+                size={uiScale.pageScreen.text.metaData}
+                typography={textStyle.pageScreen.metaData}
+                style={[styles.courtesyLink, { color: text.link }]}
+                onPress={openRopewikiHome}
+              >
+                {ROPEWIKI_ATTRIBUTION_COURTESY_LINK_LABEL}
+              </ConstantText>
+              {ROPEWIKI_ATTRIBUTION_COURTESY_SUFFIX}
+            </ConstantText>
             <RappelInfoRow
               rappelCount={rappelCount}
               longestRappel={longestRappel}
@@ -367,6 +412,16 @@ export function PageContent({
                 />
               </View>
             ) : null}
+            {!mapExpanded &&
+            minimapForUi != null &&
+            isPageMiniMapType(minimapForUi.miniMapType) ? (
+              <AttributionAuthorsText
+                authors={pageMiniMapAuthors}
+                kind="map"
+                textAlign="right"
+                style={styles.mapAuthors}
+              />
+            ) : null}
             {(data.betaSections ?? [])
               .slice()
               .sort((a, b) => a.order - b.order)
@@ -386,6 +441,7 @@ export function PageContent({
                 {formatLastUpdated(data.latestRevisionDate)}
               </ConstantText>
             ) : null}
+            <RopewikiPageAttributionFooter authors={data.authors} />
           </View>
         </View>
       </View>
@@ -432,6 +488,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  bannerAuthors: {
+    marginBottom: 16,
+  },
   title: {
     marginBottom: 6,
   },
@@ -447,6 +506,15 @@ const styles = StyleSheet.create({
   },
   starRatingText: {
     marginLeft: 6,
+  },
+  courtesy: {
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: "justify",
+    width: "100%",
+  },
+  courtesyLink: {
+    textDecorationLine: "underline",
   },
   miniMapWrap: {
     marginTop: 16,
@@ -464,5 +532,8 @@ const styles = StyleSheet.create({
   lastUpdated: {
     marginTop: 24,
     textAlign: "right",
+  },
+  mapAuthors: {
+    marginTop: 8,
   },
 });

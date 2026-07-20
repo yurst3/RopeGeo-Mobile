@@ -72,7 +72,7 @@ export const smallUiScaleProfile: UiScaleProfile = {
   pageScreen: {
     text: {
       title: {
-        default: FontSizeStep.MEDIUM,
+        default: FontSizeStep.LARGE,
       },
       akaNames: {
         default: FontSizeStep.MEDIUM,

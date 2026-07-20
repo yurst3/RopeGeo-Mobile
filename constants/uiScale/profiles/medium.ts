@@ -72,7 +72,7 @@ export const mediumUiScaleProfile: UiScaleProfile = {
   pageScreen: {
     text: {
       title: {
-        default: FontSizeStep.LARGE,
+        default: FontSizeStep.XLARGE,
       },
       akaNames: {
         default: FontSizeStep.MEDIUM,

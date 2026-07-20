@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import RenderHtml from "react-native-render-html";
+import { AttributionAuthorsText } from "@/components/attribution/AttributionAuthorsText";
 import { ROPEWIKI_ORIGIN } from "@/constants/ropewikiOrigin";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle, useText } from "@/context/typography/TextContext";
@@ -40,7 +41,9 @@ export function containImageBottomY(
 
 export type ExpandedImageCaptionProps = {
   /** Raw caption HTML from the API (wiki fragment). */
-  caption: string;
+  caption: string | null;
+  /** Image contributors; known names or unknown-author fallback below the caption. */
+  authors?: string[] | null;
   /** Width of the expanded image stage (full-bleed area behind the caption). */
   stageWidth: number;
   /** Padding from the bottom of the stage (e.g. safe area). */
@@ -50,11 +53,12 @@ export type ExpandedImageCaptionProps = {
 };
 
 /**
- * Expanded image caption: themed HTML on a semi-transparent pill.
+ * Expanded image caption: themed HTML on a semi-transparent pill, plus author attribution.
  * Anchored a fixed distance from the bottom of the stage (may overlap the image).
  */
 export function ExpandedImageCaption({
   caption,
+  authors,
   stageWidth,
   bottomInset,
   maxHeight,
@@ -89,6 +93,8 @@ export function ExpandedImageCaption({
     0,
     contentWidth - CAPTION_PILL_PADDING_H * 2,
   );
+  const hasCaption = caption != null && caption.length > 0;
+
   return (
     <View
       style={[
@@ -114,24 +120,36 @@ export function ExpandedImageCaption({
             { backgroundColor: themeColors.image.textBackground },
           ]}
         >
-          <RenderHtml
-            contentWidth={pillInnerWidth}
-            systemFonts={RENDER_HTML_SYSTEM_FONTS}
-            source={{
-              html: replaceEmbeddedImgTagsWithLinks(caption),
-              baseUrl: ROPEWIKI_ORIGIN,
-            }}
-            baseStyle={{
-              ...toRenderHtmlTypographyStyle(captionTypography),
-              fontSize: captionFontSize,
-              textAlign: "center",
-              color: themeColors.image.text,
-            }}
-            tagsStyles={captionTagsStyles}
-            customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
-            ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
-            enableUserAgentStyles={false}
-            defaultTextProps={ROPEWIKI_HTML_DEFAULT_TEXT_PROPS}
+          {hasCaption ? (
+            <RenderHtml
+              contentWidth={pillInnerWidth}
+              systemFonts={RENDER_HTML_SYSTEM_FONTS}
+              source={{
+                html: replaceEmbeddedImgTagsWithLinks(caption),
+                baseUrl: ROPEWIKI_ORIGIN,
+              }}
+              baseStyle={{
+                ...toRenderHtmlTypographyStyle(captionTypography),
+                fontSize: captionFontSize,
+                textAlign: "center",
+                color: themeColors.image.text,
+              }}
+              tagsStyles={captionTagsStyles}
+              customHTMLElementModels={ROPEWIKI_CUSTOM_HTML_ELEMENT_MODELS}
+              ignoredStyles={ROPEWIKI_HTML_IGNORED_STYLES}
+              enableUserAgentStyles={false}
+              defaultTextProps={ROPEWIKI_HTML_DEFAULT_TEXT_PROPS}
+            />
+          ) : null}
+          <AttributionAuthorsText
+            authors={authors}
+            kind="image"
+            textAlign="right"
+            style={[
+              styles.authors,
+              hasCaption ? styles.authorsAfterCaption : null,
+              { color: themeColors.image.text },
+            ]}
           />
         </View>
       </ScrollView>
@@ -159,5 +177,11 @@ const styles = StyleSheet.create({
     paddingVertical: CAPTION_PILL_PADDING_V,
     paddingHorizontal: CAPTION_PILL_PADDING_H,
     borderRadius: CAPTION_PILL_RADIUS,
+  },
+  authors: {
+    alignSelf: "stretch",
+  },
+  authorsAfterCaption: {
+    marginTop: 6,
   },
 });

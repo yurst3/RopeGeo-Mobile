@@ -107,7 +107,7 @@ export const autoUiScaleProfile: UiScaleProfile = {
   pageScreen: {
     text: {
       title: {
-        default: FontSizeStep.LARGE,
+        default: FontSizeStep.XLARGE,
         floor: FontSizeStep.LARGE,
       },
       akaNames: {

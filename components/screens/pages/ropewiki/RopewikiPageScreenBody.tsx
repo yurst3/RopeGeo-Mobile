@@ -564,6 +564,7 @@ export function RopewikiPageScreenBody({
               bannerUrl,
               linkUrl: data.bannerImage?.linkUrl ?? null,
               captionHtml: data.bannerImage?.caption ?? null,
+              authors: data.bannerImage?.authors ?? null,
             },
           ]}
           initialPageIndex={0}

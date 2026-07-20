@@ -76,7 +76,7 @@ export function RappelInfoRow({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
+    marginTop: 0,
   },
   separator: {
     height: 1,

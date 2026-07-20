@@ -17,4 +17,6 @@ export type ExpandedImageGalleryPage = {
   /** Ropewiki file/page URL for this image (not the parent page URL). */
   linkUrl?: string | null;
   captionHtml?: string | null;
+  /** Image contributors when resolved; null/empty hides the credit. */
+  authors?: string[] | null;
 };

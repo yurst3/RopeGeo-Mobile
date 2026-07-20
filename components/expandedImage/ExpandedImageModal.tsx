@@ -383,7 +383,11 @@ export function ExpandedImageModal({
 
   const activePage = pages[chromeIndex];
   const activeCaptionHtml = activePage?.captionHtml ?? null;
+  const activeAuthors = activePage?.authors ?? null;
   const activeExternalLinkUrl = activePage?.linkUrl ?? null;
+  const showCaptionChrome =
+    (activeCaptionHtml != null && activeCaptionHtml.length > 0) ||
+    (activeAuthors != null && activeAuthors.length > 0);
 
   const captionBottomInset = Math.max(insets.bottom, 12);
   const captionMaxHeight = windowHeight * 0.45;
@@ -498,13 +502,14 @@ export function ExpandedImageModal({
                   </View>
                 )}
               </View>
-              {activeCaptionHtml != null && expandLayout != null ? (
+              {showCaptionChrome && expandLayout != null ? (
                 <Animated.View
                   style={[styles.chromeCaptionLayer, chromeCaptionFadeStyle]}
                   pointerEvents={showUi ? "box-none" : "none"}
                 >
                   <ExpandedImageCaption
                     caption={activeCaptionHtml}
+                    authors={activeAuthors}
                     stageWidth={stageWidth}
                     bottomInset={captionBottomInset}
                     maxHeight={captionMaxHeight}
