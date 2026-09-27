@@ -14,6 +14,7 @@ export type StandardButtonKeys =
   | "back"
   | "filter"
   | "mapLayers"
+  | "settings"
   | "save"
   | "share"
   | "externalLink"

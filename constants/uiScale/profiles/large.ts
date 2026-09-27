@@ -286,7 +286,7 @@ export const largeUiScaleProfile: UiScaleProfile = {
       },
     },
   },
-  settingsScreen: {
+  profileScreen: {
     text: {
       unitConversion: {
         default: FontSizeStep.XLARGE,

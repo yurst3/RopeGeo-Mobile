@@ -407,7 +407,7 @@ export const autoUiScaleProfile: UiScaleProfile = {
       },
     },
   },
-  settingsScreen: {
+  profileScreen: {
     text: {
       unitConversion: {
         default: FontSizeStep.LARGE,

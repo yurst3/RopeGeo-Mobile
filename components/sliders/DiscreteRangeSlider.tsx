@@ -52,7 +52,7 @@ export type DiscreteRangeSliderProps<T extends string> = {
 
 /**
  * Two-thumb discrete range slider: each stop can show a badge thumb for that value.
- * Used by filter sheets (e.g. ACA ratings) and settings (e.g. relevance strength).
+ * Used by filter sheets (e.g. ACA ratings) and profile (e.g. relevance strength).
  */
 export function DiscreteRangeSlider<T extends string>({
   label,

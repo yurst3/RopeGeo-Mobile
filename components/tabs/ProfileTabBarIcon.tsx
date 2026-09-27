@@ -7,7 +7,7 @@ type Props = {
   focused: boolean;
 };
 
-export function SettingsTabBarIcon({ size, focused }: Props) {
+export function ProfileTabBarIcon({ size, focused }: Props) {
   const { tabBar } = useColorTheme();
   const iconColor = focused ? tabBar.iconFocused : tabBar.iconUnfocused;
   const dim = size ?? 26;
@@ -17,8 +17,8 @@ export function SettingsTabBarIcon({ size, focused }: Props) {
       <Image
         source={
           focused
-            ? require("@/assets/images/icons/tabs/settings-solid.png")
-            : require("@/assets/images/icons/tabs/settings.png")
+            ? require("@/assets/images/icons/buttons/profile-solid.png")
+            : require("@/assets/images/icons/buttons/profile.png")
         }
         style={[styles.icon, { width: dim, height: dim, tintColor: iconColor }]}
         contentFit="contain"

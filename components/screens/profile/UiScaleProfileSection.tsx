@@ -14,15 +14,15 @@ const UI_SCALE_LABELS: Record<UiScaleProfileKey, string> = {
   Large: "Large",
 };
 
-export type UiScaleSettingsSectionProps = {
+export type UiScaleProfileSectionProps = {
   value: UiScaleProfileKey;
   onChange: (uiScale: UiScaleProfileKey) => void;
 };
 
-export function UiScaleSettingsSection({
+export function UiScaleProfileSection({
   value,
   onChange,
-}: UiScaleSettingsSectionProps) {
+}: UiScaleProfileSectionProps) {
   const textStyle = useTextStyle();
 
   return (

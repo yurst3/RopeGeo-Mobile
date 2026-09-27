@@ -85,7 +85,7 @@ export function UnitsConversionPreview({ value }: UnitsConversionPreviewProps) {
 
   return (
     <ScalingTextGroup
-      size={uiScale.settingsScreen.text.unitConversion}
+      size={uiScale.profileScreen.text.unitConversion}
       typography={textStyle.filter.optionLabel}
       gap={PILL_GAP}
       widthSafetyMargin={items.length * PILL_HORIZONTAL_SPACE}

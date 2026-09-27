@@ -6,6 +6,7 @@ import {
   GOOGLE_DIRECTIONS_BUTTON_KEY,
   MAP_LAYERS_BUTTON_KEY,
   FILTER_BUTTON_KEY,
+  SETTINGS_BUTTON_KEY,
   RESET_CAMERA_ORIENTATION_BUTTON_KEY,
   RESET_CAMERA_TO_BOUNDS_BUTTON_KEY,
   RESET_CAMERA_TO_POSITION_BUTTON_KEY,
@@ -36,6 +37,7 @@ export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> =
   [BACK_BUTTON_KEY]: defaultStandard,
   [FILTER_BUTTON_KEY]: highlightedStandard,
   [MAP_LAYERS_BUTTON_KEY]: highlightedStandard,
+  [SETTINGS_BUTTON_KEY]: defaultStandard,
   [SAVE_BUTTON_KEY]: highlightedStandard,
   [SHARE_BUTTON_KEY]: defaultStandard,
   [EXTERNAL_LINK_BUTTON_KEY]: {

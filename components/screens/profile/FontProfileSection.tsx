@@ -14,12 +14,12 @@ const FONT_LABELS: Record<FontProfileKey, string> = {
   DancingScript: "Dancing Script",
 };
 
-export type FontSettingsSectionProps = {
+export type FontProfileSectionProps = {
   value: FontProfileKey;
   onChange: (font: FontProfileKey) => void;
 };
 
-export function FontSettingsSection({ value, onChange }: FontSettingsSectionProps) {
+export function FontProfileSection({ value, onChange }: FontProfileSectionProps) {
   const textStyle = useTextStyle();
 
   return (

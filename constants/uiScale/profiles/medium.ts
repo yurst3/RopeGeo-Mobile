@@ -279,7 +279,7 @@ export const mediumUiScaleProfile: UiScaleProfile = {
       },
     },
   },
-  settingsScreen: {
+  profileScreen: {
     text: {
       unitConversion: {
         default: FontSizeStep.LARGE,

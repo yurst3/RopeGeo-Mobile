@@ -1,5 +1,5 @@
 import { OptionChip } from "@/components/settings/OptionChip";
-import { UnitsConversionPreview } from "@/components/screens/settings/UnitsConversionPreview";
+import { UnitsConversionPreview } from "@/components/screens/profile/UnitsConversionPreview";
 import { UNITS_PREFERENCES, type UnitsPreference } from "@/constants/settings";
 import { StyleSheet, View } from "react-native";
 
@@ -9,12 +9,12 @@ const UNITS_LABELS: Record<UnitsPreference, string> = {
   Freedom: "Freedom",
 };
 
-export type UnitsSettingsSectionProps = {
+export type UnitsProfileSectionProps = {
   value: UnitsPreference;
   onChange: (units: UnitsPreference) => void;
 };
 
-export function UnitsSettingsSection({ value, onChange }: UnitsSettingsSectionProps) {
+export function UnitsProfileSection({ value, onChange }: UnitsProfileSectionProps) {
   return (
     <View>
       <View style={styles.rowWrap}>

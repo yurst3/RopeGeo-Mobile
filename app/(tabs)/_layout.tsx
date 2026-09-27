@@ -1,6 +1,6 @@
 import { ExploreTabBarIcon } from "@/components/tabs/ExploreTabBarIcon";
 import { SavedTabBarIcon } from "@/components/tabs/SavedTabBarIcon";
-import { SettingsTabBarIcon } from "@/components/tabs/SettingsTabBarIcon";
+import { ProfileTabBarIcon } from "@/components/tabs/ProfileTabBarIcon";
 import { useTabFocusToastScreenListeners } from "@/utils/navigation/useTabFocusToastScreenListeners";
 import { SavedTabHighlightProvider } from "@/context/ui/SavedTabHighlightContext";
 import { ShareSheetDimmerOverlay } from "@/context/ui/ShareSheetDimmerContext";
@@ -83,11 +83,11 @@ export default function TabsLayout() {
             }}
           />
           <Tabs.Screen
-            name="settings"
+            name="profile"
             options={{
-              title: "settings",
+              title: "profile",
               tabBarIcon: ({ focused }) => (
-                <SettingsTabBarIcon size={tabIconSize} focused={focused} />
+                <ProfileTabBarIcon size={tabIconSize} focused={focused} />
               ),
             }}
           />

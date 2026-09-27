@@ -1,7 +1,7 @@
 import { stackScreenOptions } from "@/utils/navigation/stackScreenOptions";
 import { Stack } from "expo-router";
 
-export default function SettingsStackLayout() {
+export default function ProfileStackLayout() {
   return (
     <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen

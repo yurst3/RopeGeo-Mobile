@@ -29,21 +29,24 @@ const DESIGN_INFO_ICON_WRAP_SIZE = 18;
 const DESIGN_INFO_ICON_IMAGE_SIZE = 12;
 const DISABLED_SLIDER_OPACITY = 0.28;
 
-export type RelevantInfoSettingsSectionProps = {
+export type RelevantInfoProfileSectionProps = {
   showRelevantContext: boolean;
   strengthMin: RelevanceStrength;
   strengthMax: RelevanceStrength;
   onShowRelevantContextChange: (show: boolean) => void;
   onStrengthsChange: (min: RelevanceStrength, max: RelevanceStrength) => void;
+  /** Called before navigating to the relevance info screen (e.g. dismiss a sheet). */
+  onBeforeOpenInfo?: () => void;
 };
 
-export function RelevantInfoSettingsSection({
+export function RelevantInfoProfileSection({
   showRelevantContext,
   strengthMin,
   strengthMax,
   onShowRelevantContextChange,
   onStrengthsChange,
-}: RelevantInfoSettingsSectionProps) {
+  onBeforeOpenInfo,
+}: RelevantInfoProfileSectionProps) {
   const themeColors = useColorTheme();
   const { switchLabel, switchTrackColors, switchThumbColor } = useFilterTheme();
   const uiScale = useUiScale();
@@ -62,7 +65,8 @@ export function RelevantInfoSettingsSection({
   );
 
   const openRelevanceInfo = () => {
-    router.push("/settings/relevance-info");
+    onBeforeOpenInfo?.();
+    router.push("/profile/relevance-info");
   };
 
   return (
