@@ -3,7 +3,30 @@ import {
   MAPBOX_STYLE_IMPORT_ID,
 } from "@/constants/mapbox";
 import type { MapLightPreset } from "@/constants/settings/mapLayersTypes";
-import { StyleImport, LineLayer, SymbolLayer } from "@rnmapbox/maps";
+import { useSettings } from "@/context/app/SettingsContext";
+import {
+  StyleImport,
+  LineLayer,
+  SymbolLayer,
+  type SymbolLayerStyle,
+} from "@rnmapbox/maps";
+import type { LengthMeasurementSystem } from "ropegeo-common/models";
+
+const FEET_PER_METER = 3.28084;
+
+/** Contour `ele` values from Mapbox Terrain are always meters. */
+function contourLabelTextField(
+  system: LengthMeasurementSystem,
+): SymbolLayerStyle["textField"] {
+  if (system === "Metric") {
+    return ["concat", ["to-string", ["get", "ele"]], " m"];
+  }
+  return [
+    "concat",
+    ["to-string", ["round", ["*", ["get", "ele"], FEET_PER_METER]]],
+    " ft",
+  ];
+}
 
 type MapStyleLayersProps = {
   lightPreset: MapLightPreset;
@@ -25,7 +48,9 @@ export function ElevationContourLayers({
 }: {
   visible: boolean;
 }) {
+  const { settings } = useSettings();
   const visibility = visible ? "visible" : "none";
+  const textField = contourLabelTextField(settings.lengthMeasurementSystem);
 
   return (
     <>
@@ -42,7 +67,7 @@ export function ElevationContourLayers({
       <SymbolLayer
         id={MAPBOX_CONTOUR_LAYER_IDS[2]}
         existing
-        style={{ visibility }}
+        style={{ visibility, textField }}
       />
     </>
   );

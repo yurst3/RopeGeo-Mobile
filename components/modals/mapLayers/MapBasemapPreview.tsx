@@ -5,9 +5,12 @@ import {
 } from "@/constants/mapbox";
 import type { MapBasemap, MapLightPreset } from "@/constants/settings/mapLayersTypes";
 import { MapStyleImport, ElevationContourLayers } from "@/components/modals/mapLayers/MapStyleLayers";
+import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
+import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { isMapLayersPreviewPackReady } from "@/utils/mapbox/mapLayersPreviewPacks";
 import { Camera, MapView } from "@rnmapbox/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 
 type MapBasemapPreviewProps = {
   basemap: MapBasemap;
@@ -34,10 +37,29 @@ export function MapBasemapPreview({
   allowMount = true,
   onMapReady,
 }: MapBasemapPreviewProps) {
+  const { text } = useColorTheme();
+  const { isOnline, networkState } = useNetworkStatus();
+  const offline = networkState != null && !isOnline;
+  const [packReady, setPackReady] = useState<boolean | null>(null);
   const [laidOut, setLaidOut] = useState<LaidOutSize | null>(null);
   const readyReportedRef = useRef(false);
   const onMapReadyRef = useRef(onMapReady);
   onMapReadyRef.current = onMapReady;
+
+  useEffect(() => {
+    if (!offline) {
+      setPackReady(null);
+      return;
+    }
+    let cancelled = false;
+    setPackReady(null);
+    void isMapLayersPreviewPackReady(basemap).then((ready) => {
+      if (!cancelled) setPackReady(ready);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [basemap, offline]);
 
   useEffect(() => {
     readyReportedRef.current = false;
@@ -61,7 +83,15 @@ export function MapBasemapPreview({
   }, []);
 
   const propsReady = width > 0 && height > 0;
-  const mountMap = allowMount && propsReady && laidOut != null;
+  const unavailable = offline && packReady === false;
+  const mapSize =
+    allowMount && propsReady && laidOut != null && !unavailable && (!offline || packReady === true)
+      ? laidOut
+      : null;
+
+  useEffect(() => {
+    if (allowMount && unavailable) reportReady();
+  }, [allowMount, reportReady, unavailable]);
 
   return (
     <View
@@ -78,9 +108,13 @@ export function MapBasemapPreview({
       onLayout={onFrameLayout}
       collapsable={false}
     >
-      {mountMap ? (
+      {unavailable ? (
+        <View style={styles.unavailable}>
+          <Text style={[styles.unavailableText, { color: text.error }]}>Preview not available</Text>
+        </View>
+      ) : mapSize != null ? (
         <MapView
-          style={{ width: laidOut.width, height: laidOut.height }}
+          style={{ width: mapSize.width, height: mapSize.height }}
           styleURL={MAPBOX_STYLE_URLS[basemap]}
           scrollEnabled={false}
           zoomEnabled={false}
@@ -112,5 +146,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     backgroundColor: "#e5e7eb",
+  },
+  unavailable: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  unavailableText: {
+    fontSize: 13,
+    textAlign: "center",
   },
 });

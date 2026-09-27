@@ -15,6 +15,7 @@ import { SavedFiltersProvider } from "@/context/data/SavedFiltersContext";
 import { DownloadJobQueueProvider } from "@/context/data/DownloadJobQueueContext";
 import { MapLayersSheetProvider } from "@/context/ui/MapLayersSheetContext";
 import { stackScreenOptions } from "@/utils/navigation/stackScreenOptions";
+import { MapLayersPreviewPackBootstrap } from "@/components/modals/mapLayers/MapLayersPreviewPackBootstrap";
 import { installMapboxLoggerFilters } from "@/utils/mapbox/mapboxLogger";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -31,6 +32,7 @@ export default function RootLayout() {
             <UIScaleProvider>
               <TextProvider>
                 <NetworkStatusProvider>
+                  <MapLayersPreviewPackBootstrap />
                   <ToastProvider>
                     <ToastStackAnchor />
                     {SHOW_NETWORK_STATE ? <NetworkStateDebugToasts /> : null}
