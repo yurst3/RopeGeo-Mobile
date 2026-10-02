@@ -63,7 +63,8 @@ Requires `EXPO_TOKEN` locally or `eas login`. Mapbox and other secrets are confi
 | `/explore/time-info` | Info screen for time ratings. |
 | `/explore/vehicle-info` | Info screen for vehicle type. |
 | `/saved` | Saved tab: list of saved pages with search and filters. |
-| `/profile` | Profile tab: theme, font, and UI scale preferences (screen title still says Settings). |
+| `/profile` | Profile tab: login screen. Settings open from the gear button. |
+| `/profile/account` | Signed-in profile demo (avatar, log out, settings). |
 
 Custom fonts (Roboto, Merriweather, Comic Neue, Dancing Script) are embedded at build time via the `expo-font` config plugin. After changing font assets or plugin config, run `npx expo prebuild` and rebuild the dev client.
 

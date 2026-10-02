@@ -26,6 +26,12 @@ export const fabulousTheme: ThemeColors = {
     missingText: "#FF9AD9",
     background: "#5B21B6",
     blurOverlay: "rgba(76, 29, 149, 0.45)",
+    profileEditScrim: "rgba(0,0,0,0.35)",
+    profileEditIcon: "#9ca3af",
+    profileDisplayNameBackground: "#5B21B6",
+    profileDisplayNameOutline: "#C4B5FD",
+    profileDisplayNameErrorBackground: "rgba(220, 38, 38, 0.35)",
+    profileDisplayNameErrorOutline: "#fca5a5",
   },
   preview: {
     page: {

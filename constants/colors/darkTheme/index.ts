@@ -26,6 +26,12 @@ export const darkTheme: ThemeColors = {
     missingText: "#ffffff",
     background: "#262626",
     blurOverlay: "rgba(0,0,0,0.38)",
+    profileEditScrim: "rgba(0,0,0,0.35)",
+    profileEditIcon: "#9ca3af",
+    profileDisplayNameBackground: "#262626",
+    profileDisplayNameOutline: "#6b7280",
+    profileDisplayNameErrorBackground: "rgba(220, 38, 38, 0.28)",
+    profileDisplayNameErrorOutline: "#dc2626",
   },
   preview: {
     page: {

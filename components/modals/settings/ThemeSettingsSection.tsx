@@ -35,12 +35,12 @@ function swatchColors(preference: ThemePreference, systemDark: boolean) {
   return { primary: theme.background, secondary: theme.text.link };
 }
 
-export type ThemeProfileSectionProps = {
+export type ThemeSettingsSectionProps = {
   value: ThemePreference;
   onChange: (theme: ThemePreference) => void;
 };
 
-export function ThemeProfileSection({ value, onChange }: ThemeProfileSectionProps) {
+export function ThemeSettingsSection({ value, onChange }: ThemeSettingsSectionProps) {
   const systemScheme = useColorScheme();
   const systemDark = systemScheme === "dark";
 

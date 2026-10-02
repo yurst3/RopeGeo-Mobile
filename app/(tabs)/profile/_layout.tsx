@@ -10,6 +10,13 @@ export default function ProfileStackLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="account"
+        options={{
+          headerShown: false,
+          animation: "slide_from_right",
+        }}
+      />
       <Stack.Screen name="relevance-info" options={{ headerShown: false }} />
     </Stack>
   );

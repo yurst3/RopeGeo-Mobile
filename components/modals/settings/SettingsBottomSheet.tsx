@@ -1,9 +1,9 @@
 import { ConstantText } from "@/components/text/ConstantText";
-import { FontProfileSection } from "@/components/screens/profile/FontProfileSection";
-import { RelevantInfoProfileSection } from "@/components/screens/profile/RelevantInfoProfileSection";
-import { ThemeProfileSection } from "@/components/screens/profile/ThemeProfileSection";
-import { UiScaleProfileSection } from "@/components/screens/profile/UiScaleProfileSection";
-import { UnitsProfileSection } from "@/components/screens/profile/UnitsProfileSection";
+import { FontSettingsSection } from "@/components/modals/settings/FontSettingsSection";
+import { RelevantInfoSettingsSection } from "@/components/modals/settings/RelevantInfoSettingsSection";
+import { ThemeSettingsSection } from "@/components/modals/settings/ThemeSettingsSection";
+import { UiScaleSettingsSection } from "@/components/modals/settings/UiScaleSettingsSection";
+import { UnitsSettingsSection } from "@/components/modals/settings/UnitsSettingsSection";
 import { useSettings } from "@/context/app/SettingsContext";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
@@ -179,7 +179,7 @@ export function SettingsBottomSheet({
             >
               Theme
             </ConstantText>
-            <ThemeProfileSection value={settings.theme} onChange={setTheme} />
+            <ThemeSettingsSection value={settings.theme} onChange={setTheme} />
 
             <ConstantText
               size={uiScale.filter.text.sectionTitle}
@@ -188,7 +188,7 @@ export function SettingsBottomSheet({
             >
               Font
             </ConstantText>
-            <FontProfileSection value={settings.font} onChange={setFont} />
+            <FontSettingsSection value={settings.font} onChange={setFont} />
 
             <ConstantText
               size={uiScale.filter.text.sectionTitle}
@@ -197,7 +197,7 @@ export function SettingsBottomSheet({
             >
               UI Scale
             </ConstantText>
-            <UiScaleProfileSection
+            <UiScaleSettingsSection
               value={settings.uiScale}
               onChange={setUiScale}
             />
@@ -209,12 +209,12 @@ export function SettingsBottomSheet({
             >
               Units
             </ConstantText>
-            <UnitsProfileSection
+            <UnitsSettingsSection
               value={settings.lengthMeasurementSystem}
               onChange={setUnits}
             />
 
-            <RelevantInfoProfileSection
+            <RelevantInfoSettingsSection
               showRelevantContext={settings.showRelevantContext}
               strengthMin={settings.showRelevantContextStrengths.min}
               strengthMax={settings.showRelevantContextStrengths.max}

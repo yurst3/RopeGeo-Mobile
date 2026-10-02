@@ -152,7 +152,7 @@ When introducing a palette beyond Light/Dark (e.g. **Fabulous**), update these t
 4. **Runtime resolution** — In `Mobile/context/ColorThemeContext.tsx`:
    - Map the new preference to its `COLORS` key in `resolveThemePaletteKey`.
    - Set `resolveColorTheme` to `"light"` or `"dark"` for system chrome (status bar, etc.); use `"dark"` for deep backgrounds, `"light"` for light backgrounds.
-5. **Settings UI** — In `Mobile/components/screens/profile/ThemeProfileSection.tsx`:
+5. **Settings UI** — In `Mobile/components/modals/settings/ThemeSettingsSection.tsx`:
    - Add a label in `THEME_LABELS`.
    - Add swatch colors in `swatchColors` (`primary` = `background`, `secondary` = accent such as `text.link`).
 

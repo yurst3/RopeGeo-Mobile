@@ -26,6 +26,12 @@ export const lightTheme: ThemeColors = {
     missingText: "#000000",
     background: "#d1d5db",
     blurOverlay: "rgba(255,255,255,0.38)",
+    profileEditScrim: "rgba(0,0,0,0.35)",
+    profileEditIcon: "#9ca3af",
+    profileDisplayNameBackground: "#f3f4f6",
+    profileDisplayNameOutline: "#9ca3af",
+    profileDisplayNameErrorBackground: "#fee2e2",
+    profileDisplayNameErrorOutline: "#dc2626",
   },
   preview: {
     page: {

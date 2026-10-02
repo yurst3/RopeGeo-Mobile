@@ -29,7 +29,7 @@ const DESIGN_INFO_ICON_WRAP_SIZE = 18;
 const DESIGN_INFO_ICON_IMAGE_SIZE = 12;
 const DISABLED_SLIDER_OPACITY = 0.28;
 
-export type RelevantInfoProfileSectionProps = {
+export type RelevantInfoSettingsSectionProps = {
   showRelevantContext: boolean;
   strengthMin: RelevanceStrength;
   strengthMax: RelevanceStrength;
@@ -39,14 +39,14 @@ export type RelevantInfoProfileSectionProps = {
   onBeforeOpenInfo?: () => void;
 };
 
-export function RelevantInfoProfileSection({
+export function RelevantInfoSettingsSection({
   showRelevantContext,
   strengthMin,
   strengthMax,
   onShowRelevantContextChange,
   onStrengthsChange,
   onBeforeOpenInfo,
-}: RelevantInfoProfileSectionProps) {
+}: RelevantInfoSettingsSectionProps) {
   const themeColors = useColorTheme();
   const { switchLabel, switchTrackColors, switchThumbColor } = useFilterTheme();
   const uiScale = useUiScale();

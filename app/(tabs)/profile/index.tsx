@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/components/screens/profile/ProfileScreen";
+import { LoginScreen } from "@/components/screens/login/LoginScreen";
 
-export default function ProfileRoute() {
-  return <ProfileScreen />;
+export default function LoginRoute() {
+  return <LoginScreen />;
 }

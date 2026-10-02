@@ -11,8 +11,10 @@ const APPLE_LOGO = require("@/assets/images/icons/buttons/appleLogo.png");
 const GOOGLE_LOGO = require("@/assets/images/icons/buttons/googleLogo.png");
 const FACEBOOK_LOGO = require("@/assets/images/icons/buttons/facebookLogo.png");
 const ROPEGEO_LOGO = require("@/assets/images/logo.png");
+const WARNING_ICON = require("@/assets/images/temp/warning.png");
 
 const DESIGN_LOGO_SIZE = 22;
+const DESIGN_WARNING_ICON_SIZE = 18;
 const DESIGN_BRAND_LOGO_SIZE = 88;
 const BRAND_LOGO_BORDER_RADIUS = 20;
 const BRAND_LOGO_GAP = 16;
@@ -59,13 +61,14 @@ const LOGIN_OPTIONS: LoginOption[] = [
   },
 ];
 
-/** Demo-only login affordances; presses are no-ops until auth is wired. */
-export function ProfileLoginSection() {
+/** Demo login affordances. Provider buttons call {@link onContinue}. */
+export function LoginSection({ onContinue }: { onContinue: () => void }) {
   const { text, cardHighlight, filter } = useColorTheme();
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
   const iconSizeScale = useResolvedIconSizeScale();
   const logoSize = Math.round(DESIGN_LOGO_SIZE * iconSizeScale);
+  const warningIconSize = Math.round(DESIGN_WARNING_ICON_SIZE * iconSizeScale);
   const brandLogoSize = Math.round(DESIGN_BRAND_LOGO_SIZE * iconSizeScale);
   const brandLogoRadius = Math.round(BRAND_LOGO_BORDER_RADIUS * iconSizeScale);
   /** Apple logo should read as the opposite of the page background. */
@@ -106,7 +109,7 @@ export function ProfileLoginSection() {
           {LOGIN_OPTIONS.map((option) => (
             <Pressable
               key={option.provider}
-              onPress={() => {}}
+              onPress={onContinue}
               style={({ pressed }) => [
                 styles.button,
                 {
@@ -137,6 +140,12 @@ export function ProfileLoginSection() {
                 >
                   {option.label}
                 </ConstantText>
+                <Image
+                  source={WARNING_ICON}
+                  style={{ width: warningIconSize, height: warningIconSize }}
+                  contentFit="contain"
+                  accessibilityLabel="Not implemented"
+                />
               </View>
             </Pressable>
           ))}
@@ -156,6 +165,12 @@ export function ProfileLoginSection() {
             >
               Forgot password?
             </ConstantText>
+            <Image
+              source={WARNING_ICON}
+              style={{ width: warningIconSize, height: warningIconSize }}
+              contentFit="contain"
+              accessibilityLabel="Not implemented"
+            />
           </Pressable>
         </View>
       </View>
@@ -215,6 +230,9 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: LOGO_LABEL_GAP,
     paddingVertical: 4,
   },
   forgotPasswordPressed: {

@@ -15,6 +15,7 @@ export type StandardButtonKeys =
   | "filter"
   | "mapLayers"
   | "settings"
+  | "edit"
   | "save"
   | "share"
   | "externalLink"
@@ -27,7 +28,11 @@ export type StandardButtonKeys =
   | "savedPageGlyph"
   | "removeDownload";
 
-export type NonstandardButtonKeys = "download" | "miniDownload" | "badgeButton";
+export type NonstandardButtonKeys =
+  | "download"
+  | "miniDownload"
+  | "badgeButton"
+  | "logout";
 
 export type StandardButtonColors = {
   background: string;
@@ -62,10 +67,17 @@ export type BadgeButtonColors = {
   infoIcon: string;
 };
 
+export type LogoutButtonColors = {
+  background: string;
+  text: string;
+  shadowColor: string;
+};
+
 export type NonstandardButtonColors =
   | DownloadButtonColors
   | MiniDownloadButtonColors
-  | BadgeButtonColors;
+  | BadgeButtonColors
+  | LogoutButtonColors;
 
 export type ButtonColors = {
   standard: Record<StandardButtonKeys, StandardButtonColors>;
@@ -199,6 +211,18 @@ export type ImageColors = {
   background: string;
   /** Tint over blurred banners (darken in dark theme, brighten in light). */
   blurOverlay: string;
+  /** Darkening scrim over a profile photo while editing. */
+  profileEditScrim: string;
+  /** Edit-photo icon tint while editing. */
+  profileEditIcon: string;
+  /** Display-name field fill while editing (lifted from the page background). */
+  profileDisplayNameBackground: string;
+  /** Display-name field outline while editing. */
+  profileDisplayNameOutline: string;
+  /** Display-name field fill when the draft is empty. */
+  profileDisplayNameErrorBackground: string;
+  /** Display-name field outline when the draft is empty. */
+  profileDisplayNameErrorOutline: string;
 };
 
 export type ToastStyle = "success" | "error" | "warning" | "info";

@@ -1,12 +1,14 @@
 import {
   BADGE_BUTTON_KEY,
   DOWNLOAD_BUTTON_KEY,
+  LOGOUT_BUTTON_KEY,
   MINI_DOWNLOAD_BUTTON_KEY,
 } from "@/constants/buttons";
 
 import type {
   BadgeButtonColors,
   DownloadButtonColors,
+  LogoutButtonColors,
   MiniDownloadButtonColors,
   NonstandardButtonKeys,
 } from "../../types";
@@ -42,11 +44,21 @@ const badgeButton: BadgeButtonColors = {
   infoIcon: "#ffffff",
 };
 
+const logoutButton: LogoutButtonColors = {
+  background: "#000000",
+  text: "#f87171",
+  shadowColor,
+};
+
 export const nonstandardButtons: Record<
   NonstandardButtonKeys,
-  DownloadButtonColors | MiniDownloadButtonColors | BadgeButtonColors
+  | DownloadButtonColors
+  | MiniDownloadButtonColors
+  | BadgeButtonColors
+  | LogoutButtonColors
 > = {
   [DOWNLOAD_BUTTON_KEY]: downloadButton,
   [MINI_DOWNLOAD_BUTTON_KEY]: miniDownloadButton,
   [BADGE_BUTTON_KEY]: badgeButton,
+  [LOGOUT_BUTTON_KEY]: logoutButton,
 };
