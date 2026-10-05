@@ -28,4 +28,8 @@ export const darkThemeBadges: BadgeColors = {
     icon: "#ffffff",
   },
   border: "#ffffff",
+  profileIcon: {
+    background: "#000000",
+    icon: "#ffffff",
+  },
 };

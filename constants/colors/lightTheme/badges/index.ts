@@ -28,4 +28,8 @@ export const lightThemeBadges: BadgeColors = {
     icon: "#000000",
   },
   border: "#000000",
+  profileIcon: {
+    background: "#ffffff",
+    icon: "#000000",
+  },
 };

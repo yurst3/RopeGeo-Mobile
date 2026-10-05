@@ -1,3 +1,6 @@
+import { BadgesTab } from "@/components/screens/profile/BadgesTab";
+import type { ProfileBadgeId } from "@/components/screens/profile/BadgesTab";
+import { ProfileImage } from "@/components/screens/profile/ProfileImage";
 import { EditButton } from "@/components/buttons/standard/EditButton";
 import { LogoutButton } from "@/components/buttons/nonstandard/LogoutButton";
 import { SettingsBottomSheet } from "@/components/modals/settings/SettingsBottomSheet";
@@ -18,14 +21,8 @@ import { useState } from "react";
 import { StyleSheet, TextInput, View, Modal, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const PROFILE_PIC = require("@/assets/images/temp/profilePic.png");
-const EDIT_PROFILE_PIC_ICON = require("@/assets/images/icons/buttons/editProfilePic.png");
 const WARNING_ICON = require("@/assets/images/temp/warning.png");
 const EDIT_ICON = require("@/assets/images/icons/buttons/edit.png");
-const DESIGN_AVATAR_SIZE = 160;
-const DESIGN_AVATAR_BORDER_WIDTH = 3;
-const DESIGN_EDIT_OVERLAY_ICON_SIZE = 56;
-const DESIGN_WARNING_ICON_SIZE = 18;
 const DESIGN_DISPLAY_NAME_ICON_SIZE = 24;
 const DISPLAY_NAME_ICON_GAP = 4;
 
@@ -56,15 +53,7 @@ export function ProfileScreen() {
   const [pronouns, setPronouns] = useState<Pronouns>("He/Him");
   const [pronounsOpen, setPronounsOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<ProfileTab>("Activity");
-  const avatarSize = Math.round(DESIGN_AVATAR_SIZE * iconSizeScale);
-  const avatarBorderWidth = Math.max(
-    2,
-    Math.round(DESIGN_AVATAR_BORDER_WIDTH * iconSizeScale),
-  );
-  const editOverlayIconSize = Math.round(
-    DESIGN_EDIT_OVERLAY_ICON_SIZE * iconSizeScale,
-  );
-  const warningIconSize = Math.round(DESIGN_WARNING_ICON_SIZE * iconSizeScale);
+  const [selectedBadge, setSelectedBadge] = useState<ProfileBadgeId>("none");
   const tabWarningIconSize = Math.round(DESIGN_TAB_WARNING_ICON_SIZE * iconSizeScale);
   const displayNameIconSize = Math.round(DESIGN_DISPLAY_NAME_ICON_SIZE * iconSizeScale);
   const [hintTextWidth, setHintTextWidth] = useState(0);
@@ -165,58 +154,7 @@ export function ProfileScreen() {
         ]}
       >
         <View style={styles.profileHeader}>
-        <View
-          style={[
-            styles.avatar,
-            {
-              width: avatarSize,
-              height: avatarSize,
-              borderRadius: avatarSize / 2,
-              borderWidth: avatarBorderWidth,
-              borderColor: text.primary,
-            },
-          ]}
-        >
-          <Image
-            source={PROFILE_PIC}
-            style={{
-              width: avatarSize - avatarBorderWidth * 2,
-              height: avatarSize - avatarBorderWidth * 2,
-            }}
-            contentFit="cover"
-            accessibilityLabel="Profile picture"
-          />
-          {editing ? (
-            <View style={styles.editOverlay} pointerEvents="none">
-              <View
-                style={[styles.editScrim, { backgroundColor: image.profileEditScrim }]}
-              />
-              <Image
-                source={EDIT_PROFILE_PIC_ICON}
-                style={{
-                  width: editOverlayIconSize,
-                  height: editOverlayIconSize,
-                  tintColor: image.profileEditIcon,
-                }}
-                contentFit="contain"
-                accessibilityLabel="Edit profile picture"
-              />
-              <View
-                style={[
-                  styles.warningIcon,
-                  { marginBottom: editOverlayIconSize / 2 + 6 },
-                ]}
-              >
-                <Image
-                  source={WARNING_ICON}
-                  style={{ width: warningIconSize, height: warningIconSize }}
-                  contentFit="contain"
-                  accessibilityLabel="Not implemented"
-                />
-              </View>
-            </View>
-          ) : null}
-        </View>
+        <ProfileImage editing={editing} selectedBadge={selectedBadge} />
         <View style={styles.displayName}>
           {editing ? (
             <View
@@ -354,21 +292,28 @@ export function ProfileScreen() {
             );
           })}
         </View>
-        <View style={styles.tabBody}>
-          <Image
-            source={WARNING_ICON}
-            style={{ width: tabWarningIconSize, height: tabWarningIconSize }}
-            contentFit="contain"
-            accessibilityLabel="Not implemented"
+        {profileTab === "Badges" ? (
+          <BadgesTab
+            selectedBadge={selectedBadge}
+            onSelectBadge={setSelectedBadge}
           />
-          <ConstantText
-            size={uiScale.filter.text.sectionTitle}
-            typography={textStyle.filter.optionLabel}
-            style={{ color: toast.warning.text }}
-          >
-            Not Implemented
-          </ConstantText>
-        </View>
+        ) : (
+          <View style={styles.tabPlaceholder}>
+            <Image
+              source={WARNING_ICON}
+              style={{ width: tabWarningIconSize, height: tabWarningIconSize }}
+              contentFit="contain"
+              accessibilityLabel="Not implemented"
+            />
+            <ConstantText
+              size={uiScale.filter.text.sectionTitle}
+              typography={textStyle.filter.optionLabel}
+              style={{ color: toast.warning.text }}
+            >
+              Not Implemented
+            </ConstantText>
+          </View>
+        )}
       </View>
 
       <Modal
@@ -463,14 +408,11 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
   },
-  tabBody: {
+  tabPlaceholder: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  avatar: {
-    overflow: "hidden",
   },
   displayName: {
     marginTop: 12,
@@ -523,20 +465,5 @@ const styles = StyleSheet.create({
   displayNameMeasure: {
     position: "absolute",
     opacity: 0,
-  },
-  editOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  editScrim: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  warningIcon: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: "50%",
-    alignItems: "center",
   },
 });

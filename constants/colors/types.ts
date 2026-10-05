@@ -128,6 +128,12 @@ export type SubBadgeColors = {
   icon: string;
 };
 
+/** Monochrome icon plate for profile achievement badges. */
+export type ProfileIconBadgeColors = {
+  background: string;
+  icon: string;
+};
+
 export type RelevanceStrengthBadgeColors = {
   background: string;
   icon: string;
@@ -147,6 +153,7 @@ export type BadgeColors = {
   placeholder: string;
   subBadge: SubBadgeColors;
   border: string;
+  profileIcon: ProfileIconBadgeColors;
 };
 
 export type TextColors = {
