@@ -1,4 +1,4 @@
-import { Settings } from "@/constants/settings";
+import { Settings, type WaypointRecordingSettings } from "@/constants/settings";
 import type { MapBasemap, MapLightPreset } from "@/constants/settings/mapLayersTypes";
 import type { FontProfileKey } from "@/constants/text/font/types";
 import type { UiScaleProfileKey } from "@/constants/uiScale/types";
@@ -65,6 +65,7 @@ type SettingsContextValue = {
     showSatelliteContours: boolean;
   }) => void;
   resetMapLayers: () => void;
+  setWaypointRecording: (values: Partial<WaypointRecordingSettings>) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -204,6 +205,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [schedulePersist],
   );
 
+  const setWaypointRecording = useCallback(
+    (values: Partial<WaypointRecordingSettings>) => {
+      setSettings((prev) => {
+        const next = cloneSettings(prev);
+        next.setWaypointRecording(values);
+        schedulePersist(next);
+        return next;
+      });
+    },
+    [schedulePersist],
+  );
+
   const value = useMemo<SettingsContextValue>(
     () => ({
       settings,
@@ -216,6 +229,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setShowRelevantContextStrengths,
       setMapLayersDraft,
       resetMapLayers,
+      setWaypointRecording,
     }),
     [
       settings,
@@ -228,6 +242,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setShowRelevantContextStrengths,
       setMapLayersDraft,
       resetMapLayers,
+      setWaypointRecording,
     ],
   );
 

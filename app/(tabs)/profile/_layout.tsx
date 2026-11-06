@@ -17,6 +17,20 @@ export default function ProfileStackLayout() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen
+        name="trip-report"
+        options={{
+          headerShown: false,
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="page-select"
+        options={{
+          headerShown: false,
+          animation: "fade",
+        }}
+      />
       <Stack.Screen name="relevance-info" options={{ headerShown: false }} />
     </Stack>
   );

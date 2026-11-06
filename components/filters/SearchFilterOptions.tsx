@@ -180,16 +180,126 @@ function SearchOrderRadioGroup({
   );
 }
 
+export function cloneSearchFilter(f: SearchFilter): SearchFilter {
+  return SearchFilter.fromJsonString(f.toString());
+}
+
+/** "Search Order" label, radio group, and location hint. Blocks distance without a GPS fix. */
+export function SearchOrderSection({
+  selectedOrder,
+  livePosition,
+  onChangeOrder,
+}: {
+  selectedOrder: SearchOrder;
+  livePosition: SearchParamsPosition | null;
+  onChangeOrder: (order: SearchOrder) => void;
+}) {
+  const { filter: filterColors, sectionLabel, hintText, text } = useFilterTheme();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const canDistance = livePosition != null;
+
+  const selectOrder = (o: SearchOrder) => {
+    if (o === "distance" && !canDistance) {
+      Alert.alert(
+        "Location required",
+        "Distance order needs your current location.",
+      );
+      return;
+    }
+    onChangeOrder(o);
+  };
+
+  return (
+    <View>
+      <ConstantText
+        size={uiScale.filter.text.sectionTitle}
+        typography={textStyle.filter.sectionTitle}
+        style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}
+      >
+        Search Order
+      </ConstantText>
+      <SearchOrderRadioGroup
+        selectedOrder={selectedOrder}
+        canDistance={canDistance}
+        onSelectOrder={selectOrder}
+        radioButton={filterColors.radioButton}
+        text={text}
+      />
+      {!canDistance ? (
+        <ConstantText
+          size={uiScale.filter.buttons.radio.subtext!}
+          typography={textStyle.filter.optionSublabel}
+          style={hintText}
+        >
+          Enable location to use distance ranking.
+        </ConstantText>
+      ) : null}
+    </View>
+  );
+}
+
+/** "Name Similarity" label, slider rounded to 0.1, and explanatory note. */
+export function NameSimilaritySection({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const { filter: filterColors, sectionLabel, text } = useFilterTheme();
+  const uiScale = useUiScale();
+  const textStyle = useTextStyle();
+  const { slider, noteText } = filterColors;
+
+  return (
+    <View>
+      <ConstantText
+        size={uiScale.filter.text.sectionTitle}
+        typography={textStyle.filter.sectionTitle}
+        style={[styles.sectionLabel, sectionLabel]}
+      >
+        Name Similarity
+      </ConstantText>
+      <View style={styles.sliderBlock}>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={1}
+          step={0.1}
+          value={value}
+          onValueChange={(v) => onChange(Math.round(v * 10) / 10)}
+          minimumTrackTintColor={slider.filledBar}
+          maximumTrackTintColor={slider.unfilledBar}
+          thumbTintColor={slider.thumb}
+        />
+        <ConstantText
+          size={uiScale.filter.buttons.checkbox.text!}
+          typography={textStyle.filter.revertButton}
+          style={[styles.sliderValue, { color: text.secondary }]}
+        >
+          {value.toFixed(1)}
+        </ConstantText>
+      </View>
+      <ConstantText
+        size={uiScale.filter.text.note}
+        typography={textStyle.filter.note}
+        style={[styles.similarityNote, { color: noteText }]}
+      >
+        Similarity is how closely the search results should match the search bar
+        input. A higher value means a stricter match with less results and a
+        lower value means a looser match with more results.
+      </ConstantText>
+    </View>
+  );
+}
+
 export type SearchFilterOptionsProps = {
   filter: SearchFilter;
   onChange: (filter: SearchFilter) => void;
   /** Required to enable distance ranking; shows an alert if distance is chosen without a fix. */
   livePosition: SearchParamsPosition | null;
 };
-
-function cloneFilter(f: SearchFilter): SearchFilter {
-  return SearchFilter.fromJsonString(f.toString());
-}
 
 export function SearchFilterOptions({
   filter,
@@ -198,32 +308,22 @@ export function SearchFilterOptions({
 }: SearchFilterOptionsProps) {
   const {
     filter: filterColors,
-    sectionLabel,
-    hintText,
     switchLabel,
     switchLabelMuted,
     disableSection,
     switchProps,
-    text,
   } = useFilterTheme();
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
-  const { radioButton, slider, noteText } = filterColors;
+  const { noteText } = filterColors;
 
   const patch = (fn: (s: SearchFilter) => void) => {
-    const s = cloneFilter(filter);
+    const s = cloneSearchFilter(filter);
     fn(s);
     onChange(s);
   };
 
   const setOrder = (o: SearchOrder) => {
-    if (o === "distance" && livePosition == null) {
-      Alert.alert(
-        "Location required",
-        "Distance order needs your current location.",
-      );
-      return;
-    }
     patch((s) => {
       s.setOrder(o);
       if (o === "distance") {
@@ -232,7 +332,6 @@ export function SearchFilterOptions({
     });
   };
 
-  const canDistance = livePosition != null;
   const regionsDisabledByOrder = filter.order === "distance";
   const akaDisabled = !filter.includePages;
   const akaDisabledReason =
@@ -244,11 +343,6 @@ export function SearchFilterOptions({
   const mergedDisabledGreyBand =
     regionsDisabledByOrder && akaDisabled;
 
-  const onSimilarityChange = (v: number) => {
-    const rounded = Math.round(v * 10) / 10;
-    patch((s) => s.setSimilarityThreshold(rounded));
-  };
-
   const disabledBandStyle = [
     styles.switchBlockDisabled,
     disableSection,
@@ -256,31 +350,11 @@ export function SearchFilterOptions({
 
   return (
     <>
-      <View>
-        <ConstantText
-          size={uiScale.filter.text.sectionTitle}
-          typography={textStyle.filter.sectionTitle}
-          style={[styles.sectionLabel, styles.sectionLabelFirst, sectionLabel]}
-        >
-          Search Order
-        </ConstantText>
-        <SearchOrderRadioGroup
-          selectedOrder={filter.order}
-          canDistance={canDistance}
-          onSelectOrder={setOrder}
-          radioButton={radioButton}
-          text={text}
-        />
-        {!canDistance ? (
-          <ConstantText
-            size={uiScale.filter.buttons.radio.subtext!}
-            typography={textStyle.filter.optionSublabel}
-            style={hintText}
-          >
-            Enable location to use distance ranking.
-          </ConstantText>
-        ) : null}
-      </View>
+      <SearchOrderSection
+        selectedOrder={filter.order}
+        livePosition={livePosition}
+        onChangeOrder={setOrder}
+      />
 
       <View style={styles.groupSpacer} />
 
@@ -459,44 +533,10 @@ export function SearchFilterOptions({
 
       <View style={styles.groupSpacer} />
 
-      <View>
-        <ConstantText
-          size={uiScale.filter.text.sectionTitle}
-          typography={textStyle.filter.sectionTitle}
-          style={[styles.sectionLabel, sectionLabel]}
-        >
-          Name Similarity
-        </ConstantText>
-        <View style={styles.sliderBlock}>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={1}
-            step={0.1}
-            value={filter.similarityThreshold}
-            onValueChange={onSimilarityChange}
-            minimumTrackTintColor={slider.filledBar}
-            maximumTrackTintColor={slider.unfilledBar}
-            thumbTintColor={slider.thumb}
-          />
-          <ConstantText
-            size={uiScale.filter.buttons.checkbox.text!}
-            typography={textStyle.filter.revertButton}
-            style={[styles.sliderValue, { color: text.secondary }]}
-          >
-            {filter.similarityThreshold.toFixed(1)}
-          </ConstantText>
-        </View>
-        <ConstantText
-          size={uiScale.filter.text.note}
-          typography={textStyle.filter.note}
-          style={[styles.similarityNote, { color: noteText }]}
-        >
-          Similarity is how closely the search results should match the search bar
-          input. A higher value means a stricter match with less results and a
-          lower value means a looser match with more results.
-        </ConstantText>
-      </View>
+      <NameSimilaritySection
+        value={filter.similarityThreshold}
+        onChange={(v) => patch((s) => s.setSimilarityThreshold(v))}
+      />
 
       <View style={styles.groupSpacer} />
 
@@ -508,6 +548,17 @@ export function SearchFilterOptions({
     </>
   );
 }
+
+export const searchFilterOptionStyles = StyleSheet.create({
+  groupSpacer: {
+    height: 32,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+});
 
 const styles = StyleSheet.create({
   groupSpacer: {

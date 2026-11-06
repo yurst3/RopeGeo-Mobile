@@ -46,7 +46,9 @@ import { BetaSectionImages } from "./BetaSectionImages";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_PADDING_HORIZONTAL = 20;
 const CONTENT_WIDTH = SCREEN_WIDTH - CARD_PADDING_HORIZONTAL * 2;
-const TEXT_MAX_HEIGHT = 150;
+/** Height the body text is clipped to while collapsed. */
+export const BETA_SECTION_COLLAPSED_TEXT_HEIGHT = 150;
+const TEXT_MAX_HEIGHT = BETA_SECTION_COLLAPSED_TEXT_HEIGHT;
 const EXPAND_COLLAPSE_MS = 280;
 /** Bottom fade height when collapsed; softens the hard clip above "Show more". */
 const COLLAPSE_FADE_HEIGHT = 48;

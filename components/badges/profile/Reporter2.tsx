@@ -26,7 +26,17 @@ export function Reporter2({ selected, onPress }: ReporterBadgeProps) {
   );
 }
 
-export function AvatarReporter2({ selected, onPress }: ReporterBadgeProps) {
+export function AvatarReporter2({
+  selected,
+  onPress,
+  plateRatio,
+  iconScale,
+  medalOnly,
+}: ReporterBadgeProps & {
+  plateRatio?: number;
+  iconScale?: number;
+  medalOnly?: boolean;
+}) {
   const { badge } = useColorTheme();
 
   return (
@@ -39,6 +49,9 @@ export function AvatarReporter2({ selected, onPress }: ReporterBadgeProps) {
       description="Submit 10 trip reports"
       selected={selected}
       onPress={onPress}
+      plateRatio={plateRatio}
+      iconScale={iconScale}
+      medalOnly={medalOnly}
     />
   );
 }

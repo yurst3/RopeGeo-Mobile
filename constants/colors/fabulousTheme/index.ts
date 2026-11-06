@@ -18,6 +18,7 @@ export const fabulousTheme: ThemeColors = {
     tertiary: "#FF3DB8",
     link: "#FACC15",
     error: "#dc2626",
+    highlight: "#FACC15",
   },
   image: {
     textBackground: "rgba(59, 7, 100, 0.72)",
@@ -36,6 +37,9 @@ export const fabulousTheme: ThemeColors = {
   preview: {
     page: {
       sourceIconBackground: "#ffffff",
+      selectionOutline: "#C4B5FD",
+      selectionFill: "#FACC15",
+      selectionCheck: "#3B0764",
     },
     region: {
       regionIconBackground: "#3B0764",
@@ -96,6 +100,11 @@ export const fabulousTheme: ThemeColors = {
         shadow: "#FACC15",
         collapseIcon: "#FF6EC7",
         markerIcon: "#ffffff",
+      },
+      recordedSegment: {
+        waypointStroke: "#FACC15",
+        lineCasing: "#FACC15",
+        lightLineOutline: "#000000",
       },
     },
   },

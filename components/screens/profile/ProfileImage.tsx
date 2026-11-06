@@ -1,3 +1,4 @@
+import { AVATAR_BADGE_CIRCLE_DIAMETER_RATIO } from "@/components/badges/profile/AvatarProfileBadge";
 import { TIER_IMAGES } from "@/components/badges/profile/ProfileBadge";
 import { AvatarReporter1 } from "@/components/badges/profile/Reporter1";
 import { AvatarReporter2 } from "@/components/badges/profile/Reporter2";
@@ -6,6 +7,7 @@ import {
   PROFILE_BADGE_TIER,
   type ProfileBadgeId,
 } from "@/components/screens/profile/BadgesTab";
+import type { ProfileImageLayout } from "@/constants/profile/profileImageLayout";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
 import { Image } from "expo-image";
@@ -16,39 +18,41 @@ const EDIT_PROFILE_PIC_ICON = require("@/assets/images/icons/buttons/editProfile
 const WARNING_ICON = require("@/assets/images/temp/warning.png");
 const SILVER_SPARKLE = require("@/assets/images/icons/profile/silverSparkle.png");
 const GOLD_SPARKLE = require("@/assets/images/icons/profile/goldSparkle.png");
-const DESIGN_AVATAR_SIZE = 160;
-/** Photo is smaller than the outline so the rim stays visible. */
-const AVATAR_PLATE_RATIO = 0.9;
+/** Unscaled avatar diameter. Callers use this with the icon size scale. */
+export const PROFILE_IMAGE_DESIGN_SIZE = 160;
+const DESIGN_AVATAR_SIZE = PROFILE_IMAGE_DESIGN_SIZE;
 const DESIGN_EDIT_OVERLAY_ICON_SIZE = 56;
 const DESIGN_WARNING_ICON_SIZE = 18;
-/** Nudge the avatar badge. Positive x moves right, positive y moves down. */
-const AVATAR_BADGE_OFFSET_X = 6;
-const AVATAR_BADGE_OFFSET_Y = 6;
-/** 1 matches the sparkle artwork. Increase to enlarge, decrease to shrink. */
-const SPARKLE_SCALE = 1.4;
-/** Nudge the sparkles. Positive x moves right, positive y moves down. */
-const SPARKLE_OFFSET_X = -16;
-const SPARKLE_OFFSET_Y = 16;
 
 export function ProfileImage({
   editing,
   selectedBadge,
+  size,
+  layout,
 }: {
   editing: boolean;
   selectedBadge: ProfileBadgeId | null;
+  /** Rendered size. Defaults to the profile header size. */
+  size?: number;
+  layout: ProfileImageLayout;
 }) {
   const { image } = useColorTheme();
   const iconSizeScale = useResolvedIconSizeScale();
   const avatarSize = Math.round(DESIGN_AVATAR_SIZE * iconSizeScale);
+  const frameSize = size ?? avatarSize;
+  const frameScale = frameSize / avatarSize;
   const editOverlayIconSize = Math.round(DESIGN_EDIT_OVERLAY_ICON_SIZE * iconSizeScale);
   const warningIconSize = Math.round(DESIGN_WARNING_ICON_SIZE * iconSizeScale);
   const tier =
     selectedBadge == null || selectedBadge === "none"
       ? null
       : PROFILE_BADGE_TIER[selectedBadge];
-  const photoSize = Math.round(avatarSize * AVATAR_PLATE_RATIO);
+  const photoSize = Math.round(avatarSize * layout.avatarPlateRatio);
+  const badgeSize = Math.round(
+    (avatarSize * layout.badgeAvatarRatio) / AVATAR_BADGE_CIRCLE_DIAMETER_RATIO,
+  );
 
-  return (
+  const frame = (
     <View style={[styles.frame, { width: avatarSize, height: avatarSize }]}>
       <View
         style={[
@@ -116,17 +120,37 @@ export function ProfileImage({
         style={[
           styles.badgeOverlay,
           {
+            width: badgeSize,
+            height: badgeSize,
             transform: [
-              { translateX: AVATAR_BADGE_OFFSET_X },
-              { translateY: AVATAR_BADGE_OFFSET_Y },
+              { translateX: layout.badgeOffsetX },
+              { translateY: layout.badgeOffsetY },
             ],
           },
         ]}
         pointerEvents="none"
       >
-        {selectedBadge === "reporter1" ? <AvatarReporter1 /> : null}
-        {selectedBadge === "reporter2" ? <AvatarReporter2 /> : null}
-        {selectedBadge === "reporter3" ? <AvatarReporter3 /> : null}
+        {selectedBadge === "reporter1" ? (
+          <AvatarReporter1
+            plateRatio={layout.badgePlateRatio}
+            iconScale={layout.badgeIconScale}
+            medalOnly
+          />
+        ) : null}
+        {selectedBadge === "reporter2" ? (
+          <AvatarReporter2
+            plateRatio={layout.badgePlateRatio}
+            iconScale={layout.badgeIconScale}
+            medalOnly
+          />
+        ) : null}
+        {selectedBadge === "reporter3" ? (
+          <AvatarReporter3
+            plateRatio={layout.badgePlateRatio}
+            iconScale={layout.badgeIconScale}
+            medalOnly
+          />
+        ) : null}
       </View>
     ) : null}
     {tier === "silver" || tier === "gold" ? (
@@ -136,10 +160,10 @@ export function ProfileImage({
           StyleSheet.absoluteFill,
           {
             transform: [
-              { scaleX: -SPARKLE_SCALE },
-              { scaleY: SPARKLE_SCALE },
-              { translateX: SPARKLE_OFFSET_X },
-              { translateY: SPARKLE_OFFSET_Y },
+              { scaleX: -layout.sparkleScale },
+              { scaleY: layout.sparkleScale },
+              { translateX: layout.sparkleOffsetX },
+              { translateY: layout.sparkleOffsetY },
             ],
           },
         ]}
@@ -150,6 +174,28 @@ export function ProfileImage({
     ) : null}
     </View>
   );
+
+  if (frameScale === 1) {
+    return frame;
+  }
+
+  return (
+    <View style={{ width: frameSize, height: frameSize }} pointerEvents="box-none">
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          width: avatarSize,
+          height: avatarSize,
+          left: (frameSize - avatarSize) / 2,
+          top: (frameSize - avatarSize) / 2,
+          transform: [{ scale: frameScale }],
+        }}
+      >
+        {frame}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -158,10 +204,8 @@ const styles = StyleSheet.create({
   },
   badgeOverlay: {
     position: "absolute",
-    top: 0,
     right: 0,
     bottom: 0,
-    left: 0,
     overflow: "hidden",
   },
   avatar: {

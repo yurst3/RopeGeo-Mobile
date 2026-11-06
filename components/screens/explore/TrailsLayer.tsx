@@ -1,11 +1,9 @@
 import {
+  MAPBOX_EMISSIVE_STRENGTH,
   MAPBOX_TRAILS_ABOVE_LAYER_ID,
   MAPBOX_TRAILS_LINE_LAYER_IDS,
 } from "@/constants/mapbox";
-import {
-  EXPLORE_TRAIL_LINE_COLORS,
-  EXPLORE_TRAIL_LINE_EMISSIVE_STRENGTH,
-} from "@/utils/map/exploreTrailLineColors";
+import { EXPLORE_TRAIL_LINE_COLORS } from "@/utils/map/exploreTrailLineColors";
 import { trailVectorLineStyle } from "@/utils/minimap/trailVectorLineStyle";
 import { LineLayer, VectorSource, type LineLayerStyle } from "@rnmapbox/maps";
 import { useMemo } from "react";
@@ -46,7 +44,7 @@ export function TrailsLayer({
       lineColor: EXPLORE_TRAIL_LINE_COLORS.unfocused,
       lineWidth: UNFOCUSED_ROUTE_LINE_WIDTH,
       lineOpacity: 1,
-      lineEmissiveStrength: EXPLORE_TRAIL_LINE_EMISSIVE_STRENGTH,
+      lineEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
       lineCap: "round",
       lineJoin: "round",
     }),

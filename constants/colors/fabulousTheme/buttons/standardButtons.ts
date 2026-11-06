@@ -15,6 +15,10 @@ import {
   SAVE_BUTTON_KEY,
   SAVED_PAGE_GLYPH_KEY,
   SHARE_BUTTON_KEY,
+  ADD_TRIP_REPORT_BUTTON_KEY,
+  VIEW_EDIT_BUTTON_KEY,
+  ADD_LINE_SEGMENT_BUTTON_KEY,
+  MINI_RECORD_LINE_SEGMENT_BUTTON_KEY,
 } from "@/constants/buttons";
 
 import type { StandardButtonColors, StandardButtonKeys } from "../../types";
@@ -54,4 +58,8 @@ export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> =
   [RESET_CAMERA_ORIENTATION_BUTTON_KEY]: defaultStandard,
   [SAVED_PAGE_GLYPH_KEY]: highlightedStandard,
   [REMOVE_DOWNLOAD_BUTTON_KEY]: defaultStandard,
+  [ADD_TRIP_REPORT_BUTTON_KEY]: defaultStandard,
+  [VIEW_EDIT_BUTTON_KEY]: defaultStandard,
+  [ADD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
+  [MINI_RECORD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
 };

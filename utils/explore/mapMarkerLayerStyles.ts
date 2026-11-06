@@ -1,17 +1,26 @@
 import type { MarkerColors } from "@/constants/colors/types";
+import { MAPBOX_EMISSIVE_STRENGTH } from "@/constants/mapbox";
 import { ROUTE_MARKER_CLUSTER_IMAGE } from "@/utils/mapbox/nativeMarkerImages";
 import type { SymbolLayerStyle } from "@rnmapbox/maps";
 import type { RouteMarkerMetrics } from "@/utils/layout/routeMarkerLayout";
-import { routeMarkerIconSizeInterpolate } from "./routeMarkerIcons";
+import { ROUTE_MARKER_SDF_PADDING, routeMarkerIconSizeInterpolate } from "./routeMarkerIcons";
 
 export const MAP_MARKER_ICON_OPACITY = 1;
-export const MAP_MARKER_ICON_EMISSIVE_STRENGTH = 1;
+/** Outline around marker icons, in points. */
+export const MAP_MARKER_ICON_HALO_WIDTH = 1;
+/**
+ * Moves bottom-anchored markers down by the SDF image's bottom padding (`iconOffset` is in image
+ * pixels), so the pin's tip, not the padding, sits on the point.
+ */
+const BOTTOM_ANCHOR_ICON_OFFSET: [number, number] = [0, ROUTE_MARKER_SDF_PADDING];
 
-function mapMarkerIconPaint(iconColor: string) {
+function mapMarkerIconPaint(iconColor: string, haloColor: string) {
   return {
     iconColor,
     iconOpacity: MAP_MARKER_ICON_OPACITY,
-    iconEmissiveStrength: MAP_MARKER_ICON_EMISSIVE_STRENGTH,
+    iconEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
+    iconHaloColor: haloColor,
+    iconHaloWidth: MAP_MARKER_ICON_HALO_WIDTH,
   };
 }
 
@@ -25,14 +34,16 @@ export function unclusteredRouteMarkerSymbolStyle(
   return {
     iconImage,
     iconSize,
-    ...mapMarkerIconPaint(marker.defaultIcon),
+    ...mapMarkerIconPaint(marker.defaultIcon, marker.iconHalo),
     iconAllowOverlap: true,
     iconIgnorePlacement: true,
     iconAnchor: "bottom",
+    iconOffset: BOTTOM_ANCHOR_ICON_OFFSET,
     textField: ["get", "name"],
     textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
+    textEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
     textHaloColor: marker.textHalo,
     textHaloWidth: markerMetrics.textHaloWidth,
     textOffset: [0, markerMetrics.textOffsetY],
@@ -50,10 +61,11 @@ export function clusterRouteMarkerSymbolStyle(
   return {
     iconImage: ROUTE_MARKER_CLUSTER_IMAGE,
     iconSize: routeMarkerIconSizeInterpolate(markerMetrics.iconSizeScale),
-    ...mapMarkerIconPaint(marker.clusterIcon),
+    ...mapMarkerIconPaint(marker.clusterIcon, marker.iconHalo),
     iconAllowOverlap: true,
     iconIgnorePlacement: true,
     iconAnchor: "bottom",
+    iconOffset: BOTTOM_ANCHOR_ICON_OFFSET,
     textField: [
       "concat",
       "(",
@@ -63,6 +75,7 @@ export function clusterRouteMarkerSymbolStyle(
     textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
+    textEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
     textHaloColor: marker.textHalo,
     textHaloWidth: markerMetrics.textHaloWidth,
     textOffset: [0, markerMetrics.textOffsetY],
@@ -80,7 +93,7 @@ export function pagePointIconSymbolStyle(
   return {
     iconImage,
     iconSize,
-    ...mapMarkerIconPaint(marker.defaultIcon),
+    ...mapMarkerIconPaint(marker.defaultIcon, marker.iconHalo),
     iconAllowOverlap: true,
     iconIgnorePlacement: true,
     iconAnchor: "center",
@@ -98,6 +111,7 @@ export function pagePointLabelSymbolStyle(
     textFont: [...textFont],
     textSize: markerMetrics.textSize,
     textColor: marker.text,
+    textEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
     textHaloColor: marker.textHalo,
     textHaloWidth: markerMetrics.textHaloWidth,
     textOffset: [0, markerMetrics.pageMiniMapTextOffsetY],

@@ -18,6 +18,8 @@ export const TOAST_KEY_DOWNLOAD_CANCELLED = "download-cancelled";
 export const TOAST_KEY_INVALID_STORED_DOWNLOAD_JOB = "error-download-invalid";
 export const TOAST_KEY_PAGE_SAVED = "saved-page";
 export const TOAST_KEY_DISTANCE_GPS_TIMEOUT = "error-search-distance-gps-timeout";
+/** Trip report map file upload: in progress, then finished or failed (one toast, restyled). */
+export const TOAST_KEY_MAP_FILE_UPLOAD = "map-file-upload";
 
 /** Dev only: live `NetworkState` from expo-network (see `SHOW_NETWORK_STATE`). */
 export const TOAST_KEY_DEV_NETWORK_IS_CONNECTED = "dev-network-isConnected";
@@ -153,5 +155,14 @@ export const TOAST_ARCHETYPE: Record<string, ToastArchetype> = {
     variant: "pill",
     style: "error",
     messageMaxLines: 1,
+  },
+  [TOAST_KEY_MAP_FILE_UPLOAD]: {
+    priority: 3,
+    allowedRoutes: null,
+    durationMs: null,
+    variant: "pill",
+    style: "warning",
+    messageMaxLines: 1,
+    subtitleMaxLines: 2,
   },
 };

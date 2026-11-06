@@ -18,6 +18,7 @@ export const lightTheme: ThemeColors = {
     tertiary: "#9ca3af",
     link: "#dc732b",
     error: "#dc2626",
+    highlight: "#ca8a04",
   },
   image: {
     textBackground: "rgba(255,255,255,0.75)",
@@ -36,6 +37,9 @@ export const lightTheme: ThemeColors = {
   preview: {
     page: {
       sourceIconBackground: "#ffffff",
+      selectionOutline: "#9ca3af",
+      selectionFill: "#dc732b",
+      selectionCheck: "#ffffff",
     },
     region: {
       regionIconBackground: "#ffffff",
@@ -96,6 +100,11 @@ export const lightTheme: ThemeColors = {
         shadow: "#000000",
         collapseIcon: "#000000",
         markerIcon: "#000000",
+      },
+      recordedSegment: {
+        waypointStroke: "#ffffff",
+        lineCasing: "#ffffff",
+        lightLineOutline: "#000000",
       },
     },
   },

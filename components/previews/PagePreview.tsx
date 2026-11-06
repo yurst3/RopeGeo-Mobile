@@ -18,6 +18,7 @@ import {
 } from "@/utils/layout/previewLayout";
 import { useResolvedTypography } from "@/utils/theme/resolvers";
 import { useFabulousTitle } from "@/utils/theme/useFabulousTitle";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Image } from "expo-image";
@@ -56,23 +57,39 @@ function sourceIcon(source: PageDataSource): number | null {
   return null;
 }
 
-type Props = {
+/**
+ * What sits in the trailing column beside the meta lines.
+ * - `sourceIcon` (default): source logo, matching `RegionPreview`.
+ * - `miniDownload`: `MiniDownloadButton`; the source logo moves onto the thumbnail.
+ * - `selection`: selected/unselected circle; the source logo moves onto the thumbnail and
+ *   pressing the card toggles selection instead of opening the page.
+ */
+export type PagePreviewTrailing = "sourceIcon" | "miniDownload" | "selection";
+
+export type PagePreviewProps = {
   preview: OnlinePagePreview | OfflinePagePreview;
   /** `explore` (default): `/(tabs)/explore/[id]/page`. `saved`: `/(tabs)/saved/[id]/page`. */
   pageHref?: "explore" | "saved";
-  /**
-   * When true: Ropewiki badge is overlaid on the thumbnail and `MiniDownloadButton` sits in
-   * the trailing column. When false: matches `RegionPreview` (source logo in the right column,
-   * no overlay on the image).
-   */
-  showMiniDownload?: boolean;
+  trailing?: PagePreviewTrailing;
+  /** Used when `trailing` is `selection`. */
+  selected?: boolean;
+  /** Used when `trailing` is `selection`; called instead of navigating. */
+  onToggleSelected?: () => void;
+  /** When false, pressing the card does nothing (display only). Defaults to true. */
+  pressable?: boolean;
 };
 
 export function PagePreview({
   preview,
   pageHref = "explore",
-  showMiniDownload = false,
-}: Props) {
+  trailing = "sourceIcon",
+  selected = false,
+  onToggleSelected,
+  pressable = true,
+}: PagePreviewProps) {
+  const showMiniDownload = trailing === "miniDownload";
+  const showSelection = trailing === "selection";
+  const showSourceOverlay = trailing !== "sourceIcon";
   const themeColors = useColorTheme();
   const layoutMetrics = usePreviewLayoutMetrics();
   const uiScale = useUiScale();
@@ -85,7 +102,9 @@ export function PagePreview({
   );
   const akaBoldStyle = useResolvedTypography(akaBoldTypography);
   const displayTitle = useFabulousTitle(preview.title);
-  const { sourceIconBackground } = previewColors.page;
+  const { sourceIconBackground, selectionOutline, selectionFill, selectionCheck } =
+    previewColors.page;
+  const selectionSize = layoutMetrics.sourceIconCircleSize;
   const router = useRouter();
   const { savedEntries, removeDownloadBundle } = useSavedPages();
   const { getJobUISnapshot, enqueueSavedPageDownload } = useDownloadJobQueue();
@@ -145,6 +164,10 @@ export function PagePreview({
   const icon = sourceIcon(preview.source);
 
   const onPress = () => {
+    if (showSelection) {
+      onToggleSelected?.();
+      return;
+    }
     if (preview.source !== PageDataSource.Ropewiki) return;
     const params = {
       id: preview.id,
@@ -166,7 +189,10 @@ export function PagePreview({
   return (
     <Pressable
       onPress={onPress}
+      disabled={!pressable}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      accessibilityRole={!pressable ? undefined : showSelection ? "checkbox" : "button"}
+      accessibilityState={showSelection ? { checked: selected } : undefined}
     >
       <View style={[styles.imageWrap, { backgroundColor: image.background }]}>
           {previewImageUri ? (
@@ -205,7 +231,7 @@ export function PagePreview({
               />
             </View>
           )}
-          {showMiniDownload && icon != null ? (
+          {showSourceOverlay && icon != null ? (
             <View
               style={[
                 styles.sourceIconOverlay,
@@ -335,7 +361,31 @@ export function PagePreview({
                   </ConstantText>
                 ) : null}
               </View>
-            ) : !showMiniDownload && icon != null ? (
+            ) : showSelection ? (
+              <View
+                style={[
+                  styles.selectionCircle,
+                  styles.trailingControl,
+                  {
+                    width: selectionSize,
+                    height: selectionSize,
+                    borderRadius: selectionSize / 2,
+                  },
+                  selected
+                    ? { backgroundColor: selectionFill, borderColor: selectionFill }
+                    : { borderColor: selectionOutline, borderStyle: "dashed" },
+                ]}
+                pointerEvents="none"
+              >
+                {selected ? (
+                  <FontAwesome5
+                    name="check"
+                    size={Math.round(selectionSize * 0.5)}
+                    color={selectionCheck}
+                  />
+                ) : null}
+              </View>
+            ) : trailing === "sourceIcon" && icon != null ? (
               <View
                 style={[
                   styles.sourceIconCircle,
@@ -417,6 +467,10 @@ const styles = StyleSheet.create({
   trailingControl: {
     marginLeft: PAGE_PREVIEW_TRAILING_MARGIN,
     alignItems: "center",
+  },
+  selectionCircle: {
+    justifyContent: "center",
+    borderWidth: 2,
   },
   image: {
     width: "100%",

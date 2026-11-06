@@ -7,6 +7,7 @@ import {
 } from "@/constants/toasts/toastArchetypes";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useToast } from "@/context/ui/ToastContext";
+import { CategoryDivider } from "@/components/lists/CategoryDivider";
 import { OfflineLoadMoreBlockedFooter } from "@/components/lists/OfflineLoadMoreBlockedFooter";
 import { PlaceholderPreview } from "@/components/previews/PlaceholderPreview";
 import { PagePreview } from "@/components/previews/PagePreview";
@@ -16,7 +17,7 @@ import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { usePreviewTextMetrics } from "@/utils/layout/previewLayout";
 import { useIsFocused } from "@react-navigation/native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -27,17 +28,38 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { NO_NETWORK_MESSAGE } from "@/utils/network/messages";
-import { type OnlinePagePreview, Preview } from "ropegeo-common/models";
+import {
+  type OfflinePagePreview,
+  type OnlinePagePreview,
+  Preview,
+} from "ropegeo-common/models";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const LOAD_MORE_BOTTOM_THRESHOLD = 100;
 const SEARCH_HTTP_PLACEHOLDER_COUNT = 8;
+
+/** A titled group of previews. The search results category is always last. */
+export type SearchResultCategory = {
+  key: string;
+  title: string;
+  /** Shown in the divider as `Title (count)` when provided. */
+  count?: number;
+  previews: Preview[];
+};
 
 type SearchScreenResultsProps = {
   filterSheetOpen: boolean;
   onCloseFilterSheet: () => void;
   filterSheetMode: FilterSheetMode | null;
   awaitingDistanceGps: boolean;
+  resultsCategoryTitle: string;
+  /** Categories shown above the search results category. */
+  leadingCategories?: SearchResultCategory[];
+  /** When set, page previews toggle selection instead of opening the page. */
+  selection?: {
+    selectedIds: ReadonlySet<string>;
+    onToggle: (page: OnlinePagePreview | OfflinePagePreview) => void;
+  };
   isOnline: boolean;
   queryKey: string;
   loadingNextPage: boolean;
@@ -55,6 +77,9 @@ export function SearchScreenResults({
   onCloseFilterSheet,
   filterSheetMode,
   awaitingDistanceGps,
+  resultsCategoryTitle,
+  leadingCategories = [],
+  selection,
   isOnline,
   queryKey,
   loadingNextPage,
@@ -148,8 +173,10 @@ export function SearchScreenResults({
   const showErrorSkeletons = !loading && items.length === 0 && errors != null;
   const showNoResultsOnly =
     !loading && data !== null && errors == null && items.length === 0;
-  const showResultsList = items.length > 0;
-  const showScroll = showLoadingSkeletons || showErrorSkeletons || showResultsList;
+  const categories: SearchResultCategory[] = [
+    ...leadingCategories,
+    { key: "results", title: resultsCategoryTitle, previews: items },
+  ];
 
   const showOfflineLoadMoreBlocked =
     !isOnline && morePages && items.length > 0 && listNearBottom;
@@ -192,91 +219,101 @@ export function SearchScreenResults({
     <>
       <Pressable style={styles.content} onPress={onDismissKeyboard}>
         {awaitingDistanceGps ? (
-          <View style={[styles.centered, { paddingTop: contentTopPadding }]}>
-            <ActivityIndicator
-              size="large"
-              color={themeColors.loadingIndicator}
-            />
-            <ConstantText
-              size={uiScale.toast.text.message}
-              typography={textStyle.toast.message}
-              style={[styles.locationWaitText, { color: themeColors.text.secondary }]}
-            >
-              Getting your location…
-            </ConstantText>
+          <View style={[styles.locationWait, { paddingTop: contentTopPadding }]}>
+            <CategoryDivider title={resultsCategoryTitle} />
+            <View style={styles.centered}>
+              <ActivityIndicator
+                size="large"
+                color={themeColors.loadingIndicator}
+              />
+              <ConstantText
+                size={uiScale.toast.text.message}
+                typography={textStyle.toast.message}
+                style={[styles.locationWaitText, { color: themeColors.text.secondary }]}
+              >
+                Getting your location…
+              </ConstantText>
+            </View>
           </View>
         ) : (
-          <>
-            {showScroll ? (
-              <ScrollView
-                style={styles.scroll}
-                contentContainerStyle={[
-                  styles.scrollContent,
-                  {
-                    paddingTop: contentTopPadding,
-                    gap: previewMetrics.itemGap,
-                  },
-                ]}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                onScroll={wrappedOnScroll}
-                scrollEventThrottle={16}
-                onLayout={(e) => {
-                  layoutHRef.current = e.nativeEvent.layout.height;
-                  recheckScrollBottom();
-                }}
-                onContentSizeChange={(_w, h) => {
-                  contentHRef.current = h;
-                  recheckScrollBottom();
-                }}
-              >
-                {showLoadingSkeletons
-                  ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
-                      <PlaceholderPreview
-                        key={`sk-${i}`}
-                        showAkaLine={i % 2 === 0}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingTop: contentTopPadding,
+                gap: previewMetrics.itemGap,
+              },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onScroll={wrappedOnScroll}
+            scrollEventThrottle={16}
+            onLayout={(e) => {
+              layoutHRef.current = e.nativeEvent.layout.height;
+              recheckScrollBottom();
+            }}
+            onContentSizeChange={(_w, h) => {
+              contentHRef.current = h;
+              recheckScrollBottom();
+            }}
+          >
+            {categories.map((category) => (
+              <Fragment key={category.key}>
+                <CategoryDivider title={category.title} count={category.count} />
+                {category.previews.map((item, index) => {
+                  if (item.isPagePreview()) {
+                    const page = item as OnlinePagePreview | OfflinePagePreview;
+                    return (
+                      <PagePreview
+                        key={`${category.key}-page-${item.id}-${index}`}
+                        preview={page}
+                        {...(selection != null
+                          ? {
+                              trailing: "selection" as const,
+                              selected: selection.selectedIds.has(page.id),
+                              onToggleSelected: () => selection.onToggle(page),
+                            }
+                          : null)}
                       />
-                    ))
-                  : null}
-                {showErrorSkeletons
-                  ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
-                      <PlaceholderPreview
-                        key={`err-${i}`}
-                        error
-                        showAkaLine={i % 2 === 0}
-                      />
-                    ))
-                  : null}
-                {showResultsList
-                  ? items.map((item, index) =>
-                      item.isPagePreview() ? (
-                        <PagePreview
-                          key={`page-${item.id}-${index}`}
-                          preview={item as OnlinePagePreview}
-                        />
-                      ) : item.isRegionPreview() ? (
-                        <RegionPreview
-                          key={`region-${item.id}-${index}`}
-                          preview={item}
-                        />
-                      ) : null,
-                    )
-                  : null}
-                {loadingNextPage ? (
+                    );
+                  }
+                  return item.isRegionPreview() ? (
+                    <RegionPreview
+                      key={`${category.key}-region-${item.id}-${index}`}
+                      preview={item}
+                    />
+                  ) : null;
+                })}
+              </Fragment>
+            ))}
+            {showLoadingSkeletons
+              ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
                   <PlaceholderPreview
-                    key="load-more-footer"
-                    showAkaLine={items.length % 2 === 0}
+                    key={`sk-${i}`}
+                    showAkaLine={i % 2 === 0}
                   />
-                ) : null}
-                {showOfflineLoadMoreBlocked || showErroredLoadMoreBlocked ? (
-                  <OfflineLoadMoreBlockedFooter />
-                ) : null}
-              </ScrollView>
+                ))
+              : null}
+            {showErrorSkeletons
+              ? Array.from({ length: SEARCH_HTTP_PLACEHOLDER_COUNT }).map((_, i) => (
+                  <PlaceholderPreview
+                    key={`err-${i}`}
+                    error
+                    showAkaLine={i % 2 === 0}
+                  />
+                ))
+              : null}
+            {loadingNextPage ? (
+              <PlaceholderPreview
+                key="load-more-footer"
+                showAkaLine={items.length % 2 === 0}
+              />
             ) : null}
-            {showNoResultsOnly ? (
-              <View style={[styles.noResultsFill, { paddingTop: contentTopPadding }]} />
+            {showOfflineLoadMoreBlocked || showErroredLoadMoreBlocked ? (
+              <OfflineLoadMoreBlockedFooter />
             ) : null}
-          </>
+          </ScrollView>
         )}
       </Pressable>
       <FilterBottomSheet
@@ -299,8 +336,9 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  noResultsFill: {
+  locationWait: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   centered: {
     flex: 1,

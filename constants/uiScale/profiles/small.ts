@@ -74,6 +74,10 @@ export const smallUiScaleProfile: UiScaleProfile = {
       title: {
         default: FontSizeStep.LARGE,
       },
+      scalingTitle: {
+        default: FontSizeStep.LARGE,
+        floor: FontSizeStep.MEDIUM,
+      },
       akaNames: {
         default: FontSizeStep.MEDIUM,
       },
@@ -210,6 +214,8 @@ export const smallUiScaleProfile: UiScaleProfile = {
       resetCameraToPosition: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       resetCameraOrientation: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       resetCameraToBounds: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
+      addLineSegment: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
+      miniRecordLineSegment: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       appleDirections: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       googleDirections: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       relevantInfoStrengthLabel: {

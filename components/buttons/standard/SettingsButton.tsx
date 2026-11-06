@@ -7,13 +7,20 @@ import { useResolvedButtonDimensions } from "@/utils/theme/resolvers";
 const SETTINGS_ICON = require("@/assets/images/icons/tabs/settings.png");
 const SETTINGS_ICON_DESIGN_SCALE = 1.2;
 
-export function SettingsButton({ onPress }: { onPress: () => void }) {
+export function SettingsButton({
+  onPress,
+  designSize = STANDARD_BUTTON_SIZE,
+}: {
+  onPress: () => void;
+  /** Diameter before UI scaling; defaults to the standard button size. */
+  designSize?: number;
+}) {
   const themeColors = useColorTheme();
   const buttonColors = themeColors.button.standard[SETTINGS_BUTTON_KEY];
   const uiScale = useUiScale();
   const { size, iconScale } = useResolvedButtonDimensions(
     uiScale.common.buttons.filter,
-    STANDARD_BUTTON_SIZE,
+    designSize,
     SETTINGS_ICON_DESIGN_SCALE,
   );
   return (

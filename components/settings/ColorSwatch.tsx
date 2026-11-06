@@ -5,7 +5,8 @@ import { StyleSheet, View } from "react-native";
 
 export type ColorSwatchProps = {
   primaryColor: string;
-  secondaryColor: string;
+  /** Fills the lower-right half diagonally. When omitted the swatch is a single solid color. */
+  secondaryColor?: string;
   size?: number;
 };
 
@@ -36,18 +37,20 @@ export function ColorSwatch({
       ]}
     >
       <View style={[styles.primaryFill, { backgroundColor: primaryColor }]} />
-      <View
-        style={[
-          styles.secondaryHalf,
-          {
-            backgroundColor: secondaryColor,
-            width: dim * 1.5,
-            height: dim * 1.5,
-            left: half * 0.15,
-            top: half * 0.85,
-          },
-        ]}
-      />
+      {secondaryColor != null ? (
+        <View
+          style={[
+            styles.secondaryHalf,
+            {
+              backgroundColor: secondaryColor,
+              width: dim * 1.5,
+              height: dim * 1.5,
+              left: half * 0.15,
+              top: half * 0.85,
+            },
+          ]}
+        />
+      ) : null}
     </View>
   );
 }

@@ -8,9 +8,19 @@ import {
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useNetworkStatus } from "@/context/app/NetworkStatusContext";
 import { SearchScreenHeader } from "@/components/screens/search/SearchScreenHeader";
-import { SearchScreenResults } from "@/components/screens/search/SearchScreenResults";
+import {
+  SearchScreenResults,
+  type SearchResultCategory,
+} from "@/components/screens/search/SearchScreenResults";
 import { useSavedFilters } from "@/context/data/SavedFiltersContext";
+import { useSavedPages } from "@/context/data/SavedPagesContext";
+import {
+  getInitialPageSelection,
+  resolvePageSelection,
+  type SelectedPagePreview,
+} from "@/utils/navigation/pageSelection";
 import * as Location from "expo-location";
+import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { RopeGeoPagedDataLoader, Method, Service } from "ropegeo-common/components";
@@ -19,6 +29,7 @@ import {
   Preview,
   SearchFilter,
   SearchParams,
+  type SearchOrder,
   type SearchParamsPosition,
 } from "ropegeo-common/models";
 
@@ -28,6 +39,64 @@ const SEARCH_DEBOUNCE_MS = 300;
 const DISTANCE_GPS_WAIT_MS = 10_000;
 const DISTANCE_GPS_TIMEOUT_TOAST =
   "Could not get coordinates of current position, reverting to default filters";
+
+function defaultSearchFilter(
+  position: SearchParamsPosition | null,
+  name: string,
+): SearchFilter {
+  return new SearchFilter(position, name);
+}
+
+function defaultPageSelectSearchFilter(
+  position: SearchParamsPosition | null,
+  name: string,
+): SearchFilter {
+  const filter = new SearchFilter(position, name);
+  filter.setIncludePages(true);
+  filter.setIncludeRegions(false);
+  return filter;
+}
+
+/**
+ * Page-select filters live only as long as the screen so they never overwrite the
+ * saved Explore search filter. Same shape as the saved-filters search slot.
+ */
+function usePageSelectSearchFilters() {
+  const [saved, setSaved] = useState<SearchFilter | null>(null);
+  const [revision, setRevision] = useState(0);
+
+  const getEffectiveSearchFilter = useCallback(
+    (live: { position: SearchParamsPosition | null; name: string }) =>
+      saved != null
+        ? SearchFilter.fromJsonString(saved.toString())
+        : defaultPageSelectSearchFilter(live.position, live.name),
+    [saved],
+  );
+
+  const persistSearchFilter = useCallback((filter: SearchFilter | null) => {
+    setSaved(filter);
+    setRevision((r) => r + 1);
+  }, []);
+
+  return {
+    getEffectiveSearchFilter,
+    searchPersisted: saved != null,
+    persistSearchFilter,
+    revision,
+  };
+}
+
+function searchResultsCategoryTitle(order: SearchOrder, name: string): string {
+  const hasQuery = name.length > 0;
+  switch (order) {
+    case "distance":
+      return hasQuery ? "Nearby Search Results" : "Nearby";
+    case "quality":
+      return hasQuery ? "Most Popular Search Results" : "Most Popular";
+    case "similarity":
+      return "Search Results";
+  }
+}
 
 function searchFilterHasValidIncludes(f: SearchFilter): boolean {
   return f.includePages || f.includeRegions;
@@ -50,14 +119,51 @@ function buildSearchParamsWhenValid(
   return f.toSearchParams(args);
 }
 
-export function SearchScreen() {
+export type SearchScreenProps = {
+  /** Present when picking pages for another screen; results are pages only. */
+  pageSelect?: { requestId: string };
+};
+
+export function SearchScreen({ pageSelect }: SearchScreenProps = {}) {
   const themeColors = useColorTheme();
+  const navigation = useNavigation();
+  const savedFilters = useSavedFilters();
+  const { savedEntries } = useSavedPages();
+  const pageSelectFilters = usePageSelectSearchFilters();
+  const isPageSelect = pageSelect != null;
   const {
     getEffectiveSearchFilter,
     searchPersisted,
     persistSearchFilter,
     revision,
-  } = useSavedFilters();
+  } = isPageSelect ? pageSelectFilters : savedFilters;
+  const createDefaultSearchFilter = isPageSelect
+    ? defaultPageSelectSearchFilter
+    : defaultSearchFilter;
+  const pageSelectRequestId = pageSelect?.requestId;
+  const [selectedPages, setSelectedPages] = useState<SelectedPagePreview[]>(() =>
+    pageSelectRequestId != null ? getInitialPageSelection(pageSelectRequestId) : [],
+  );
+  const selectedPagesRef = useRef(selectedPages);
+  selectedPagesRef.current = selectedPages;
+  const selectedPageIds = useMemo(
+    () => new Set(selectedPages.map((page) => page.id)),
+    [selectedPages],
+  );
+  const togglePageSelected = useCallback((page: SelectedPagePreview) => {
+    setSelectedPages((current) =>
+      current.some((p) => p.id === page.id)
+        ? current.filter((p) => p.id !== page.id)
+        : [...current, page],
+    );
+  }, []);
+
+  useEffect(() => {
+    if (pageSelectRequestId == null) return;
+    return navigation.addListener("beforeRemove", () => {
+      resolvePageSelection(pageSelectRequestId, selectedPagesRef.current);
+    });
+  }, [navigation, pageSelectRequestId]);
   const { showPill: showToast, updateToast } = useToast();
   const { isOnline } = useNetworkStatus();
   const [query, setQuery] = useState("");
@@ -134,13 +240,13 @@ export function SearchScreen() {
     }
     const fallback =
       lastValidSearchParamsRef.current ??
-      new SearchFilter(null, debouncedQuery).toSearchParams({
+      createDefaultSearchFilter(null, debouncedQuery).toSearchParams({
         name: debouncedQuery,
         limit: SEARCH_LIMIT,
         currentPosition: searchPos,
       });
     return fallback;
-  }, [effectiveSearchFilter, debouncedQuery, searchPos]);
+  }, [effectiveSearchFilter, debouncedQuery, searchPos, createDefaultSearchFilter]);
 
   const searchParamsLiveRef = useRef(searchParams);
   searchParamsLiveRef.current = searchParams;
@@ -246,13 +352,19 @@ export function SearchScreen() {
       } else if (
         lastStoredSearchFilterJsonRef.current === null &&
         serialized ===
-          new SearchFilter(searchPos, debouncedQuery).toString()
+          createDefaultSearchFilter(searchPos, debouncedQuery).toString()
       ) {
         return;
       }
       persistSearchFilter(SearchFilter.fromJsonString(serialized));
     },
-    [searchPos, debouncedQuery, searchPersisted, persistSearchFilter],
+    [
+      searchPos,
+      debouncedQuery,
+      searchPersisted,
+      persistSearchFilter,
+      createDefaultSearchFilter,
+    ],
   );
 
   const closeFilterSheet = useCallback(() => {
@@ -305,19 +417,36 @@ export function SearchScreen() {
   }, [filterSheetOpen, searchDraft]);
 
   const queryKey = searchParamsForRequest.toQueryString();
+  const resultsCategoryTitle = searchResultsCategoryTitle(
+    searchParamsForRequest.order,
+    searchParamsForRequest.name,
+  );
+  const showSavedCategory = isPageSelect && searchParamsForRequest.name.length === 0;
+  const leadingCategories = useMemo<SearchResultCategory[]>(
+    () =>
+      showSavedCategory
+        ? [
+            {
+              key: "saved",
+              title: "Saved",
+              count: savedEntries.length,
+              previews: savedEntries.map((entry) => entry.preview),
+            },
+          ]
+        : [],
+    [showSavedCategory, savedEntries],
+  );
   const filterSheetMode: FilterSheetMode | null =
     filterSheetOpen && searchDraft != null
       ? {
-          kind: "search",
+          kind: isPageSelect ? "page-select-search" : "search",
           draft: searchDraft,
           onDraftChange: handleSearchDraftChange,
           persisted: searchPersisted,
           livePosition: searchPos,
           onRevert: () => {
             persistSearchFilter(null);
-            setSearchDraft(
-              new SearchFilter(searchPos, debouncedQuery),
-            );
+            setSearchDraft(createDefaultSearchFilter(searchPos, debouncedQuery));
           },
         }
       : null;
@@ -353,6 +482,13 @@ export function SearchScreen() {
             onCloseFilterSheet={closeFilterSheet}
             filterSheetMode={filterSheetMode}
             awaitingDistanceGps={awaitingDistanceGps}
+            resultsCategoryTitle={resultsCategoryTitle}
+            leadingCategories={leadingCategories}
+            selection={
+              isPageSelect
+                ? { selectedIds: selectedPageIds, onToggle: togglePageSelected }
+                : undefined
+            }
             isOnline={isOnline}
             queryKey={queryKey}
             loadingNextPage={loadingNextPage}

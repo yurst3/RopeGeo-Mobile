@@ -42,6 +42,7 @@
       "package": "com.yurst3.RopeGeo"
     },
     "plugins": [
+      "@react-native-community/datetimepicker",
       "expo-router",
       [
         "expo-splash-screen",
@@ -66,7 +67,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "RopeGeo uses your location while you use the app to show where you are on the map, center the explore view on your position, and sort search results by distance from you. For example, when you browse routes on the map, your location helps you see nearby canyoneering areas and how far you are from them."
+          "locationWhenInUsePermission": "RopeGeo uses your location while you use the app to show where you are on the map, center the explore view on your position, and sort search results by distance from you. For example, when you browse routes on the map, your location helps you see nearby canyoneering areas and how far you are from them.",
+          "locationAlwaysAndWhenInUsePermission": "RopeGeo records your route for trip reports while you travel, including when the app is in the background or your phone is locked. For example, when you record a segment on a trip report map, your location keeps adding waypoints to the line until you pause recording.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "expo-background-task",

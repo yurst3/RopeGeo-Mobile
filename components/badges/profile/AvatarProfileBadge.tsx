@@ -15,7 +15,7 @@ const TIER_IMAGES = {
 
 /** Circle center and diameter within the small medal images, as fractions of the canvas. */
 const CIRCLE_CENTER_RATIO = 0.8086;
-const CIRCLE_DIAMETER_RATIO = 0.38;
+export const AVATAR_BADGE_CIRCLE_DIAMETER_RATIO = 0.38;
 /** Inner plate is smaller than the medal so the metal rim stays visible. */
 const ICON_PLATE_RATIO = 0.8;
 const ICON_SCALE = 0.58;
@@ -30,16 +30,70 @@ export function AvatarProfileBadge({
   description,
   selected = false,
   onPress,
-}: ProfileBadgeProps) {
+  plateRatio = ICON_PLATE_RATIO,
+  iconScale = 1,
+  medalOnly = false,
+}: ProfileBadgeProps & {
+  /** Icon plate size relative to the badge medal. */
+  plateRatio?: number;
+  /** Multiplier for the badge icon. 1 matches the default icon size. */
+  iconScale?: number;
+  /** Draw only the medal, filling the parent. */
+  medalOnly?: boolean;
+}) {
   const { text, button } = useColorTheme();
   const highlightColor = button.standard.edit.iconHighlight ?? text.link;
   const textStyle = useTextStyle();
   const uiScale = useUiScale();
   const [medalSize, setMedalSize] = useState(0);
-  const circleSize = medalSize * CIRCLE_DIAMETER_RATIO;
-  const plateSize = circleSize * ICON_PLATE_RATIO;
-  const iconSize = plateSize * ICON_SCALE;
+  const circleSize = medalSize * AVATAR_BADGE_CIRCLE_DIAMETER_RATIO;
+  const plateSize = circleSize * plateRatio;
+  const iconSize = plateSize * ICON_SCALE * iconScale;
   const plateOffset = medalSize * CIRCLE_CENTER_RATIO - plateSize / 2;
+
+  const medal = (
+    <View
+      style={medalOnly ? styles.medalOnly : styles.medal}
+      onLayout={(event) => {
+        const next = event.nativeEvent.layout.width;
+        setMedalSize((current) => (current === next ? current : next));
+      }}
+    >
+      <Image
+        source={TIER_IMAGES[tier]}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+        accessibilityElementsHidden
+      />
+      {medalSize > 0 ? (
+        <View
+          style={[
+            styles.plate,
+            {
+              width: plateSize,
+              height: plateSize,
+              borderRadius: plateSize / 2,
+              backgroundColor: iconBackgroundColor,
+              left: plateOffset,
+              top: plateOffset,
+            },
+          ]}
+        >
+          <Image
+            source={icon}
+            style={{ width: iconSize, height: iconSize }}
+            contentFit="contain"
+            tintColor={iconColor}
+            accessibilityElementsHidden
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  if (medalOnly) {
+    return medal;
+  }
 
   return (
     <Pressable
@@ -55,43 +109,7 @@ export function AvatarProfileBadge({
       accessibilityState={{ selected }}
       accessibilityLabel={`${title}. ${description}`}
     >
-      <View
-        style={styles.medal}
-        onLayout={(event) => {
-          const next = event.nativeEvent.layout.width;
-          setMedalSize((current) => (current === next ? current : next));
-        }}
-      >
-        <Image
-          source={TIER_IMAGES[tier]}
-          style={StyleSheet.absoluteFill}
-          contentFit="contain"
-          accessibilityElementsHidden
-        />
-        {medalSize > 0 ? (
-          <View
-            style={[
-              styles.plate,
-              {
-                width: plateSize,
-                height: plateSize,
-                borderRadius: plateSize / 2,
-                backgroundColor: iconBackgroundColor,
-                left: plateOffset,
-                top: plateOffset,
-              },
-            ]}
-          >
-            <Image
-              source={icon}
-              style={{ width: iconSize, height: iconSize }}
-              contentFit="contain"
-              tintColor={iconColor}
-              accessibilityElementsHidden
-            />
-          </View>
-        ) : null}
-      </View>
+      {medal}
       <ConstantText
         size={uiScale.filter.text.sectionTitle}
         typography={textStyle.pageScreen.title}
@@ -122,6 +140,10 @@ const styles = StyleSheet.create({
   medal: {
     width: "100%",
     aspectRatio: 1,
+  },
+  medalOnly: {
+    width: "100%",
+    height: "100%",
   },
   plate: {
     position: "absolute",

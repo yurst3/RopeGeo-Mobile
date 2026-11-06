@@ -110,6 +110,10 @@ export const autoUiScaleProfile: UiScaleProfile = {
         default: FontSizeStep.XLARGE,
         floor: FontSizeStep.LARGE,
       },
+      scalingTitle: {
+        default: FontSizeStep.XLARGE,
+        floor: FontSizeStep.LARGE,
+      },
       akaNames: {
         default: FontSizeStep.MEDIUM,
         floor: FontSizeStep.SMALL,
@@ -305,6 +309,14 @@ export const autoUiScaleProfile: UiScaleProfile = {
         icon: { scale: 1.0, accessibilityScalingStrength: 0.4 },
       },
       resetCameraToBounds: {
+        background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
+        icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },
+      },
+      addLineSegment: {
+        background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
+        icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },
+      },
+      miniRecordLineSegment: {
         background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
         icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },
       },

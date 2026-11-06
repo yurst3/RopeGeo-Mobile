@@ -26,13 +26,22 @@ export type StandardButtonKeys =
   | "resetCameraToPosition"
   | "resetCameraOrientation"
   | "savedPageGlyph"
-  | "removeDownload";
+  | "removeDownload"
+  | "addTripReport"
+  | "viewEdit"
+  | "addLineSegment"
+  | "miniRecordLineSegment";
 
 export type NonstandardButtonKeys =
   | "download"
   | "miniDownload"
   | "badgeButton"
-  | "logout";
+  | "logout"
+  | "addRelevantPage"
+  | "addBlock"
+  | "confirmRemove"
+  | "recordLineSegment"
+  | "deleteTripReport";
 
 export type StandardButtonColors = {
   background: string;
@@ -73,11 +82,52 @@ export type LogoutButtonColors = {
   shadowColor: string;
 };
 
+export type AddRelevantPageButtonColors = {
+  outline: string;
+  text: string;
+  icon: string;
+};
+
+export type AddBlockButtonColors = {
+  outline: string;
+  text: string;
+  icon: string;
+};
+
+/** Filled button that confirms removing something. */
+export type ConfirmRemoveButtonColors = {
+  background: string;
+  text: string;
+};
+
+export type RecordLineSegmentButtonColors = {
+  background: string;
+  text: string;
+  /** Record icon, and the pulsing border around a map that is recording. */
+  indicator: string;
+  /** Pause icon shown while recording. */
+  pauseIcon: string;
+  shadowColor: string;
+};
+
+/** Filled pill that deletes a whole trip report. */
+export type DeleteTripReportButtonColors = {
+  background: string;
+  text: string;
+  icon: string;
+  shadowColor: string;
+};
+
 export type NonstandardButtonColors =
   | DownloadButtonColors
   | MiniDownloadButtonColors
   | BadgeButtonColors
-  | LogoutButtonColors;
+  | LogoutButtonColors
+  | AddRelevantPageButtonColors
+  | AddBlockButtonColors
+  | ConfirmRemoveButtonColors
+  | RecordLineSegmentButtonColors
+  | DeleteTripReportButtonColors;
 
 export type ButtonColors = {
   standard: Record<StandardButtonKeys, StandardButtonColors>;
@@ -162,11 +212,15 @@ export type TextColors = {
   tertiary: string;
   link: string;
   error: string;
+  /** Yellow accent for small supporting notes (e.g. supported file formats). */
+  highlight: string;
 };
 
 export type MarkerColors = {
   defaultIcon: string;
   clusterIcon: string;
+  /** Outline around marker icons, inverted from the icon color so markers stand out on lines. */
+  iconHalo: string;
   text: string;
   textHalo: string;
 };
@@ -191,11 +245,25 @@ export type MiniMapLegendColors = {
   markerIcon: string;
 };
 
+/** Chrome around user-recorded line segments; the line and dot fill use the segment's color. */
+export type RecordedSegmentColors = {
+  /** Outline around each waypoint dot. */
+  waypointStroke: string;
+  /** Thin outline under the line so it stays visible on any basemap. */
+  lineCasing: string;
+  /**
+   * Replaces {@link lineCasing} and {@link waypointStroke} for light segment colors (white,
+   * yellow, green), which those don't stand out against.
+   */
+  lightLineOutline: string;
+};
+
 export type MiniMapColors = {
   /** Full-bleed mount/handoff loading cover behind chrome. */
   background: string;
   title: MiniMapTitleColors;
   legend: MiniMapLegendColors;
+  recordedSegment: RecordedSegmentColors;
 };
 
 export type MapColors = {
@@ -244,6 +312,12 @@ export type ToastColors = {
 
 export type PagePreviewColors = {
   sourceIconBackground: string;
+  /** Dashed circle on an unselected selectable preview. */
+  selectionOutline: string;
+  /** Filled circle on a selected preview. */
+  selectionFill: string;
+  /** Checkmark inside the selected circle. */
+  selectionCheck: string;
 };
 
 export type RegionPreviewColors = {

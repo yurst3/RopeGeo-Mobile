@@ -50,7 +50,7 @@ import {
   minimapStyles,
 } from "./shared/minimapShared";
 import { ConstantText } from "@/components/text/ConstantText";
-import { MAPBOX_CUSTOM_LAYER_SLOT } from "@/constants/mapbox";
+import { MAPBOX_CUSTOM_LAYER_SLOT, MAPBOX_EMISSIVE_STRENGTH } from "@/constants/mapbox";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
@@ -1105,6 +1105,7 @@ export function PageMiniMapView({
                       lineColor: contrastHaloColor(lineHighlightStroke),
                       lineWidth: Math.max(8, lineHighlightWidth + 6),
                       lineOpacity: lineHighlightOpacity,
+                      lineEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
                       lineCap: "round",
                       lineJoin: "round",
                     }}
@@ -1116,6 +1117,7 @@ export function PageMiniMapView({
                       lineColor: lineHighlightStroke,
                       lineWidth: lineHighlightWidth,
                       lineOpacity: lineHighlightOpacity,
+                      lineEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
                       lineCap: "round",
                       lineJoin: "round",
                     }}

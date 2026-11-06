@@ -108,6 +108,8 @@ export type BetaSectionButtonSizes = {
 
 export type PageScreenTextSizes = {
   title: ConstantTextSizeSpec;
+  /** {@link title} for titles that shrink toward `floor` to fit before truncating. */
+  scalingTitle: ScalingTextSizeSpec;
   akaNames: ConstantTextSizeSpec;
   locationHierarchy: ConstantTextSizeSpec;
   starRating: ConstantTextSizeSpec;
@@ -170,6 +172,10 @@ export type MapButtonSizes = {
   resetCameraToPosition: ButtonScaleSpec;
   resetCameraOrientation: ButtonScaleSpec;
   resetCameraToBounds: ButtonScaleSpec;
+  /** Trip report legend's add line segment button. */
+  addLineSegment: ButtonScaleSpec;
+  /** Trip report segment panel's record / pause button. */
+  miniRecordLineSegment: ButtonScaleSpec;
   appleDirections: ButtonScaleSpec;
   googleDirections: ButtonScaleSpec;
   /** RelevanceStrengthPill label + info/badge icons. */

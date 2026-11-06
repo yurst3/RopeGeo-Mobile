@@ -11,6 +11,13 @@ export const MAPBOX_STYLE_URL = MAPBOX_STYLE_URLS.standard;
 /** Insert custom layers into the style's `top` slot (above basemap, below place labels). */
 export const MAPBOX_CUSTOM_LAYER_SLOT = "top" as const;
 
+/**
+ * Emissive strength (`line…`, `fill…`, `circle…`, `icon…`, `textEmissiveStrength`) for every layer
+ * the app adds. At 1, Mapbox Standard light presets (e.g. night) don't dim them, so custom
+ * features keep their exact colors at every time of day.
+ */
+export const MAPBOX_EMISSIVE_STRENGTH = 1;
+
 export const MAPBOX_STYLE_IMPORT_ID = "basemap";
 
 export const MAPBOX_CONTOUR_LAYER_IDS = [

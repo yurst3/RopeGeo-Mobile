@@ -17,6 +17,7 @@ import { MapLayersSheetProvider } from "@/context/ui/MapLayersSheetContext";
 import { stackScreenOptions } from "@/utils/navigation/stackScreenOptions";
 import { MapLayersPreviewPackBootstrap } from "@/components/modals/mapLayers/MapLayersPreviewPackBootstrap";
 import { installMapboxLoggerFilters } from "@/utils/mapbox/mapboxLogger";
+import "@/utils/location/waypointRecordingTask";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native";

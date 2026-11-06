@@ -18,6 +18,7 @@ export const darkTheme: ThemeColors = {
     tertiary: "#9ca3af",
     link: "#dc732b",
     error: "#dc2626",
+    highlight: "#facc15",
   },
   image: {
     textBackground: "rgba(0,0,0,0.55)",
@@ -36,6 +37,9 @@ export const darkTheme: ThemeColors = {
   preview: {
     page: {
       sourceIconBackground: "#ffffff",
+      selectionOutline: "#6b7280",
+      selectionFill: "#dc732b",
+      selectionCheck: "#ffffff",
     },
     region: {
       regionIconBackground: "#000000",
@@ -96,6 +100,11 @@ export const darkTheme: ThemeColors = {
         shadow: "#ffffff",
         collapseIcon: "#ffffff",
         markerIcon: "#ffffff",
+      },
+      recordedSegment: {
+        waypointStroke: "#ffffff",
+        lineCasing: "#ffffff",
+        lightLineOutline: "#000000",
       },
     },
   },

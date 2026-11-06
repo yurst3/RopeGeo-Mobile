@@ -34,6 +34,7 @@ import { RoutesFilterOptions } from "@/components/filters/RoutesFilterOptions";
 import {
   SavedPagesFilterOptions,
 } from "@/components/filters/SavedPagesFilterOptions";
+import { PageSelectSearchFilterOptions } from "@/components/filters/PageSelectSearchFilterOptions";
 import { SearchFilterOptions } from "@/components/filters/SearchFilterOptions";
 import { FILTER_SHEET_HORIZONTAL_INSET } from "@/utils/filters/filterSheetInsets";
 
@@ -61,7 +62,8 @@ export type FilterSheetMode =
       onRevert: () => void;
     }
   | {
-      kind: "search";
+      /** `page-select-search` hides the page/region include switches (pages only). */
+      kind: "search" | "page-select-search";
       draft: SearchFilter;
       onDraftChange: (f: SearchFilter) => void;
       persisted: boolean;
@@ -95,6 +97,7 @@ function titleForMode(m: FilterSheetMode): string {
     case "region-route":
       return "Route Filter";
     case "search":
+    case "page-select-search":
       return "Search Filter";
     case "saved-pages":
       return "Saved Pages Filter";
@@ -180,6 +183,7 @@ export function FilterBottomSheet({
   const showRevert =
     (mode.kind === "explore-route" ||
       mode.kind === "search" ||
+      mode.kind === "page-select-search" ||
       mode.kind === "saved-pages") &&
     mode.persisted;
 
@@ -247,11 +251,12 @@ export function FilterBottomSheet({
                   onChange={mode.onDraftChange}
                 />
               ) : null}
-              {mode.kind === "search" ? (
+              {mode.kind === "search" || mode.kind === "page-select-search" ? (
                 <SearchFilterForm
                   filter={mode.draft}
                   livePosition={mode.livePosition}
                   onChange={mode.onDraftChange}
+                  pagesOnly={mode.kind === "page-select-search"}
                 />
               ) : null}
               {mode.kind === "saved-pages" ? (
@@ -331,10 +336,12 @@ function SearchFilterForm({
   filter,
   livePosition,
   onChange,
+  pagesOnly,
 }: {
   filter: SearchFilter;
   livePosition: SearchParamsPosition | null;
   onChange: (f: SearchFilter) => void;
+  pagesOnly: boolean;
 }) {
   const patch = (fn: (s: SearchFilter) => void) => {
     const s = SearchFilter.fromJsonString(filter.toString());
@@ -342,9 +349,11 @@ function SearchFilterForm({
     onChange(s);
   };
 
+  const OptionsComponent = pagesOnly ? PageSelectSearchFilterOptions : SearchFilterOptions;
+
   return (
     <>
-      <SearchFilterOptions
+      <OptionsComponent
         filter={filter}
         onChange={onChange}
         livePosition={livePosition}

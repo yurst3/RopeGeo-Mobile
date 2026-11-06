@@ -8,6 +8,7 @@ import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { StyleSheet, ScrollView, View } from "react-native";
+import type { UserAvatarBadgeIcon, UserAvatarFields } from "ropegeo-common/models";
 
 export type ProfileBadgeId = "none" | "reporter1" | "reporter2" | "reporter3";
 
@@ -16,6 +17,22 @@ export const PROFILE_BADGE_TIER = {
   reporter2: "silver",
   reporter3: "gold",
 } as const satisfies Record<Exclude<ProfileBadgeId, "none">, ProfileBadgeTier>;
+
+export const PROFILE_BADGE_ICON = {
+  reporter1: "tripReport",
+  reporter2: "tripReport",
+  reporter3: "tripReport",
+} as const satisfies Record<Exclude<ProfileBadgeId, "none">, UserAvatarBadgeIcon>;
+
+/** The badge fields of a user avatar for the badge picked on the profile. */
+export function userAvatarBadgeFields(
+  badge: ProfileBadgeId,
+): Pick<UserAvatarFields, "badgeRank" | "badgeIcon"> {
+  if (badge === "none") {
+    return { badgeRank: null, badgeIcon: null };
+  }
+  return { badgeRank: PROFILE_BADGE_TIER[badge], badgeIcon: PROFILE_BADGE_ICON[badge] };
+}
 
 export function BadgesTab({
   selectedBadge,
@@ -103,7 +120,7 @@ const styles = StyleSheet.create({
   },
   categoryLine: {
     flex: 1,
-    height: StyleSheet.hairlineWidth,
+    height: 1,
   },
   grid: {
     flexDirection: "row",

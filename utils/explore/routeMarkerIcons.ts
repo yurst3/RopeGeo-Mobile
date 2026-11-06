@@ -14,10 +14,22 @@ export {
 };
 
 /**
+ * Width in pixels of the marker shape inside each SDF marker image, and the padding around it
+ * that leaves room for the halo. Must match `scripts/generateMarkerSdfs.js`.
+ */
+export const ROUTE_MARKER_SDF_CONTENT_SIZE = 64;
+export const ROUTE_MARKER_SDF_PADDING = 8;
+/** On-screen width of a route marker's shape at UI scale 1, in points. */
+const ROUTE_MARKER_SCREEN_SIZE = 25.6;
+
+/**
  * Route marker icon size (constant screen size at all zoom levels).
  * The zoom-22 value must be (ICON_SIZE_AT_ZOOM_0 * 2^-22) so the icon doesn't scale with zoom.
+ * SDF edges soften and halos max out at about 6 × `iconSize` points as `iconSize` shrinks, so the
+ * SDF images are generated small enough to keep this near 1.
  */
-export const ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 = 0.05;
+export const ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 =
+  ROUTE_MARKER_SCREEN_SIZE / ROUTE_MARKER_SDF_CONTENT_SIZE;
 export const ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 =
   ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * 2 ** -22;
 

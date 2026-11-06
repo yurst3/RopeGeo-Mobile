@@ -39,6 +39,7 @@ export function MiniMapHeaderSideSlots({ children }: { children: ReactNode }) {
 
 export function MiniMapHeader({
   title,
+  titleSlot,
   onBack,
   rightSlot,
   top,
@@ -46,7 +47,13 @@ export function MiniMapHeader({
   /** When false, title (and right slot) look inert; back stays enabled. */
   chromeInteractive = true,
 }: {
-  title: string;
+  /** Omit to show only the back button (and right slot), with no title pill. */
+  title?: string;
+  /**
+   * Custom control in the title's place (between the back button and the right slot); it should
+   * fill the remaining width itself. Takes precedence over `title`.
+   */
+  titleSlot?: ReactNode;
   onBack: () => void;
   rightSlot?: ReactNode;
   top: number;
@@ -116,17 +123,23 @@ export function MiniMapHeader({
       >
         <BackButton onPress={onBack} />
       </View>
-      <View style={titleBarStyle} pointerEvents="none">
-        <ScalingText
-          size={uiScale.map.text.title}
-          typography={textStyle.map.title}
-          numberOfLines={1}
-          measure={{ type: "width" }}
-          style={titleTextStyle}
-        >
-          {title}
-        </ScalingText>
-      </View>
+      {titleSlot != null ? (
+        titleSlot
+      ) : title != null ? (
+        <View style={titleBarStyle} pointerEvents="none">
+          <ScalingText
+            size={uiScale.map.text.title}
+            typography={textStyle.map.title}
+            numberOfLines={1}
+            measure={{ type: "width" }}
+            style={titleTextStyle}
+          >
+            {title}
+          </ScalingText>
+        </View>
+      ) : (
+        <View style={styles.titleSpacer} pointerEvents="none" />
+      )}
       {rightSlot != null ? (
         <View
           pointerEvents={chromeInteractive ? "box-none" : "none"}
@@ -163,6 +176,9 @@ const styles = StyleSheet.create({
   },
   chromeDimmed: {
     opacity: 0.45,
+  },
+  titleSpacer: {
+    flex: 1,
   },
   titleBar: {
     flex: 1,

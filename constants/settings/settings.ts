@@ -27,6 +27,11 @@ import {
   type MapBasemap,
   type MapLightPreset,
 } from "./mapLayersTypes";
+import {
+  DEFAULT_WAYPOINT_RECORDING,
+  normalizeWaypointRecording,
+  type WaypointRecordingSettings,
+} from "./waypointRecording";
 
 export type ShowRelevantContextStrengths = {
   min: RelevanceStrength;
@@ -50,6 +55,7 @@ export class Settings {
   mapBasemap: MapBasemap;
   mapLightPreset: MapLightPreset;
   showSatelliteContours: boolean;
+  waypointRecording: WaypointRecordingSettings;
 
   constructor(
     theme: ThemePreference = "Auto",
@@ -64,6 +70,7 @@ export class Settings {
     mapBasemap: MapBasemap = DEFAULT_MAP_BASEMAP,
     mapLightPreset: MapLightPreset = DEFAULT_MAP_LIGHT_PRESET,
     showSatelliteContours: boolean = DEFAULT_SHOW_SATELLITE_CONTOURS,
+    waypointRecording: WaypointRecordingSettings = { ...DEFAULT_WAYPOINT_RECORDING },
   ) {
     this.theme = theme;
     this.font = font;
@@ -75,6 +82,7 @@ export class Settings {
     this.mapBasemap = mapBasemap;
     this.mapLightPreset = mapLightPreset;
     this.showSatelliteContours = showSatelliteContours;
+    this.waypointRecording = normalizeWaypointRecording(waypointRecording);
   }
 
   setTheme(v: ThemePreference): void {
@@ -121,6 +129,14 @@ export class Settings {
     this.showSatelliteContours = v;
   }
 
+  /** Updates any of the waypoint recording values, clamped to their limits. */
+  setWaypointRecording(values: Partial<WaypointRecordingSettings>): void {
+    this.waypointRecording = normalizeWaypointRecording({
+      ...this.waypointRecording,
+      ...values,
+    });
+  }
+
   resetMapLayers(): void {
     this.mapBasemap = DEFAULT_MAP_BASEMAP;
     this.mapLightPreset = DEFAULT_MAP_LIGHT_PRESET;
@@ -149,6 +165,7 @@ export class Settings {
       mapBasemap: this.mapBasemap,
       mapLightPreset: this.mapLightPreset,
       showSatelliteContours: this.showSatelliteContours,
+      waypointRecording: this.waypointRecording,
     };
   }
 
@@ -184,7 +201,16 @@ export class Settings {
       Settings.parseMapBasemap(o.mapBasemap),
       Settings.parseMapLightPreset(o.mapLightPreset),
       Settings.parseShowSatelliteContours(o.showSatelliteContours),
+      Settings.parseWaypointRecording(o.waypointRecording),
     );
+  }
+
+  /** Missing or malformed values fall back to the defaults so older saved settings keep loading. */
+  private static parseWaypointRecording(v: unknown): WaypointRecordingSettings {
+    if (v == null || typeof v !== "object") {
+      return { ...DEFAULT_WAYPOINT_RECORDING };
+    }
+    return normalizeWaypointRecording(v as Partial<WaypointRecordingSettings>);
   }
 
   private static parseTheme(v: unknown): ThemePreference {

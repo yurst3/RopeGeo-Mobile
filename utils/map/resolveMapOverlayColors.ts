@@ -11,6 +11,7 @@ const DAY_OVERLAY: MapOverlayColors = {
   marker: {
     defaultIcon: "#000000",
     clusterIcon: "#000000",
+    iconHalo: "#ffffff",
     text: "#000000",
     textHalo: "#ffffff",
   },
@@ -22,6 +23,7 @@ const NIGHT_OVERLAY: MapOverlayColors = {
   marker: {
     defaultIcon: "#ffffff",
     clusterIcon: "#ffffff",
+    iconHalo: "#000000",
     text: "#ffffff",
     textHalo: "#000000",
   },
