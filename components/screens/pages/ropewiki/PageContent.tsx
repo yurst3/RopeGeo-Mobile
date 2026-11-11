@@ -158,9 +158,10 @@ export function PageContent({
   const betaSectionLookup = useMemo(() => data.toBetaSectionLookup(), [data]);
   const imageLookup = useMemo(() => data.toImageLookup(), [data]);
   const measurementsLookup = useMemo(() => data.toMeasurementsLookup(), [data]);
+  const directionsPoint = data.parkingCoordinates ?? data.coordinates;
   const directionsFromPageCoords =
-    data.coordinates != null
-      ? { lat: data.coordinates.lat, lon: data.coordinates.lon }
+    directionsPoint != null
+      ? { lat: directionsPoint.lat, lon: directionsPoint.lon }
       : null;
   const mapDirections =
     directionsFromPageCoords != null &&
