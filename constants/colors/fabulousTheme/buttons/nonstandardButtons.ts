@@ -7,7 +7,6 @@ import {
   DOWNLOAD_BUTTON_KEY,
   LOGOUT_BUTTON_KEY,
   MINI_DOWNLOAD_BUTTON_KEY,
-  RECORD_LINE_SEGMENT_BUTTON_KEY,
 } from "@/constants/buttons";
 
 import type {
@@ -20,7 +19,6 @@ import type {
   LogoutButtonColors,
   MiniDownloadButtonColors,
   NonstandardButtonKeys,
-  RecordLineSegmentButtonColors,
 } from "../../types";
 
 const downloadCompleteBackground = "#15803d";
@@ -77,14 +75,6 @@ const confirmRemoveButton: ConfirmRemoveButtonColors = {
   text: "#ffffff",
 };
 
-const recordLineSegmentButton: RecordLineSegmentButtonColors = {
-  background: "#3B0764",
-  text: "#FF6EC7",
-  indicator: "#ef4444",
-  pauseIcon: "#FF6EC7",
-  shadowColor,
-};
-
 const deleteTripReportButton: DeleteTripReportButtonColors = {
   background: "#dc2626",
   text: "#ffffff",
@@ -101,7 +91,6 @@ export const nonstandardButtons: Record<
   | AddRelevantPageButtonColors
   | AddBlockButtonColors
   | ConfirmRemoveButtonColors
-  | RecordLineSegmentButtonColors
   | DeleteTripReportButtonColors
 > = {
   [DOWNLOAD_BUTTON_KEY]: downloadButton,
@@ -111,6 +100,5 @@ export const nonstandardButtons: Record<
   [ADD_RELEVANT_PAGE_BUTTON_KEY]: addRelevantPageButton,
   [ADD_BLOCK_BUTTON_KEY]: addBlockButton,
   [CONFIRM_REMOVE_BUTTON_KEY]: confirmRemoveButton,
-  [RECORD_LINE_SEGMENT_BUTTON_KEY]: recordLineSegmentButton,
   [DELETE_TRIP_REPORT_BUTTON_KEY]: deleteTripReportButton,
 };

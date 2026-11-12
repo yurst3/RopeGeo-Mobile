@@ -1,3 +1,5 @@
+import { TripReportMarkerStyle } from "ropegeo-common/models";
+
 /**
  * Mapbox style image ids registered via `Images#nativeAssetImages`.
  * PNGs are copied into native projects by `plugins/withMapboxNativeMarkerImages`
@@ -13,3 +15,25 @@ export const ROUTE_MARKER_NATIVE_ASSET_IMAGES = [
   { name: ROUTE_MARKER_SELECTED_IMAGE, sdf: true },
   { name: ROUTE_MARKER_CLUSTER_IMAGE, sdf: true },
 ] as const;
+
+/** Style image for each trip report marker style. */
+export const TRIP_REPORT_MARKER_IMAGES: Record<TripReportMarkerStyle, string> = {
+  [TripReportMarkerStyle.Marker]: ROUTE_MARKER_IMAGE,
+  [TripReportMarkerStyle.Alert]: "marker_alert",
+  [TripReportMarkerStyle.Blocked]: "marker_blocked",
+  [TripReportMarkerStyle.Camera]: "marker_camera",
+  [TripReportMarkerStyle.Camp]: "marker_camp",
+  [TripReportMarkerStyle.Down]: "marker_down",
+  [TripReportMarkerStyle.Parking]: "marker_parking",
+  [TripReportMarkerStyle.Pool]: "marker_pool",
+  [TripReportMarkerStyle.Question]: "marker_question",
+  [TripReportMarkerStyle.Star]: "marker_star",
+  [TripReportMarkerStyle.Swim]: "marker_swim",
+  [TripReportMarkerStyle.Up]: "marker_up",
+  [TripReportMarkerStyle.Waterfall]: "marker_waterfall",
+};
+
+/** Passed to `<Images nativeAssetImages={...} />` on maps showing trip report markers. */
+export const TRIP_REPORT_MARKER_NATIVE_ASSET_IMAGES = Object.values(TRIP_REPORT_MARKER_IMAGES).map(
+  (name) => ({ name, sdf: true }),
+);

@@ -15,6 +15,11 @@ const MESSAGES: Partial<Record<RecordingPermission, string>> = {
   denied: "Recording isn't available because RopeGeo doesn't have location access.",
 };
 
+/** Whether {@link RecordingPermissionNotice} shows anything for `permission`. */
+export function hasRecordingPermissionNotice(permission: RecordingPermission): boolean {
+  return MESSAGES[permission] != null;
+}
+
 /**
  * Red explanation shown above a trip report map when location access limits recording, with
  * directions and a link to the app's system settings. Renders nothing with full access.

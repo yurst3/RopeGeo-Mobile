@@ -3,20 +3,20 @@ import {
   useAddLineSegmentButtonSize,
 } from "@/components/buttons/standard/AddLineSegmentButton";
 import { LineSegmentPreview } from "@/components/lineSegments/LineSegmentPreview";
+import { TripReportMarkerIcon } from "@/components/markers/TripReportMarkerIcon";
 import { ConstantText } from "@/components/text/ConstantText";
 import { ScalingText } from "@/components/text/ScalingText";
-import { RECORD_LINE_SEGMENT_BUTTON_KEY } from "@/constants/buttons";
-import type { RecordLineSegmentButtonColors } from "@/constants/colors/types";
+import { RECORDING_INDICATOR_COLOR } from "@/constants/tripReport/recording";
 import {
-  LINE_SEGMENT_COLORS,
   LINE_SEGMENT_WIDTHS,
+  lineSegmentColorValue,
 } from "@/constants/tripReport/lineSegmentAppearance";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -25,7 +25,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import type { TripReportLineSegment } from "ropegeo-common/models";
+import type { TripReportLineSegment, TripReportMarker } from "ropegeo-common/models";
 import { DESIGN_RECORDING_DOT_SIZE, RecordingDot } from "../shared/RecordingDot";
 
 const EXPAND_MS = 280;
@@ -35,6 +35,7 @@ const LEGEND_CHEVRON_SIZE = 14;
 const LEGEND_SWATCH_COLUMN_WIDTH = 28;
 const LEGEND_SWATCH_LINE_WIDTH = 20;
 const LEGEND_SWATCH_DASH_COUNT = 2;
+const LEGEND_MARKER_ICON_SIZE = 22;
 const DESIGN_RECORD_ICON_SIZE = 12;
 const EMPTY_STATE_PADDING = 10;
 /** Space between the add line segment button and the top of the legend card. */
@@ -42,6 +43,7 @@ const ADD_BUTTON_GAP = 8;
 
 export type TripReportLegendProps = {
   segments: readonly TripReportLineSegment[];
+  markers: readonly TripReportMarker[];
   expanded: boolean;
   /** Tallest the expanded legend gets, including the add line segment button above it. */
   maxHeight: number;
@@ -52,10 +54,10 @@ export type TripReportLegendProps = {
   /** Right edge inset already including the scaled overlay gap. */
   rightInset: number;
   onToggleExpanded: () => void;
-  /** Segment open in the segment panel; its row is highlighted. */
-  selectedSegmentId: string | null;
-  /** Tapping a row selects that segment, or deselects it if it was already selected. */
-  onSelectSegment: (segmentId: string | null) => void;
+  /** Segment or marker open in its edit panel; its row is highlighted. */
+  selectedItemId: string | null;
+  /** Tapping a row selects that segment or marker, or deselects it if it was already selected. */
+  onSelectItem: (itemId: string | null) => void;
   /** Same state and action as the map's record button, used by the empty-state prompt. */
   recording: boolean;
   /** Segment being recorded; its row shows the pulsing recording dot. */
@@ -87,7 +89,7 @@ function SegmentSwatch({
       accessibilityIgnoresInvertColors
     >
       <LineSegmentPreview
-        color={LINE_SEGMENT_COLORS[segment.color]}
+        color={lineSegmentColorValue(segment.color)}
         lineStyle={segment.style}
         thickness={LINE_SEGMENT_WIDTHS[segment.thickness]}
         width={Math.round(LEGEND_SWATCH_LINE_WIDTH * iconScale)}
@@ -97,22 +99,36 @@ function SegmentSwatch({
   );
 }
 
+/** A marker's icon in its color, sized to the legend's swatch column. */
+function MarkerSwatch({ marker, iconScale }: { marker: TripReportMarker; iconScale: number }) {
+  return (
+    <View style={[styles.swatchWrap, { width: Math.round(LEGEND_SWATCH_COLUMN_WIDTH * iconScale) }]}>
+      <TripReportMarkerIcon
+        markerStyle={marker.style}
+        color={marker.color}
+        size={Math.round(LEGEND_MARKER_ICON_SIZE * iconScale)}
+      />
+    </View>
+  );
+}
+
 /**
- * Trip report variant of the expanded minimap legend. Lists the map block's line segments; with
- * none, shows a dashed "Record new line segment" prompt that behaves like the record button.
+ * Trip report variant of the expanded minimap legend. Lists the map block's line segments, then
+ * its markers; with neither, shows a dashed "Record new line segment" prompt that behaves like the record button.
  * An add line segment button floats above its right edge and rides along as it expands and
  * collapses.
  */
 export function TripReportLegend({
   segments,
+  markers,
   expanded,
   maxHeight,
   leftOffset,
   bottomOffset,
   rightInset,
   onToggleExpanded,
-  selectedSegmentId,
-  onSelectSegment,
+  selectedItemId,
+  onSelectItem,
   recording,
   recordingSegmentId,
   recordingPulse,
@@ -126,9 +142,6 @@ export function TripReportLegend({
   const { text, separator, preview, cardHighlight } = themeColors;
   const { minimap } = themeColors.map;
   const { bodyBackground, headerBackground, shadow, collapseIcon } = minimap.legend;
-  const recordColors = themeColors.button.nonstandard[
-    RECORD_LINE_SEGMENT_BUTTON_KEY
-  ] as RecordLineSegmentButtonColors;
   const uiScale = useUiScale();
   const textStyle = useTextStyle();
   const iconScale = useResolvedIconSizeScale();
@@ -143,7 +156,7 @@ export function TripReportLegend({
   const [contentHeight, setContentHeight] = useState(0);
   const bodyHeight = useSharedValue(0);
   const bodyOpacity = useSharedValue(0);
-  const empty = segments.length === 0;
+  const empty = segments.length === 0 && markers.length === 0;
   // The empty-state prompt fills the full legend height; segment lists only take what they need.
   const targetHeight = empty ? bodyMaxHeight : Math.min(contentHeight, bodyMaxHeight);
 
@@ -156,6 +169,24 @@ export function TripReportLegend({
       bodyHeight.value = withTiming(0, { duration: COLLAPSE_MS, easing: EASE });
     }
   }, [expanded, targetHeight, bodyHeight, bodyOpacity]);
+
+  // A selection made elsewhere (tapping the map) scrolls its row into view.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const viewportHeightRef = useRef(0);
+  const rowLayoutsRef = useRef(new Map<string, { y: number; height: number }>());
+  useEffect(() => {
+    if (!expanded || selectedItemId == null) return;
+    const row = rowLayoutsRef.current.get(selectedItemId);
+    if (row == null) return;
+    const top = scrollYRef.current;
+    const bottom = top + Math.min(viewportHeightRef.current, bodyMaxHeight);
+    if (row.y < top) {
+      scrollRef.current?.scrollTo({ y: row.y, animated: true });
+    } else if (row.y + row.height > bottom) {
+      scrollRef.current?.scrollTo({ y: row.y + row.height - (bottom - top), animated: true });
+    }
+  }, [expanded, selectedItemId, bodyMaxHeight]);
 
   const animatedBodyStyle = useAnimatedStyle(() => ({
     height: bodyHeight.value,
@@ -246,7 +277,7 @@ export function TripReportLegend({
                     <FontAwesome5
                       name="pause"
                       size={recordIconSize}
-                      color={recordColors.pauseIcon}
+                      color={text.primary}
                     />
                   ) : (
                     <View
@@ -255,7 +286,7 @@ export function TripReportLegend({
                         {
                           width: recordIconSize,
                           height: recordIconSize,
-                          backgroundColor: recordColors.indicator,
+                          backgroundColor: RECORDING_INDICATOR_COLOR,
                         },
                       ]}
                     />
@@ -265,16 +296,34 @@ export function TripReportLegend({
             </View>
           ) : (
             <ScrollView
+              ref={scrollRef}
               style={{ maxHeight: bodyMaxHeight }}
+              onLayout={(e) => (viewportHeightRef.current = e.nativeEvent.layout.height)}
+              onScroll={(e) => (scrollYRef.current = e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={32}
               onContentSizeChange={(_, height) => setContentHeight(height)}
               showsVerticalScrollIndicator
             >
-              {segments.map((segment, index) => {
-                const selected = segment.id === selectedSegmentId;
+              {[
+                ...segments.map((segment) => ({
+                  id: segment.id,
+                  name: segment.name,
+                  swatch: <SegmentSwatch segment={segment} iconScale={iconScale} />,
+                  recording: segment.id === recordingSegmentId,
+                })),
+                ...markers.map((marker) => ({
+                  id: marker.id,
+                  name: marker.name,
+                  swatch: <MarkerSwatch marker={marker} iconScale={iconScale} />,
+                  recording: false,
+                })),
+              ].map((item, index) => {
+                const selected = item.id === selectedItemId;
                 return (
                   <Pressable
-                    key={segment.id}
-                    onPress={() => onSelectSegment(selected ? null : segment.id)}
+                    key={item.id}
+                    onLayout={(e) => rowLayoutsRef.current.set(item.id, e.nativeEvent.layout)}
+                    onPress={() => onSelectItem(selected ? null : item.id)}
                     style={[
                       styles.row,
                       index > 0 && { borderTopWidth: StyleSheet.hairlineWidth },
@@ -284,7 +333,7 @@ export function TripReportLegend({
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                   >
-                    <SegmentSwatch segment={segment} iconScale={iconScale} />
+                    {item.swatch}
                     <ScalingText
                       size={uiScale.map.text.legendItem}
                       typography={textStyle.map.legendItem}
@@ -297,9 +346,9 @@ export function TripReportLegend({
                         selected && { fontWeight: "600" as const },
                       ]}
                     >
-                      {segment.name}
+                      {item.name}
                     </ScalingText>
-                    {segment.id === recordingSegmentId ? (
+                    {item.recording ? (
                       <RecordingDot size={recordingDotSize} progress={recordingPulse} />
                     ) : null}
                   </Pressable>

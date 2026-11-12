@@ -100,11 +100,9 @@ describe("uploadMapFile", () => {
 
     const block = savedMapBlock(blockId);
     expect(block.segments.map((segment) => segment.name)).toEqual(["Approach"]);
-    expect(block.features.map((feature) => feature.geometry?.type)).toEqual(["Point", "Polygon"]);
-    expect(Object.values(block.legend).map((item) => item.name).sort()).toEqual([
-      "Camp",
-      "Trailhead",
-    ]);
+    expect(block.markers.map((marker) => marker.name)).toEqual(["Trailhead"]);
+    expect(block.features.map((feature) => feature.geometry?.type)).toEqual(["Polygon"]);
+    expect(Object.values(block.legend).map((item) => item.name)).toEqual(["Camp"]);
     expect(uploadingWhileSaving).toBe(true);
     expect(mapFileUploadStore.uploading).toBe(false);
     expect(shown).toEqual([
@@ -134,7 +132,8 @@ describe("uploadMapFile", () => {
     expect(updates).toHaveLength(1);
     const block = updates[0]!(TripReportMapBlock.createEmpty());
     expect(block.segments).toHaveLength(1);
-    expect(block.features).toHaveLength(2);
+    expect(block.markers).toHaveLength(1);
+    expect(block.features).toHaveLength(1);
     expect(mapFileUploadStore.drain(blockId)).toEqual([]);
     unmount();
   });

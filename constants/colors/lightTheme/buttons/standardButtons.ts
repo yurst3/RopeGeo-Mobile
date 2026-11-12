@@ -18,7 +18,8 @@ import {
   ADD_TRIP_REPORT_BUTTON_KEY,
   VIEW_EDIT_BUTTON_KEY,
   ADD_LINE_SEGMENT_BUTTON_KEY,
-  MINI_RECORD_LINE_SEGMENT_BUTTON_KEY,
+  RECORD_LINE_SEGMENT_BUTTON_KEY,
+  RECORD_SETTINGS_BUTTON_KEY,
 } from "@/constants/buttons";
 
 import type { StandardButtonColors, StandardButtonKeys } from "../../types";
@@ -61,5 +62,6 @@ export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> =
   [ADD_TRIP_REPORT_BUTTON_KEY]: defaultStandard,
   [VIEW_EDIT_BUTTON_KEY]: defaultStandard,
   [ADD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
-  [MINI_RECORD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
+  [RECORD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
+  [RECORD_SETTINGS_BUTTON_KEY]: defaultStandard,
 };

@@ -30,7 +30,8 @@ export type StandardButtonKeys =
   | "addTripReport"
   | "viewEdit"
   | "addLineSegment"
-  | "miniRecordLineSegment";
+  | "recordLineSegment"
+  | "recordSettings";
 
 export type NonstandardButtonKeys =
   | "download"
@@ -40,7 +41,6 @@ export type NonstandardButtonKeys =
   | "addRelevantPage"
   | "addBlock"
   | "confirmRemove"
-  | "recordLineSegment"
   | "deleteTripReport";
 
 export type StandardButtonColors = {
@@ -100,16 +100,6 @@ export type ConfirmRemoveButtonColors = {
   text: string;
 };
 
-export type RecordLineSegmentButtonColors = {
-  background: string;
-  text: string;
-  /** Record icon, and the pulsing border around a map that is recording. */
-  indicator: string;
-  /** Pause icon shown while recording. */
-  pauseIcon: string;
-  shadowColor: string;
-};
-
 /** Filled pill that deletes a whole trip report. */
 export type DeleteTripReportButtonColors = {
   background: string;
@@ -126,7 +116,6 @@ export type NonstandardButtonColors =
   | AddRelevantPageButtonColors
   | AddBlockButtonColors
   | ConfirmRemoveButtonColors
-  | RecordLineSegmentButtonColors
   | DeleteTripReportButtonColors;
 
 export type ButtonColors = {
@@ -314,6 +303,8 @@ export type PagePreviewColors = {
   sourceIconBackground: string;
   /** Dashed circle on an unselected selectable preview. */
   selectionOutline: string;
+  /** Dashed outline of a trip report block with a warning (e.g. limited location access). */
+  warningOutline: string;
   /** Filled circle on a selected preview. */
   selectionFill: string;
   /** Checkmark inside the selected circle. */

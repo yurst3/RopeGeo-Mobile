@@ -1,8 +1,6 @@
-import { RECORD_LINE_SEGMENT_BUTTON_KEY } from "@/constants/buttons";
-import type { RecordLineSegmentButtonColors } from "@/constants/colors/types";
-import { useColorTheme } from "@/context/theme/ColorThemeContext";
+import { RECORDING_INDICATOR_COLOR } from "@/constants/tripReport/recording";
 import { shadeColor } from "@/utils/color/shadeColor";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import {
   cancelAnimation,
   useSharedValue,
@@ -42,15 +40,12 @@ export function useRecordingPulse(active: boolean): SharedValue<number> {
   return progress;
 }
 
+const RECORDING_PULSE_DIM_COLOR = shadeColor(
+  RECORDING_INDICATOR_COLOR,
+  RECORDING_PULSE_DIM_BLACK_RATIO,
+);
+
 /** The recording red and its dimmed (half black) end of the pulse. */
 export function useRecordingPulseColors(): { fullColor: string; dimColor: string } {
-  const colors = useColorTheme().button.nonstandard[
-    RECORD_LINE_SEGMENT_BUTTON_KEY
-  ] as RecordLineSegmentButtonColors;
-  const fullColor = colors.indicator;
-  const dimColor = useMemo(
-    () => shadeColor(fullColor, RECORDING_PULSE_DIM_BLACK_RATIO),
-    [fullColor],
-  );
-  return { fullColor, dimColor };
+  return { fullColor: RECORDING_INDICATOR_COLOR, dimColor: RECORDING_PULSE_DIM_COLOR };
 }

@@ -38,6 +38,7 @@ export const darkTheme: ThemeColors = {
     page: {
       sourceIconBackground: "#ffffff",
       selectionOutline: "#6b7280",
+      warningOutline: "#facc15",
       selectionFill: "#dc732b",
       selectionCheck: "#ffffff",
     },

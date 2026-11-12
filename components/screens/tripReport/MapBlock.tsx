@@ -1,6 +1,9 @@
 import { TripReportMiniMap } from "@/components/modals/minimap/TripReportMiniMap";
 import { CornerRemoveButton } from "@/components/screens/tripReport/CornerRemoveButton";
-import { RecordingPermissionNotice } from "@/components/screens/tripReport/RecordingPermissionNotice";
+import {
+  hasRecordingPermissionNotice,
+  RecordingPermissionNotice,
+} from "@/components/screens/tripReport/RecordingPermissionNotice";
 import { useTripReportRecording } from "@/components/screens/tripReport/TripReportRecordingContext";
 import { UploadMapFileArea } from "@/components/screens/tripReport/UploadMapFileArea";
 import {
@@ -24,6 +27,7 @@ import type {
   TripReportLineColor,
   TripReportLineSegment,
   TripReportMapBlock,
+  TripReportMarker,
   TripReportWaypoint,
 } from "ropegeo-common/models";
 
@@ -191,6 +195,14 @@ export function MapBlock({
     onChange((current) => current.withSegmentRemoved(segmentId));
   };
 
+  const updateMarker = (
+    markerId: string,
+    update: (marker: TripReportMarker) => TripReportMarker,
+  ) => onChange((current) => current.withMarkerUpdated(markerId, update));
+
+  const removeMarker = (markerId: string) =>
+    onChange((current) => current.withMarkerRemoved(markerId));
+
   const setExpandedAndNotify = useCallback(
     (next: boolean) => {
       setExpanded(next);
@@ -199,62 +211,71 @@ export function MapBlock({
     [onExpandedChange],
   );
 
+  // A permission warning above the block also turns its outline yellow.
+  const outlineColor = hasRecordingPermissionNotice(permission)
+    ? preview.page.warningOutline
+    : preview.page.selectionOutline;
+
   return (
-    <View
-      style={[
-        styles.outline,
-        { borderColor: preview.page.selectionOutline },
-        expanded && styles.raised,
-      ]}
-    >
+    <View style={[styles.block, expanded && styles.raised]}>
       <RecordingPermissionNotice permission={permission} />
       <View
-        ref={mapSlotRef}
-        collapsable={false}
-        style={[
-          styles.mapSlot,
-          { backgroundColor: map.minimap.background },
-          expanded ? styles.raised : styles.mapSlotClip,
-        ]}
+        style={[styles.outline, { borderColor: outlineColor }, expanded && styles.raised]}
       >
-        <TripReportMiniMap
-          mountNativeMap
-          expanded={expanded}
-          expandAnchorRef={expandAnchorRef}
-          collapsedMeasureRef={mapSlotRef}
-          onExpand={() => setExpandedAndNotify(true)}
-          onCollapse={() => setExpandedAndNotify(false)}
-          segments={block.segments}
-          features={block.features}
-          legend={block.legend}
-          recording={recording}
-          blockedByOtherRecording={blockedByOtherRecording}
-          onToggleRecording={toggleRecording}
-          recordingSegmentId={recordedSegmentId}
-          onToggleSegmentRecording={toggleSegmentRecording}
-          onAddSegment={addSegmentAt}
-          locationDisabled={!locationGranted}
-          onUpdateSegment={updateSegment}
-          onRemoveSegment={removeSegment}
-        />
+        <View
+          ref={mapSlotRef}
+          collapsable={false}
+          style={[
+            styles.mapSlot,
+            { backgroundColor: map.minimap.background },
+            expanded ? styles.raised : styles.mapSlotClip,
+          ]}
+        >
+          <TripReportMiniMap
+            mountNativeMap
+            expanded={expanded}
+            expandAnchorRef={expandAnchorRef}
+            collapsedMeasureRef={mapSlotRef}
+            onExpand={() => setExpandedAndNotify(true)}
+            onCollapse={() => setExpandedAndNotify(false)}
+            segments={block.segments}
+            markers={block.markers}
+            features={block.features}
+            legend={block.legend}
+            recording={recording}
+            blockedByOtherRecording={blockedByOtherRecording}
+            onToggleRecording={toggleRecording}
+            recordingSegmentId={recordedSegmentId}
+            onToggleSegmentRecording={toggleSegmentRecording}
+            onAddSegment={addSegmentAt}
+            locationDisabled={!locationGranted}
+            onUpdateSegment={updateSegment}
+            onRemoveSegment={removeSegment}
+            onUpdateMarker={updateMarker}
+            onRemoveMarker={removeMarker}
+          />
+        </View>
+        <View style={styles.divider}>
+          <View style={[styles.dividerDashes, { borderColor: outlineColor }]} />
+        </View>
+        <UploadMapFileArea onPress={startMapFileUpload} disabled={uploadInProgress} />
+        {!expanded ? (
+          <CornerRemoveButton
+            onPress={onRemove}
+            accessibilityLabel="Remove map block"
+            designSize={DESIGN_REMOVE_BUTTON_SIZE}
+            offset={REMOVE_BUTTON_OFFSET}
+          />
+        ) : null}
       </View>
-      <View style={styles.divider}>
-        <View style={[styles.dividerDashes, { borderColor: preview.page.selectionOutline }]} />
-      </View>
-      <UploadMapFileArea onPress={startMapFileUpload} disabled={uploadInProgress} />
-      {!expanded ? (
-        <CornerRemoveButton
-          onPress={onRemove}
-          accessibilityLabel="Remove map block"
-          designSize={DESIGN_REMOVE_BUTTON_SIZE}
-          offset={REMOVE_BUTTON_OFFSET}
-        />
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  block: {
+    alignSelf: "stretch",
+  },
   outline: {
     alignSelf: "stretch",
     borderWidth: 2,

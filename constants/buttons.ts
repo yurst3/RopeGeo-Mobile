@@ -17,7 +17,8 @@ export const REMOVE_DOWNLOAD_BUTTON_KEY = "removeDownload";
 export const ADD_TRIP_REPORT_BUTTON_KEY = "addTripReport";
 export const VIEW_EDIT_BUTTON_KEY = "viewEdit";
 export const ADD_LINE_SEGMENT_BUTTON_KEY = "addLineSegment";
-export const MINI_RECORD_LINE_SEGMENT_BUTTON_KEY = "miniRecordLineSegment";
+export const RECORD_LINE_SEGMENT_BUTTON_KEY = "recordLineSegment";
+export const RECORD_SETTINGS_BUTTON_KEY = "recordSettings";
 
 export const DOWNLOAD_BUTTON_KEY = "download";
 export const MINI_DOWNLOAD_BUTTON_KEY = "miniDownload";
@@ -27,5 +28,4 @@ export const ADD_RELEVANT_PAGE_BUTTON_KEY = "addRelevantPage";
 /** Shared by the add text, media, and map block buttons. */
 export const ADD_BLOCK_BUTTON_KEY = "addBlock";
 export const CONFIRM_REMOVE_BUTTON_KEY = "confirmRemove";
-export const RECORD_LINE_SEGMENT_BUTTON_KEY = "recordLineSegment";
 export const DELETE_TRIP_REPORT_BUTTON_KEY = "deleteTripReport";

@@ -38,6 +38,7 @@ export const lightTheme: ThemeColors = {
     page: {
       sourceIconBackground: "#ffffff",
       selectionOutline: "#9ca3af",
+      warningOutline: "#ca8a04",
       selectionFill: "#dc732b",
       selectionCheck: "#ffffff",
     },

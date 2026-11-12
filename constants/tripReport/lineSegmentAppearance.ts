@@ -1,5 +1,6 @@
 import type { MapLightPreset } from "@/constants/settings/mapLayersTypes";
 import type {
+  TripReportColor,
   TripReportLineColor,
   TripReportLineStyle,
   TripReportLineThickness,
@@ -33,6 +34,31 @@ export const LIGHT_LINE_SEGMENT_COLORS: ReadonlySet<TripReportLineColor> = new S
   "yellow",
   "green",
 ]);
+
+/** Exact (imported) colors at least this bright are treated like the light palette colors. */
+const LIGHT_EXACT_COLOR_BRIGHTNESS = 0.6;
+
+function isPaletteColor(color: TripReportColor): color is TripReportLineColor {
+  return Object.prototype.hasOwnProperty.call(LINE_SEGMENT_COLORS, color);
+}
+
+/** The color to draw a palette color or an exact `#rrggbb` color (from an imported file) with. */
+export function lineSegmentColorValue(color: TripReportColor): string {
+  return isPaletteColor(color) ? LINE_SEGMENT_COLORS[color] : color;
+}
+
+/**
+ * Whether a segment or marker in this color gets the light outline (`lightLineOutline`). Exact
+ * colors count as light by perceived brightness.
+ */
+export function isLightLineSegmentColor(color: TripReportColor): boolean {
+  if (isPaletteColor(color)) return LIGHT_LINE_SEGMENT_COLORS.has(color);
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 >= LIGHT_EXACT_COLOR_BRIGHTNESS;
+}
 
 /**
  * Mapbox `lineDasharray` values, in multiples of the line width. Solid lines get a gapless dash

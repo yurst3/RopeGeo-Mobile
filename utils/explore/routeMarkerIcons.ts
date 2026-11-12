@@ -116,14 +116,26 @@ export function pageMiniMapPointIconSize(
   selectedLegendId: string | null | undefined,
   iconSizeScale = 1,
 ): SymbolLayerStyle["iconSize"] {
+  return selectedPointIconSize("legendId", selectedLegendId, iconSizeScale);
+}
+
+/**
+ * Point icons at a constant screen size scaled by UI profile, larger when the feature's
+ * `idProperty` matches `selectedId` (same multiplier as explore route markers).
+ */
+export function selectedPointIconSize(
+  idProperty: string,
+  selectedId: string | null | undefined,
+  iconSizeScale = 1,
+): SymbolLayerStyle["iconSize"] {
   const z0 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_0 * iconSizeScale;
   const z22 = ROUTE_MARKER_ICON_SIZE_AT_ZOOM_22 * iconSizeScale;
-  if (selectedLegendId == null || selectedLegendId === "") {
+  if (selectedId == null || selectedId === "") {
     return routeMarkerIconSizeInterpolate(iconSizeScale);
   }
   const m = SELECTED_ROUTE_MARKER_ICON_SIZE_MULTIPLIER;
-  const key: ["to-string", ["get", "legendId"]] = ["to-string", ["get", "legendId"]];
-  const cond = ["==", key, selectedLegendId] as ["==", typeof key, string];
+  const key = ["to-string", ["get", idProperty]] as const;
+  const cond = ["==", key, selectedId] as const;
   return [
     "interpolate",
     ["exponential", 2],

@@ -20,6 +20,7 @@ export type TripReportMiniMapProps = TripReportMiniMapViewProps & {
 /** Trip report minimap: the shared expandable card around {@link TripReportMiniMapView}. */
 export function TripReportMiniMap({
   segments,
+  markers,
   features,
   legend,
   recording,
@@ -31,12 +32,15 @@ export function TripReportMiniMap({
   locationDisabled,
   onUpdateSegment,
   onRemoveSegment,
+  onUpdateMarker,
+  onRemoveMarker,
   ...cardProps
 }: TripReportMiniMapProps) {
   return (
     <MiniMapAnimatedCard {...cardProps}>
       <TripReportMiniMapView
         segments={segments}
+        markers={markers}
         features={features}
         legend={legend}
         recording={recording}
@@ -48,6 +52,8 @@ export function TripReportMiniMap({
         locationDisabled={locationDisabled}
         onUpdateSegment={onUpdateSegment}
         onRemoveSegment={onRemoveSegment}
+        onUpdateMarker={onUpdateMarker}
+        onRemoveMarker={onRemoveMarker}
       />
     </MiniMapAnimatedCard>
   );

@@ -38,6 +38,7 @@ export const fabulousTheme: ThemeColors = {
     page: {
       sourceIconBackground: "#ffffff",
       selectionOutline: "#C4B5FD",
+      warningOutline: "#FACC15",
       selectionFill: "#FACC15",
       selectionCheck: "#3B0764",
     },

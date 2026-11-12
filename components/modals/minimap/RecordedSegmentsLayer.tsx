@@ -1,9 +1,9 @@
 import { MAPBOX_CUSTOM_LAYER_SLOT, MAPBOX_EMISSIVE_STRENGTH } from "@/constants/mapbox";
 import {
-  LIGHT_LINE_SEGMENT_COLORS,
-  LINE_SEGMENT_COLORS,
+  isLightLineSegmentColor,
   LINE_SEGMENT_DASH_ARRAYS,
   LINE_SEGMENT_WIDTHS,
+  lineSegmentColorValue,
 } from "@/constants/tripReport/lineSegmentAppearance";
 import type { RecordedSegmentColors } from "@/constants/colors/types";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
@@ -28,6 +28,20 @@ const WAYPOINT_ZOOM_TIERS: { minZoom: number; maxZoom?: number; every: number }[
   { minZoom: 17, every: 1 },
 ];
 
+function layerIdPrefix(segmentId: string): string {
+  return `recorded-segment-${segmentId}`;
+}
+
+/**
+ * Ids of the layers drawing a segment's line (none until it has two waypoints). Their features
+ * carry the segment's id as `segmentId`.
+ */
+export function recordedSegmentLineLayerIds(segment: TripReportLineSegment): string[] {
+  if (segment.waypoints.length < 2) return [];
+  const prefix = layerIdPrefix(segment.id);
+  return [`${prefix}-casing`, `${prefix}-stroke`];
+}
+
 function tierFilter(every: number): FilterExpression | undefined {
   return every <= 1 ? undefined : ["==", ["%", ["-", ["get", "number"], 1], every], 0];
 }
@@ -44,8 +58,8 @@ const SegmentLayers = memo(function SegmentLayers({
   const lineShape = useMemo(() => segment.toLineFeature(), [segment]);
   const waypointShape = useMemo(() => segment.toWaypointFeatures(), [segment]);
 
-  const lineColor = LINE_SEGMENT_COLORS[segment.color];
-  const lightLine = LIGHT_LINE_SEGMENT_COLORS.has(segment.color);
+  const lineColor = lineSegmentColorValue(segment.color);
+  const lightLine = isLightLineSegmentColor(segment.color);
   const casingColor = lightLine ? colors.lightLineOutline : colors.lineCasing;
   const waypointStrokeColor = lightLine ? colors.lightLineOutline : colors.waypointStroke;
   const lineWidth = LINE_SEGMENT_WIDTHS[segment.thickness];
@@ -54,7 +68,7 @@ const SegmentLayers = memo(function SegmentLayers({
   // Dash lengths are multiples of the layer's width, so rescale them to line up under the line.
   const casingDashArray = dashArray.map((value) => (value * lineWidth) / casingWidth);
   const lineCap = segment.style === "dashed" ? "butt" : "round";
-  const prefix = `recorded-segment-${segment.id}`;
+  const prefix = layerIdPrefix(segment.id);
 
   return (
     <>

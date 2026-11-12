@@ -215,7 +215,8 @@ export const mediumUiScaleProfile: UiScaleProfile = {
       resetCameraOrientation: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
       resetCameraToBounds: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
       addLineSegment: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
-      miniRecordLineSegment: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
+      recordLineSegment: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
+      recordSettings: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
       appleDirections: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
       googleDirections: { background: { scale: 1.0 }, icon: { scale: 1.0 } },
       relevantInfoStrengthLabel: {

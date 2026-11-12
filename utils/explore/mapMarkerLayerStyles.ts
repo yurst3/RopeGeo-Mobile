@@ -53,6 +53,39 @@ export function unclusteredRouteMarkerSymbolStyle(
   };
 }
 
+/**
+ * Trip report markers: each feature's `icon`, `color`, and `halo` properties pick its style image,
+ * fill, and outline. Labels hide where they'd collide; the markers always show.
+ */
+export function tripReportMarkerSymbolStyle(
+  marker: MarkerColors,
+  iconSize: SymbolLayerStyle["iconSize"],
+  markerMetrics: RouteMarkerMetrics,
+  textFont: readonly string[],
+): SymbolLayerStyle {
+  return {
+    iconImage: ["get", "icon"],
+    iconSize,
+    ...mapMarkerIconPaint(marker.defaultIcon, marker.iconHalo),
+    iconColor: ["get", "color"],
+    iconHaloColor: ["get", "halo"],
+    iconAllowOverlap: true,
+    iconIgnorePlacement: true,
+    iconAnchor: "bottom",
+    iconOffset: BOTTOM_ANCHOR_ICON_OFFSET,
+    textField: ["get", "name"],
+    textFont: [...textFont],
+    textSize: markerMetrics.textSize,
+    textColor: marker.text,
+    textEmissiveStrength: MAPBOX_EMISSIVE_STRENGTH,
+    textHaloColor: marker.textHalo,
+    textHaloWidth: markerMetrics.textHaloWidth,
+    textOffset: [0, markerMetrics.textOffsetY],
+    textAnchor: "top",
+    textOptional: true,
+  };
+}
+
 export function clusterRouteMarkerSymbolStyle(
   marker: MarkerColors,
   markerMetrics: RouteMarkerMetrics,

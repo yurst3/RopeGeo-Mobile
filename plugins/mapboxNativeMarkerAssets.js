@@ -6,9 +6,22 @@
  * @type {MapboxNativeMarkerAsset[]}
  */
 const MAPBOX_NATIVE_MARKER_ASSETS = [
-  { name: "route_marker", filename: "markerSdf.png" },
-  { name: "route_marker_selected", filename: "markerSelectedSdf.png" },
-  { name: "route_marker_cluster", filename: "markerClusterSdf.png" },
+  { name: "route_marker", filename: "sdf/markerSdf.png" },
+  { name: "route_marker_selected", filename: "sdf/markerSelectedSdf.png" },
+  { name: "route_marker_cluster", filename: "sdf/markerClusterSdf.png" },
+  // Trip report marker styles; the plain style reuses `route_marker`.
+  { name: "marker_alert", filename: "sdf/markerAlertSdf.png" },
+  { name: "marker_blocked", filename: "sdf/markerBlockedSdf.png" },
+  { name: "marker_camera", filename: "sdf/markerCameraSdf.png" },
+  { name: "marker_camp", filename: "sdf/markerCampSdf.png" },
+  { name: "marker_down", filename: "sdf/markerDownSdf.png" },
+  { name: "marker_parking", filename: "sdf/markerParkingSdf.png" },
+  { name: "marker_pool", filename: "sdf/markerPoolSdf.png" },
+  { name: "marker_question", filename: "sdf/markerQuestionSdf.png" },
+  { name: "marker_star", filename: "sdf/markerStarSdf.png" },
+  { name: "marker_swim", filename: "sdf/markerSwimSdf.png" },
+  { name: "marker_up", filename: "sdf/markerUpSdf.png" },
+  { name: "marker_waterfall", filename: "sdf/markerWaterfallSdf.png" },
 ];
 
 const MARKERS_SOURCE_DIR = "assets/images/icons/markers";

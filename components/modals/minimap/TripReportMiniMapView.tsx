@@ -2,19 +2,23 @@ import { ButtonStack } from "@/components/buttons/ButtonStack";
 import {
   RECORD_CONTROL_DESIGN_SIZE,
   RecordLineSegmentButton,
-} from "@/components/buttons/nonstandard/RecordLineSegmentButton";
-import { RecordedSegmentsLayer } from "@/components/modals/minimap/RecordedSegmentsLayer";
+} from "@/components/buttons/standard/RecordLineSegmentButton";
+import {
+  recordedSegmentLineLayerIds,
+  RecordedSegmentsLayer,
+} from "@/components/modals/minimap/RecordedSegmentsLayer";
 import { RecordSettingsModal } from "@/components/modals/recordSettings/RecordSettingsModal";
-import { SettingsButton } from "@/components/buttons/standard/SettingsButton";
+import { RecordSettingsButton } from "@/components/buttons/standard/RecordSettingsButton";
 import { MapLayersButton } from "@/components/buttons/standard/MapLayersButton";
 import { ResetCameraOrientationButton } from "@/components/buttons/standard/ResetCameraOrientationButton";
 import { ResetCameraToBoundsButton } from "@/components/buttons/standard/ResetCameraToBoundsButton";
 import { ResetCameraToPositionButton } from "@/components/buttons/standard/ResetCameraToPositionButton";
 import { GhostRouteLayer } from "@/components/modals/minimap/GhostRouteLayer";
+import { ImportedAreasLayer } from "@/components/modals/minimap/ImportedFeaturesLayer";
 import {
-  ImportedAreasLayer,
-  ImportedPointsLayer,
-} from "@/components/modals/minimap/ImportedFeaturesLayer";
+  TRIP_REPORT_MARKERS_LAYER_ID,
+  TripReportMarkersLayer,
+} from "@/components/modals/minimap/TripReportMarkersLayer";
 import { TripReportGhostDropdown } from "@/components/modals/minimap/TripReportGhostDropdown";
 import { useSavedPages } from "@/context/data/SavedPagesContext";
 import { MapStyleLayers } from "@/components/modals/mapLayers/MapStyleLayers";
@@ -47,7 +51,7 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, {
   interpolateColor,
@@ -57,13 +61,13 @@ import Animated, {
 import type {
   LegendItem,
   TripReportLineSegment,
+  TripReportMarker,
   TripReportWaypoint,
 } from "ropegeo-common/models";
+import { TRIP_REPORT_EDIT_PANEL_EXIT_MS } from "./panels/TripReportEditPanel";
 import { TripReportLegend } from "./panels/TripReportLegend";
-import {
-  TRIP_REPORT_SEGMENT_PANEL_EXIT_MS,
-  TripReportSegmentPanel,
-} from "./panels/TripReportSegmentPanel";
+import { TripReportMarkerPanel } from "./panels/TripReportMarkerPanel";
+import { TripReportSegmentPanel } from "./panels/TripReportSegmentPanel";
 import { MiniMapHeader } from "./shared/MiniMapHeader";
 import { useRecordingPulse, useRecordingPulseColors } from "./shared/recordingPulse";
 import { MiniMapNativeGestureHost, miniMapInteractionProps } from "./shared/miniMapMapGestures";
@@ -81,8 +85,8 @@ const DEFAULT_ZOOM = 13;
 const USER_LOCATION_ZOOM = 14;
 const COLLAPSED_CAMERA_ANIMATION_MS = 250;
 const LEGEND_CAMERA_ANIMATION_MS = 300;
-/** Horizontal gap between the segment panel and the legend, split around the screen center. */
-const SEGMENT_PANEL_LEGEND_GAP = 8;
+/** Horizontal gap between an edit panel and the legend, split around the screen center. */
+const EDIT_PANEL_LEGEND_GAP = 8;
 const NO_CAMERA_PADDING = { paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0 };
 const EXPANDED_RECORDING_BORDER_WIDTH = 6;
 const COLLAPSED_RECORDING_BORDER_WIDTH = 4;
@@ -93,12 +97,15 @@ const COLLAPSED_FIT_PADDING: CameraPadding = {
 };
 /** Fits never zoom in past this, so a lone point or a short segment keeps some context. */
 const MAX_FIT_ZOOM = 16;
+/** Taps this close (in points) to a marker or line select it, so thin lines are easy to hit. */
+const MAP_PRESS_TOLERANCE = 12;
 /** Waits out the fit animation before treating the camera as fitted to the features. */
 const FIT_SETTLE_MS = MINIMAP_FIT_BOUNDS_ANIMATION_MS + 80;
 
-/** Bounds of everything drawn on the map: segments with waypoints, then imported features. */
+/** Bounds of everything drawn on the map: segments with waypoints, markers, and imported areas. */
 function useFeatureBounds(
   segments: readonly TripReportLineSegment[],
+  markers: readonly TripReportMarker[],
   features: readonly GeoJSON.Feature[],
 ): GeoBounds | null {
   const bounds = useMemo(
@@ -109,10 +116,11 @@ function useFeatureBounds(
           ...segments
             .filter((segment) => segment.waypoints.length > 0)
             .map((segment) => segment.toLineFeature()),
+          ...markers.map((marker) => marker.toFeature()),
           ...features,
         ],
       }),
-    [segments, features],
+    [segments, markers, features],
   );
   // Recording replaces `segments` on every waypoint; only hand out a new object when the bounds move.
   return useMemo(() => bounds, [bounds?.north, bounds?.south, bounds?.east, bounds?.west]);
@@ -193,7 +201,8 @@ function useGrantedUserLocation(enabled: boolean): [number, number] | null {
 
 export type TripReportMiniMapViewProps = {
   segments: readonly TripReportLineSegment[];
-  /** Imported point and polygon features, each with a legend id keyed into `legend`. */
+  markers: readonly TripReportMarker[];
+  /** Imported polygon features, each with a legend id keyed into `legend`. */
   features: readonly GeoJSON.Feature[];
   legend: Readonly<Record<string, LegendItem>>;
   /** Shows the pulsing recording border; the button switches to "Pause Recording". */
@@ -214,16 +223,19 @@ export type TripReportMiniMapViewProps = {
     update: (segment: TripReportLineSegment) => TripReportLineSegment,
   ) => void;
   onRemoveSegment: (segmentId: string) => void;
+  onUpdateMarker: (markerId: string, update: (marker: TripReportMarker) => TripReportMarker) => void;
+  onRemoveMarker: (markerId: string) => void;
 };
 
 /**
  * Minimap for a trip report map block. Loads no backend data: it shows the base map, the block's
- * line segments, and its imported points and areas. With anything on the map, the collapsed
+ * line segments and markers, and its imported areas. With anything on the map, the collapsed
  * camera fits all of it; otherwise it centers on the user's position when location is already
  * allowed, else on Moab. Must be rendered inside a `MiniMapAnimatedCard`.
  */
 export function TripReportMiniMapView({
   segments,
+  markers,
   features,
   legend,
   recording,
@@ -235,6 +247,8 @@ export function TripReportMiniMapView({
   locationDisabled,
   onUpdateSegment,
   onRemoveSegment,
+  onUpdateMarker,
+  onRemoveMarker,
 }: TripReportMiniMapViewProps) {
   const mapLayers = useMapLayersSettings();
   const {
@@ -268,7 +282,7 @@ export function TripReportMiniMapView({
     markCameraFittedToBoundsAfter,
     markCameraMovedFromBounds,
   } = useMiniMapCamera({ expanded });
-  const featureBounds = useFeatureBounds(segments, features);
+  const featureBounds = useFeatureBounds(segments, markers, features);
 
   const grantedUserLocation = useGrantedUserLocation(mountNativeMap);
   const homeCenter = grantedUserLocation ?? DEFAULT_MAP_CENTER;
@@ -288,23 +302,26 @@ export function TripReportMiniMapView({
   const uiScale = useUiScale();
   const { height: windowHeight, width: windowWidth, fontScale } = useWindowDimensions();
 
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
-  const selectedSegment = segments.find((segment) => segment.id === selectedSegmentId) ?? null;
-  // The segment panel shows whenever a segment is selected, whether or not the legend is expanded.
-  const segmentPanelVisible = selectedSegment != null;
-  /** The legend or the segment panel covers the bottom of the screen. */
-  const bottomPanelsOpen = legendExpanded || segmentPanelVisible;
-  // The panel is keyed by segment, so switching segments slides the old panel out and a new one
-  // in. When it replaces another segment's panel, the new one waits for the old one to leave.
-  const panelSegmentId = segmentPanelVisible ? selectedSegment.id : null;
-  const [panelSegmentIds, setPanelSegmentIds] = useState({
-    current: panelSegmentId,
+  // One segment or marker is selected at a time (their ids never collide within a block).
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const selectedSegment = segments.find((segment) => segment.id === selectedItemId) ?? null;
+  const selectedMarker = markers.find((marker) => marker.id === selectedItemId) ?? null;
+  // An edit panel shows whenever an item is selected, whether or not the legend is expanded.
+  const editPanelVisible = selectedSegment != null || selectedMarker != null;
+  /** The legend or an edit panel covers the bottom of the screen. */
+  const bottomPanelsOpen = legendExpanded || editPanelVisible;
+  // The panel is keyed by item, so switching items slides the old panel out and a new one in.
+  // When it replaces another item's panel, the new one waits for the old one to leave.
+  const panelItemId = editPanelVisible ? selectedItemId : null;
+  const [panelItemIds, setPanelItemIds] = useState({
+    current: panelItemId,
     previous: null as string | null,
   });
-  if (panelSegmentIds.current !== panelSegmentId) {
-    setPanelSegmentIds({ current: panelSegmentId, previous: panelSegmentIds.current });
+  if (panelItemIds.current !== panelItemId) {
+    setPanelItemIds({ current: panelItemId, previous: panelItemIds.current });
   }
-  const panelSwitchedSegments = panelSegmentIds.previous != null && panelSegmentId != null;
+  const panelSwitchedItems = panelItemIds.previous != null && panelItemId != null;
+  const editPanelEnterDelayMs = panelSwitchedItems ? TRIP_REPORT_EDIT_PANEL_EXIT_MS : 0;
 
   // A segment added while recording, or by the add line segment button, is the one just started:
   // select it.
@@ -319,22 +336,22 @@ export function TripReportMiniMapView({
       lastSegmentId !== previous.lastId &&
       segments.length > previous.count;
     if (!added) return;
-    if (recording || selectNextAddedSegmentRef.current) setSelectedSegmentId(lastSegmentId);
+    if (recording || selectNextAddedSegmentRef.current) setSelectedItemId(lastSegmentId);
     selectNextAddedSegmentRef.current = false;
   }, [lastSegmentId, recording, segments.length]);
 
   useEffect(() => {
     if (!expanded) {
       setLegendExpanded(false);
-      setSelectedSegmentId(null);
+      setSelectedItemId(null);
     }
   }, [expanded]);
 
-  // Collapsing the legend keeps the selection, and the segment panel stays open beside it.
+  // Collapsing the legend keeps the selection, and the edit panel stays open beside it.
   const toggleLegendExpanded = () => setLegendExpanded(!legendExpanded);
 
   /**
-   * With the legend or segment panel open, camera padding moves the camera's center to the middle
+   * With the legend or an edit panel open, camera padding moves the camera's center to the middle
    * of the top half of the usable screen: below the top safe area inset and above the tab bar.
    * Inline hosts draw the map behind the tab bar; portal hosts end above it.
    */
@@ -359,7 +376,7 @@ export function TripReportMiniMapView({
     }),
     [shell.layoutHost, tabBarHeight, windowHeight, windowWidth],
   );
-  // Expanded fits stay clear of the header, buttons, and tab bar, and with the legend or segment
+  // Expanded fits stay clear of the header, buttons, and tab bar, and with the legend or an edit
   // panel open, keep to the top half of the screen like the legend's recentering.
   const expandedFitPadding = useMemo((): CameraPadding => {
     const base = shell.expandedPadding;
@@ -477,36 +494,83 @@ export function TripReportMiniMapView({
     if (changed && expanded) markCameraMovedFromBounds();
   }, [featureBounds, expanded, markCameraMovedFromBounds]);
 
-  // Selecting a segment focuses the camera on it. Its segment panel is open while it's selected,
-  // so the fit padding keeps the segment in the top half of the screen, clear of the legend and
-  // the panel. Only a new selection refocuses: a segment growing while it's recorded, or one
-  // selected before it has waypoints (a recording that just started), leaves the camera alone.
-  const selectedSegmentBounds = selectedSegment?.bounds ?? null;
-  const focusedSegmentIdRef = useRef<string | null>(null);
+  // Selecting a segment or marker focuses the camera on it. Its edit panel is open while it's
+  // selected, so the fit padding keeps it in the top half of the screen, clear of the legend and
+  // the panel. Only a new selection refocuses: a segment growing while it's recorded, a marker
+  // being edited, or a segment selected before it has waypoints (a recording that just started)
+  // leaves the camera alone.
+  const selectedItemBounds = useMemo((): GeoBounds | null => {
+    if (selectedSegment != null) return selectedSegment.bounds;
+    if (selectedMarker == null) return null;
+    const [lng, lat] = selectedMarker.position;
+    return { north: lat, south: lat, east: lng, west: lng };
+  }, [selectedSegment, selectedMarker]);
+  const selectedItemBoundsRef = useRef(selectedItemBounds);
+  selectedItemBoundsRef.current = selectedItemBounds;
+  const focusedItemIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!expanded || selectedSegmentId == null) {
-      focusedSegmentIdRef.current = null;
+    if (!expanded || selectedItemId == null) {
+      focusedItemIdRef.current = null;
       return;
     }
-    if (focusedSegmentIdRef.current === selectedSegmentId) return;
-    focusedSegmentIdRef.current = selectedSegmentId;
-    if (selectedSegmentBounds == null) return;
+    if (focusedItemIdRef.current === selectedItemId) return;
+    focusedItemIdRef.current = selectedItemId;
+    const bounds = selectedItemBoundsRef.current;
+    if (bounds == null) return;
     markCameraMovedFromBounds();
-    fitCameraToBounds(
-      selectedSegmentBounds,
-      expandedViewport,
-      expandedFitPadding,
-      MINIMAP_FIT_BOUNDS_ANIMATION_MS,
-    );
+    fitCameraToBounds(bounds, expandedViewport, expandedFitPadding, MINIMAP_FIT_BOUNDS_ANIMATION_MS);
   }, [
     expanded,
     expandedFitPadding,
     expandedViewport,
     fitCameraToBounds,
     markCameraMovedFromBounds,
-    selectedSegmentBounds,
-    selectedSegmentId,
+    selectedItemId,
   ]);
+
+  // Tapping a marker or line on the expanded map selects it, like tapping its legend row, and
+  // expands the legend to show it. Markers sit above lines, so they win; tapping neither clears
+  // the selection.
+  const mapRef = useRef<ComponentRef<typeof MapView>>(null);
+  const pressableLayerIds = useMemo(
+    () => [
+      ...(markers.length > 0 ? [TRIP_REPORT_MARKERS_LAYER_ID] : []),
+      ...segments.flatMap(recordedSegmentLineLayerIds),
+    ],
+    [markers.length, segments],
+  );
+  const onMapPress = useCallback(
+    async (feature: GeoJSON.Feature) => {
+      if (!expanded) return;
+      const map = mapRef.current;
+      if (map == null || pressableLayerIds.length === 0) {
+        setSelectedItemId(null);
+        return;
+      }
+      const { screenPointX: x, screenPointY: y } = feature.properties as {
+        screenPointX: number;
+        screenPointY: number;
+      };
+      const t = MAP_PRESS_TOLERANCE;
+      let hits: GeoJSON.Feature[] = [];
+      try {
+        const rendered = await map.queryRenderedFeaturesInRect(
+          [y - t, x - t, y + t, x + t],
+          [],
+          pressableLayerIds,
+        );
+        hits = rendered?.features ?? [];
+      } catch (error) {
+        console.warn("[TripReportMiniMapView] couldn't query pressed features", error);
+      }
+      const idFrom = (key: "markerId" | "segmentId") =>
+        hits.map((hit) => hit.properties?.[key]).find((id) => typeof id === "string") ?? null;
+      const pressedId: string | null = idFrom("markerId") ?? idFrom("segmentId");
+      setSelectedItemId(pressedId);
+      if (pressedId != null) setLegendExpanded(true);
+    },
+    [expanded, pressableLayerIds],
+  );
 
   const userLocationCoord = useForegroundUserLocation(expanded && mapBodyVisible);
 
@@ -551,7 +615,7 @@ export function TripReportMiniMapView({
   const cameraOnFeatureBounds = expanded && featureBounds != null && !boundsResetButtonVisible;
   const boundsButtonVisible = featureBounds != null && boundsResetButtonVisible;
 
-  // Opening the first bottom panel (legend or segment panel) or closing the last one moves the
+  // Opening the first bottom panel (legend or edit panel) or closing the last one moves the
   // camera's center between the full screen and its top half. A camera focused on the user's
   // position or the features' bounds refocuses there; one the user has moved elsewhere stays put.
   const legendToggleFocusRef = useRef({ onUser: false, onBounds: false });
@@ -593,12 +657,15 @@ export function TripReportMiniMapView({
     uiScale,
     fontScale,
   );
+  const editPanelLeftOffset = shell.insets.left + overlayEdgeGap;
+  const editPanelRightOffset = windowWidth / 2 + EDIT_PANEL_LEGEND_GAP / 2;
 
   return (
     <>
       {shell.mapBodyVisible ? (
         <MiniMapNativeGestureHost expanded={shell.expanded}>
           <MapView
+            ref={mapRef}
             styleURL={mapLayers.styleUrl}
             style={[minimapStyles.map, !shell.mapChromeInteractive ? styles.hidden : null]}
             projection="globe"
@@ -616,6 +683,7 @@ export function TripReportMiniMapView({
                 setMapLiveZoom(state.properties.zoom);
               }
             }}
+            onPress={onMapPress}
             onDidFinishLoadingMap={onStyleReady}
             onDidFinishLoadingStyle={onStyleFinishedLoading}
             onMapLoadingError={onStyleLoadError}
@@ -649,9 +717,12 @@ export function TripReportMiniMapView({
                 <ImportedAreasLayer features={features} legend={legend} />
                 <RecordedSegmentsLayer
                   segments={segments}
-                  waypointsSegmentId={shell.expanded ? selectedSegmentId : null}
+                  waypointsSegmentId={shell.expanded ? (selectedSegment?.id ?? null) : null}
                 />
-                <ImportedPointsLayer features={features} legend={legend} />
+                <TripReportMarkersLayer
+                  markers={markers}
+                  selectedMarkerId={shell.expanded ? (selectedMarker?.id ?? null) : null}
+                />
               </>
             ) : null}
           </MapView>
@@ -666,14 +737,17 @@ export function TripReportMiniMapView({
       ) : null}
       {!shell.expanded && shell.layoutReady ? (
         <View style={styles.recordButton} pointerEvents="box-none">
-          <SettingsButton
+          <RecordSettingsButton
             designSize={RECORD_CONTROL_DESIGN_SIZE}
             onPress={() => setRecordSettingsOpen(true)}
           />
           <RecordLineSegmentButton
             recording={recording}
-            blockedByOtherRecording={blockedByOtherRecording}
             onPress={onToggleRecording}
+            disabled={blockedByOtherRecording}
+            showLineSegment
+            designSize={RECORD_CONTROL_DESIGN_SIZE}
+            accessibilityLabel={blockedByOtherRecording ? "Recording another map" : undefined}
           />
         </View>
       ) : null}
@@ -698,38 +772,54 @@ export function TripReportMiniMapView({
             style={[StyleSheet.absoluteFill, !shell.mapChromeInteractive ? styles.dimmed : null]}
             pointerEvents={shell.mapChromeInteractive ? "box-none" : "none"}
           >
-            {segmentPanelVisible ? (
+            {selectedSegment != null ? (
               <TripReportSegmentPanel
                 key={selectedSegment.id}
-                enterDelayMs={panelSwitchedSegments ? TRIP_REPORT_SEGMENT_PANEL_EXIT_MS : 0}
+                enterDelayMs={editPanelEnterDelayMs}
                 segment={selectedSegment}
                 maxHeight={windowHeight / 3}
-                leftOffset={shell.insets.left + overlayEdgeGap}
-                rightOffset={windowWidth / 2 + SEGMENT_PANEL_LEGEND_GAP / 2}
+                leftOffset={editPanelLeftOffset}
+                rightOffset={editPanelRightOffset}
                 bottomOffset={legendBottomOffset}
                 recording={selectedSegment.id === recordingSegmentId}
                 recordingPulse={recordingPulse}
                 onToggleRecording={() => onToggleSegmentRecording(selectedSegment.id)}
                 recordDisabled={locationDisabled}
+                onOpenRecordSettings={() => setRecordSettingsOpen(true)}
                 onUpdate={(update) => onUpdateSegment(selectedSegment.id, update)}
                 onDelete={() => {
-                  setSelectedSegmentId(null);
+                  setSelectedItemId(null);
                   onRemoveSegment(selectedSegment.id);
+                }}
+              />
+            ) : null}
+            {selectedMarker != null ? (
+              <TripReportMarkerPanel
+                key={selectedMarker.id}
+                enterDelayMs={editPanelEnterDelayMs}
+                marker={selectedMarker}
+                maxHeight={windowHeight / 3}
+                leftOffset={editPanelLeftOffset}
+                rightOffset={editPanelRightOffset}
+                bottomOffset={legendBottomOffset}
+                onUpdate={(update) => onUpdateMarker(selectedMarker.id, update)}
+                onDelete={() => {
+                  setSelectedItemId(null);
+                  onRemoveMarker(selectedMarker.id);
                 }}
               />
             ) : null}
             <TripReportLegend
               segments={segments}
+              markers={markers}
               expanded={legendExpanded}
               maxHeight={windowHeight / 3}
-              leftOffset={
-                windowWidth / 2 + (segmentPanelVisible ? SEGMENT_PANEL_LEGEND_GAP / 2 : 0)
-              }
+              leftOffset={windowWidth / 2 + (editPanelVisible ? EDIT_PANEL_LEGEND_GAP / 2 : 0)}
               bottomOffset={legendBottomOffset}
               rightInset={shell.insets.right + overlayEdgeGap}
               onToggleExpanded={toggleLegendExpanded}
-              selectedSegmentId={selectedSegmentId}
-              onSelectSegment={setSelectedSegmentId}
+              selectedItemId={selectedItemId}
+              onSelectItem={setSelectedItemId}
               recording={recording}
               recordingPulse={recordingPulse}
               blockedByOtherRecording={blockedByOtherRecording}
