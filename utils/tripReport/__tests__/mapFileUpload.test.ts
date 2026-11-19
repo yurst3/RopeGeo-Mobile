@@ -2,6 +2,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { TripReport, TripReportMapBlock } from "ropegeo-common/models";
 import { TOAST_KEY_MAP_FILE_UPLOAD } from "@/constants/toasts/toastArchetypes";
+import { MAP_BLOCK_UNDO_STACK_SIZE } from "@/constants/tripReport/mapBlockUndo";
 import { updateSavedTripReport } from "@/utils/tripReport/tripReportStorage";
 import { mapFileUploadStore, uploadMapFile, type MapFileUploadTarget } from "../mapFileUpload";
 
@@ -27,7 +28,7 @@ let deletedUris: string[];
 let savedReport: TripReport;
 
 function createReport(): { report: TripReport; blockId: string } {
-  const block = TripReportMapBlock.createEmpty();
+  const block = TripReportMapBlock.createEmpty(MAP_BLOCK_UNDO_STACK_SIZE);
   const report = TripReport.createDraft({ name: "Tester", badgeRank: null, badgeIcon: null })
     .withBlockAdded(block);
   return { report, blockId: block.id };
@@ -130,7 +131,7 @@ describe("uploadMapFile", () => {
     expect(updateSavedTripReportMock).not.toHaveBeenCalled();
     const updates = mapFileUploadStore.drain(blockId);
     expect(updates).toHaveLength(1);
-    const block = updates[0]!(TripReportMapBlock.createEmpty());
+    const block = updates[0]!(TripReportMapBlock.createEmpty(MAP_BLOCK_UNDO_STACK_SIZE));
     expect(block.segments).toHaveLength(1);
     expect(block.markers).toHaveLength(1);
     expect(block.features).toHaveLength(1);

@@ -174,6 +174,8 @@ export type MapButtonSizes = {
   resetCameraToBounds: ButtonScaleSpec;
   /** Trip report legend's add line segment button. */
   addLineSegment: ButtonScaleSpec;
+  /** Trip report legend's add marker button. */
+  addMarker: ButtonScaleSpec;
   /** Trip report record / pause button (collapsed map and segment panel). */
   recordLineSegment: ButtonScaleSpec;
   /** Record settings button beside the record button on a collapsed trip report map. */

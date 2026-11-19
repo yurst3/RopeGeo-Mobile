@@ -1,10 +1,16 @@
 import { ButtonStack } from "@/components/buttons/ButtonStack";
+import { AddMidWaypointButton } from "@/components/buttons/standard/AddMidWaypointButton";
+import { BackButton } from "@/components/buttons/standard/BackButton";
 import {
   RECORD_CONTROL_DESIGN_SIZE,
   RecordLineSegmentButton,
 } from "@/components/buttons/standard/RecordLineSegmentButton";
+import { RemoveWaypointButton } from "@/components/buttons/standard/RemoveWaypointButton";
+import { SplitSegmentButton } from "@/components/buttons/standard/SplitSegmentButton";
+import { UndoButton } from "@/components/buttons/standard/UndoButton";
 import {
   recordedSegmentLineLayerIds,
+  recordedSegmentWaypointLayerIds,
   RecordedSegmentsLayer,
 } from "@/components/modals/minimap/RecordedSegmentsLayer";
 import { RecordSettingsModal } from "@/components/modals/recordSettings/RecordSettingsModal";
@@ -16,9 +22,18 @@ import { ResetCameraToPositionButton } from "@/components/buttons/standard/Reset
 import { GhostRouteLayer } from "@/components/modals/minimap/GhostRouteLayer";
 import { ImportedAreasLayer } from "@/components/modals/minimap/ImportedFeaturesLayer";
 import {
+  MarkerDragHandle,
+  MarkerDragPreview,
+} from "@/components/modals/minimap/MarkerDragHandle";
+import {
   TRIP_REPORT_MARKERS_LAYER_ID,
   TripReportMarkersLayer,
 } from "@/components/modals/minimap/TripReportMarkersLayer";
+import {
+  SelectedWaypointDragHandle,
+  WaypointDragPreview,
+  type WaypointDragSession,
+} from "@/components/modals/minimap/WaypointDragHandle";
 import { TripReportGhostDropdown } from "@/components/modals/minimap/TripReportGhostDropdown";
 import { useSavedPages } from "@/context/data/SavedPagesContext";
 import { MapStyleLayers } from "@/components/modals/mapLayers/MapStyleLayers";
@@ -36,6 +51,7 @@ import {
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { SCREEN_CORNER_RADIUS } from "@/utils/layout/screenCornerRadius";
 import { useForegroundUserLocation } from "@/utils/location/useForegroundUserLocation";
+import { mapPositionAt } from "@/utils/map/mapPositionAt";
 import { boundsFromFeatureCollection } from "@/utils/minimap/geoJsonBounds";
 import { useMiniMapCamera } from "@/utils/minimap/useMiniMapCamera";
 import {
@@ -52,10 +68,18 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Camera, LocationPuck, MapView } from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type GestureResponderEvent,
+} from "react-native";
+
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
+  useSharedValue,
   type SharedValue,
 } from "react-native-reanimated";
 import type {
@@ -78,6 +102,19 @@ import {
   MINIMAP_FIT_BOUNDS_ANIMATION_MS,
   minimapStyles,
 } from "./shared/minimapShared";
+
+/** `view`'s frame in window coordinates, or null if it isn't mounted. */
+function measureInWindow(
+  view: View | null,
+): Promise<{ x: number; y: number; width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    if (view == null) {
+      resolve(null);
+      return;
+    }
+    view.measureInWindow((x, y, width, height) => resolve({ x, y, width, height }));
+  });
+}
 
 /** Default map center when location is unavailable (Moab, UT). [lng, lat]. */
 const DEFAULT_MAP_CENTER: [number, number] = [-109.5508, 38.5733];
@@ -225,6 +262,29 @@ export type TripReportMiniMapViewProps = {
   onRemoveSegment: (segmentId: string) => void;
   onUpdateMarker: (markerId: string, update: (marker: TripReportMarker) => TripReportMarker) => void;
   onRemoveMarker: (markerId: string) => void;
+  /** Adds a new marker at `position`. */
+  onAddMarker: (position: TripReportWaypoint) => void;
+  /** Geometric waypoint move (pushes map-block undo). */
+  onMoveWaypoint: (
+    segmentId: string,
+    waypointIndex: number,
+    position: TripReportWaypoint,
+  ) => void;
+  /** Inserts a waypoint at `index` (pushes map-block undo). */
+  onInsertWaypoint: (
+    segmentId: string,
+    index: number,
+    position: TripReportWaypoint,
+  ) => void;
+  /** Removes a waypoint (pushes map-block undo). */
+  onRemoveWaypoint: (segmentId: string, waypointIndex: number) => void;
+  /** Splits a segment at `waypointIndex` (pushes map-block undo). */
+  onSplitSegment: (segmentId: string, waypointIndex: number) => void;
+  /** Geometric marker move (pushes map-block undo). */
+  onMoveMarker: (markerId: string, position: TripReportWaypoint) => void;
+  /** Whether the map block has anything on its undo stack. */
+  canUndo: boolean;
+  onUndo: () => void;
 };
 
 /**
@@ -249,6 +309,14 @@ export function TripReportMiniMapView({
   onRemoveSegment,
   onUpdateMarker,
   onRemoveMarker,
+  onAddMarker,
+  onMoveWaypoint,
+  onInsertWaypoint,
+  onRemoveWaypoint,
+  onSplitSegment,
+  onMoveMarker,
+  canUndo,
+  onUndo,
 }: TripReportMiniMapViewProps) {
   const mapLayers = useMapLayersSettings();
   const {
@@ -306,6 +374,61 @@ export function TripReportMiniMapView({
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const selectedSegment = segments.find((segment) => segment.id === selectedItemId) ?? null;
   const selectedMarker = markers.find((marker) => marker.id === selectedItemId) ?? null;
+  // Index into the selected segment's waypoints when one is being edited; null otherwise.
+  const [selectedWaypointIndex, setSelectedWaypointIndex] = useState<number | null>(null);
+  // A marker being dragged is drawn under the finger and left off the map; the block only changes
+  // when it's dropped. Unselected markers start from MapView long-press; the selected marker uses
+  // a hit target so a drag moves it immediately.
+  const [draggedMarkerId, setDraggedMarkerId] = useState<string | null>(null);
+  /** True while a long-press (not selected-handle) marker drag is in progress. */
+  const [markerTouchDragActive, setMarkerTouchDragActive] = useState(false);
+  const markerDragX = useSharedValue(0);
+  const markerDragY = useSharedValue(0);
+  const markerDragging = useSharedValue(false);
+  // Same for a waypoint: the map hides it (and the edges through it) while the preview follows the
+  // finger; the segment only changes when it's dropped. Unselected waypoints start from MapView
+  // long-press; the selected waypoint uses a hit target so a drag moves it immediately.
+  const [draggedWaypointIndex, setDraggedWaypointIndex] = useState<number | null>(null);
+  const [waypointDragSession, setWaypointDragSession] = useState<WaypointDragSession | null>(null);
+  const waypointDragX = useSharedValue(0);
+  const waypointDragY = useSharedValue(0);
+  const waypointDragging = useSharedValue(false);
+  // Bumped as the camera moves while a marker or waypoint is selected, so its drag handle follows.
+  const [cameraRevision, setCameraRevision] = useState(0);
+  // Fingers down on the map frame; drag handles cancel when a second finger starts a pinch.
+  const mapPointerCount = useSharedValue(0);
+  const syncMapPointerCount = useCallback((event: GestureResponderEvent) => {
+    mapPointerCount.value = event.nativeEvent.touches.length;
+  }, [mapPointerCount]);
+  const mapTouchRootRef = useRef<View>(null);
+  const mapFrameRef = useRef<View>(null);
+  /** Window origin of the map touch root; feature drag math is in that view's space. */
+  const overlayWindowOriginRef = useRef<{ x: number; y: number } | null>(null);
+  /** Ignore MapView onPress shortly after a long-press so both don't fire for one gesture. */
+  const ignoreMapPressUntilRef = useRef(0);
+  const draggedWaypointIndexRef = useRef<number | null>(null);
+  draggedWaypointIndexRef.current = draggedWaypointIndex;
+  const draggedMarkerIdRef = useRef<string | null>(null);
+  draggedMarkerIdRef.current = draggedMarkerId;
+  /**
+   * Long-press drags follow the finger via the map root's touch move handlers. Selected-handle
+   * drags use RNGH instead, so those handlers must stay out of the way.
+   */
+  const waypointDragTracksTouchRef = useRef(false);
+  const markerDragTracksTouchRef = useRef(false);
+  /** Selects a legend item (or clears selection) and drops any feature being dragged. */
+  const selectItem = useCallback((id: string | null) => {
+    setSelectedItemId(id);
+    setSelectedWaypointIndex(null);
+    setDraggedWaypointIndex(null);
+    setWaypointDragSession(null);
+    waypointDragTracksTouchRef.current = false;
+    waypointDragging.value = false;
+    setDraggedMarkerId(null);
+    setMarkerTouchDragActive(false);
+    markerDragTracksTouchRef.current = false;
+    markerDragging.value = false;
+  }, [markerDragging, waypointDragging]);
   // An edit panel shows whenever an item is selected, whether or not the legend is expanded.
   const editPanelVisible = selectedSegment != null || selectedMarker != null;
   /** The legend or an edit panel covers the bottom of the screen. */
@@ -336,16 +459,24 @@ export function TripReportMiniMapView({
       lastSegmentId !== previous.lastId &&
       segments.length > previous.count;
     if (!added) return;
-    if (recording || selectNextAddedSegmentRef.current) setSelectedItemId(lastSegmentId);
+    if (recording || selectNextAddedSegmentRef.current) selectItem(lastSegmentId);
     selectNextAddedSegmentRef.current = false;
-  }, [lastSegmentId, recording, segments.length]);
+  }, [lastSegmentId, recording, segments.length, selectItem]);
 
   useEffect(() => {
     if (!expanded) {
       setLegendExpanded(false);
-      setSelectedItemId(null);
+      selectItem(null);
     }
-  }, [expanded]);
+  }, [expanded, selectItem]);
+
+  // Drop the waypoint selection when the segment goes away or the index is no longer valid.
+  useEffect(() => {
+    if (selectedWaypointIndex == null) return;
+    if (selectedSegment == null || selectedWaypointIndex >= selectedSegment.waypoints.length) {
+      setSelectedWaypointIndex(null);
+    }
+  }, [selectedSegment, selectedWaypointIndex]);
 
   // Collapsing the legend keeps the selection, and the edit panel stays open beside it.
   const toggleLegendExpanded = () => setLegendExpanded(!legendExpanded);
@@ -528,48 +659,389 @@ export function TripReportMiniMapView({
     selectedItemId,
   ]);
 
-  // Tapping a marker or line on the expanded map selects it, like tapping its legend row, and
-  // expands the legend to show it. Markers sit above lines, so they win; tapping neither clears
-  // the selection.
+  // A marker added by the add marker button opens its edit panel and expands the legend to show
+  // it. It's already in the middle of the visible map, so the camera stays put rather than
+  // focusing on it.
+  const lastMarkerId = markers.length > 0 ? markers[markers.length - 1].id : null;
+  const previousMarkersRef = useRef({ count: markers.length, lastId: lastMarkerId });
+  const selectNextAddedMarkerRef = useRef(false);
+  useEffect(() => {
+    const previous = previousMarkersRef.current;
+    previousMarkersRef.current = { count: markers.length, lastId: lastMarkerId };
+    const added =
+      lastMarkerId != null && lastMarkerId !== previous.lastId && markers.length > previous.count;
+    if (!added || !selectNextAddedMarkerRef.current) return;
+    selectNextAddedMarkerRef.current = false;
+    focusedItemIdRef.current = lastMarkerId;
+    selectItem(lastMarkerId);
+    setLegendExpanded(true);
+  }, [lastMarkerId, markers.length, selectItem]);
+
+  // Tapping a marker, waypoint, or line on the expanded map selects it, like tapping its legend
+  // row, and expands the legend to show it. Markers win over waypoints, waypoints over lines;
+  // tapping none of them clears the selection. Short-press centers on a marker or waypoint;
+  // long-press starts a drag without moving the camera (same query hit-testing as press).
   const mapRef = useRef<ComponentRef<typeof MapView>>(null);
-  const pressableLayerIds = useMemo(
-    () => [
+  const pressableLayerIds = useMemo(() => {
+    const waypointIds =
+      selectedSegment != null ? recordedSegmentWaypointLayerIds(selectedSegment) : [];
+    return [
       ...(markers.length > 0 ? [TRIP_REPORT_MARKERS_LAYER_ID] : []),
+      ...waypointIds,
       ...segments.flatMap(recordedSegmentLineLayerIds),
-    ],
-    [markers.length, segments],
+    ];
+  }, [markers.length, segments, selectedSegment]);
+  const waypointLayerIds = useMemo(
+    () => (selectedSegment != null ? recordedSegmentWaypointLayerIds(selectedSegment) : []),
+    [selectedSegment],
   );
+  const markerLayerIds = useMemo(
+    () => (markers.length > 0 ? [TRIP_REPORT_MARKERS_LAYER_ID] : []),
+    [markers.length],
+  );
+
+  const queryHitsAtScreenPoint = useCallback(
+    async (x: number, y: number, layerIds: string[]) => {
+      const map = mapRef.current;
+      if (map == null || layerIds.length === 0) return [] as GeoJSON.Feature[];
+      const t = MAP_PRESS_TOLERANCE;
+      try {
+        const rendered = await map.queryRenderedFeaturesInRect(
+          [y - t, x - t, y + t, x + t],
+          [],
+          layerIds,
+        );
+        return rendered?.features ?? [];
+      } catch (error) {
+        console.warn("[TripReportMiniMapView] couldn't query pressed features", error);
+        return [];
+      }
+    },
+    [],
+  );
+
+  const endWaypointDrag = useCallback(
+    async (dropped: boolean) => {
+      const index = draggedWaypointIndexRef.current;
+      const segment = selectedSegment;
+      const map = mapRef.current;
+      let position: TripReportWaypoint | null = null;
+      if (dropped && index != null && segment != null && map != null) {
+        const from = segment.waypoints[index];
+        if (from != null) {
+          try {
+            position = await mapPositionAt(
+              map,
+              [waypointDragX.value, waypointDragY.value],
+              from,
+            );
+          } catch {
+            /* leave where it was */
+          }
+        }
+      }
+      waypointDragging.value = false;
+      waypointDragTracksTouchRef.current = false;
+      setDraggedWaypointIndex(null);
+      setWaypointDragSession(null);
+      if (index != null && position != null && segment != null) {
+        onMoveWaypoint(segment.id, index, position);
+      }
+    },
+    [onMoveWaypoint, selectedSegment, waypointDragX, waypointDragY, waypointDragging],
+  );
+
+  const endMarkerTouchDrag = useCallback(
+    async (dropped: boolean) => {
+      const markerId = draggedMarkerIdRef.current;
+      const marker = markers.find((entry) => entry.id === markerId) ?? null;
+      const map = mapRef.current;
+      let position: TripReportWaypoint | null = null;
+      if (dropped && marker != null && map != null) {
+        try {
+          position = await mapPositionAt(
+            map,
+            [markerDragX.value, markerDragY.value],
+            marker.position,
+          );
+        } catch {
+          /* leave where it was */
+        }
+      }
+      markerDragging.value = false;
+      markerDragTracksTouchRef.current = false;
+      setMarkerTouchDragActive(false);
+      setDraggedMarkerId(null);
+      if (markerId != null && position != null) {
+        onMoveMarker(markerId, position);
+      }
+    },
+    [markerDragX, markerDragY, markerDragging, markers, onMoveMarker],
+  );
+
+  const beginMarkerTouchDrag = useCallback(
+    async (marker: TripReportMarker, screenPoint: [number, number]) => {
+      markerDragX.value = screenPoint[0];
+      markerDragY.value = screenPoint[1];
+      markerDragging.value = true;
+      markerDragTracksTouchRef.current = true;
+      setDraggedMarkerId(marker.id);
+      setMarkerTouchDragActive(true);
+      const overlay = await measureInWindow(mapTouchRootRef.current);
+      if (overlay != null) {
+        overlayWindowOriginRef.current = { x: overlay.x, y: overlay.y };
+      }
+    },
+    [markerDragX, markerDragY, markerDragging],
+  );
+
+  const beginWaypointDrag = useCallback(
+    async (segment: TripReportLineSegment, index: number, screenPoint: [number, number]) => {
+      const map = mapRef.current;
+      // Hide the map waypoint and follow the finger right away; neighbors / overlay origin fill in.
+      waypointDragX.value = screenPoint[0];
+      waypointDragY.value = screenPoint[1];
+      waypointDragging.value = true;
+      setDraggedWaypointIndex(index);
+      setWaypointDragSession({
+        index,
+        origin: screenPoint,
+        neighbors: { prev: null, next: null },
+      });
+      const overlay = await measureInWindow(mapTouchRootRef.current);
+      if (overlay != null) {
+        overlayWindowOriginRef.current = { x: overlay.x, y: overlay.y };
+      }
+      const neighborPoint = async (neighborIndex: number): Promise<[number, number] | null> => {
+        if (map == null || neighborIndex < 0 || neighborIndex >= segment.waypoints.length) {
+          return null;
+        }
+        const wp = segment.waypoints[neighborIndex];
+        if (wp == null) return null;
+        try {
+          const point = (await map.getPointInView(wp)) as [number, number];
+          return point[0] >= 0 && point[1] >= 0 ? point : null;
+        } catch {
+          return null;
+        }
+      };
+      const [prev, next] = await Promise.all([
+        neighborPoint(index - 1),
+        neighborPoint(index + 1),
+      ]);
+      setWaypointDragSession((current) =>
+        current?.index === index ? { ...current, neighbors: { prev, next } } : current,
+      );
+    },
+    [waypointDragX, waypointDragY, waypointDragging],
+  );
+
   const onMapPress = useCallback(
     async (feature: GeoJSON.Feature) => {
       if (!expanded) return;
-      const map = mapRef.current;
-      if (map == null || pressableLayerIds.length === 0) {
-        setSelectedItemId(null);
+      if (Date.now() < ignoreMapPressUntilRef.current) return;
+      if (draggedWaypointIndexRef.current != null || draggedMarkerIdRef.current != null) return;
+      if (pressableLayerIds.length === 0) {
+        selectItem(null);
         return;
       }
       const { screenPointX: x, screenPointY: y } = feature.properties as {
         screenPointX: number;
         screenPointY: number;
       };
-      const t = MAP_PRESS_TOLERANCE;
-      let hits: GeoJSON.Feature[] = [];
-      try {
-        const rendered = await map.queryRenderedFeaturesInRect(
-          [y - t, x - t, y + t, x + t],
-          [],
-          pressableLayerIds,
-        );
-        hits = rendered?.features ?? [];
-      } catch (error) {
-        console.warn("[TripReportMiniMapView] couldn't query pressed features", error);
-      }
+      const hits = await queryHitsAtScreenPoint(x, y, pressableLayerIds);
       const idFrom = (key: "markerId" | "segmentId") =>
         hits.map((hit) => hit.properties?.[key]).find((id) => typeof id === "string") ?? null;
-      const pressedId: string | null = idFrom("markerId") ?? idFrom("segmentId");
-      setSelectedItemId(pressedId);
-      if (pressedId != null) setLegendExpanded(true);
+      const pressedMarkerId = idFrom("markerId");
+      if (pressedMarkerId != null) {
+        const marker = markers.find((entry) => entry.id === pressedMarkerId);
+        // Prefer centering on the tapped marker over the selection-effect fit (and re-center when
+        // it's already selected).
+        focusedItemIdRef.current = pressedMarkerId;
+        selectItem(pressedMarkerId);
+        setLegendExpanded(true);
+        if (marker != null) {
+          const [lng, lat] = marker.position;
+          markCameraMovedFromBounds();
+          fitCameraToBounds(
+            { north: lat, south: lat, east: lng, west: lng },
+            expandedViewport,
+            expandedFitPadding,
+            MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+          );
+        }
+        return;
+      }
+      const waypointHit = hits.find((hit) => {
+        const index = hit.properties?.waypointIndex;
+        return typeof index === "number" && typeof hit.properties?.segmentId === "string";
+      });
+      if (waypointHit != null) {
+        const segmentId = waypointHit.properties!.segmentId as string;
+        const index = waypointHit.properties!.waypointIndex as number;
+        const segment = segments.find((entry) => entry.id === segmentId);
+        const waypoint = segment?.waypoints[index];
+        // Prefer centering on the tapped waypoint over a segment-wide fit.
+        focusedItemIdRef.current = segmentId;
+        setSelectedItemId(segmentId);
+        setSelectedWaypointIndex(index);
+        setLegendExpanded(true);
+        if (waypoint != null) {
+          const [lng, lat] = waypoint;
+          markCameraMovedFromBounds();
+          fitCameraToBounds(
+            { north: lat, south: lat, east: lng, west: lng },
+            expandedViewport,
+            expandedFitPadding,
+            MINIMAP_FIT_BOUNDS_ANIMATION_MS,
+          );
+        }
+        return;
+      }
+      const pressedSegmentId = idFrom("segmentId");
+      selectItem(pressedSegmentId);
+      if (pressedSegmentId != null) setLegendExpanded(true);
     },
-    [expanded, pressableLayerIds],
+    [
+      expanded,
+      expandedFitPadding,
+      expandedViewport,
+      fitCameraToBounds,
+      markCameraMovedFromBounds,
+      markers,
+      pressableLayerIds,
+      queryHitsAtScreenPoint,
+      segments,
+      selectItem,
+    ],
+  );
+
+  const onMapLongPress = useCallback(
+    async (feature: GeoJSON.Feature) => {
+      if (!expanded) return;
+      if (draggedWaypointIndexRef.current != null || draggedMarkerIdRef.current != null) return;
+      const { screenPointX: x, screenPointY: y } = feature.properties as {
+        screenPointX: number;
+        screenPointY: number;
+      };
+      if (markerLayerIds.length > 0) {
+        const markerHits = await queryHitsAtScreenPoint(x, y, markerLayerIds);
+        const markerId =
+          markerHits
+            .map((hit) => hit.properties?.markerId)
+            .find((id) => typeof id === "string") ?? null;
+        const marker = markerId != null ? markers.find((entry) => entry.id === markerId) : null;
+        if (marker != null) {
+          ignoreMapPressUntilRef.current = Date.now() + 800;
+          // Keep the camera put; clear any waypoint edit without wiping the drag we're starting.
+          focusedItemIdRef.current = marker.id;
+          setSelectedItemId(marker.id);
+          setSelectedWaypointIndex(null);
+          setDraggedWaypointIndex(null);
+          setWaypointDragSession(null);
+          waypointDragTracksTouchRef.current = false;
+          waypointDragging.value = false;
+          setLegendExpanded(true);
+          await beginMarkerTouchDrag(marker, [x, y]);
+          return;
+        }
+      }
+      if (selectedSegment == null || waypointLayerIds.length === 0) return;
+      const hits = await queryHitsAtScreenPoint(x, y, waypointLayerIds);
+      const waypointHit = hits.find((hit) => {
+        const index = hit.properties?.waypointIndex;
+        return (
+          typeof index === "number" &&
+          hit.properties?.segmentId === selectedSegment.id
+        );
+      });
+      if (waypointHit == null) return;
+      const index = waypointHit.properties!.waypointIndex as number;
+      ignoreMapPressUntilRef.current = Date.now() + 800;
+      // Keep the camera put: mark the segment as already focused so the selection effect skips.
+      focusedItemIdRef.current = selectedSegment.id;
+      setSelectedItemId(selectedSegment.id);
+      setSelectedWaypointIndex(index);
+      setLegendExpanded(true);
+      waypointDragTracksTouchRef.current = true;
+      await beginWaypointDrag(selectedSegment, index, [x, y]);
+    },
+    [
+      beginMarkerTouchDrag,
+      beginWaypointDrag,
+      expanded,
+      markerLayerIds,
+      markers,
+      queryHitsAtScreenPoint,
+      selectedSegment,
+      waypointDragging,
+      waypointLayerIds,
+    ],
+  );
+
+  const onMapTouchMove = useCallback(
+    (event: GestureResponderEvent) => {
+      syncMapPointerCount(event);
+      const trackingWaypoint =
+        waypointDragTracksTouchRef.current && draggedWaypointIndexRef.current != null;
+      const trackingMarker =
+        markerDragTracksTouchRef.current && draggedMarkerIdRef.current != null;
+      if (!trackingWaypoint && !trackingMarker) return;
+      if (event.nativeEvent.touches.length > 1) {
+        if (trackingWaypoint) void endWaypointDrag(false);
+        if (trackingMarker) void endMarkerTouchDrag(false);
+        return;
+      }
+      const touch = event.nativeEvent.touches[0];
+      const origin = overlayWindowOriginRef.current;
+      if (touch == null || origin == null) return;
+      const x = touch.pageX - origin.x;
+      const y = touch.pageY - origin.y;
+      if (trackingWaypoint) {
+        waypointDragX.value = x;
+        waypointDragY.value = y;
+      }
+      if (trackingMarker) {
+        markerDragX.value = x;
+        markerDragY.value = y;
+      }
+    },
+    [
+      endMarkerTouchDrag,
+      endWaypointDrag,
+      markerDragX,
+      markerDragY,
+      syncMapPointerCount,
+      waypointDragX,
+      waypointDragY,
+    ],
+  );
+
+  const onMapTouchEnd = useCallback(
+    (event: GestureResponderEvent) => {
+      syncMapPointerCount(event);
+      if (event.nativeEvent.touches.length !== 0) return;
+      if (waypointDragTracksTouchRef.current && draggedWaypointIndexRef.current != null) {
+        void endWaypointDrag(true);
+      }
+      if (markerDragTracksTouchRef.current && draggedMarkerIdRef.current != null) {
+        void endMarkerTouchDrag(true);
+      }
+    },
+    [endMarkerTouchDrag, endWaypointDrag, syncMapPointerCount],
+  );
+
+  const onMapTouchCancel = useCallback(
+    (event: GestureResponderEvent) => {
+      syncMapPointerCount(event);
+      if (waypointDragTracksTouchRef.current && draggedWaypointIndexRef.current != null) {
+        void endWaypointDrag(false);
+      }
+      if (markerDragTracksTouchRef.current && draggedMarkerIdRef.current != null) {
+        void endMarkerTouchDrag(false);
+      }
+    },
+    [endMarkerTouchDrag, endWaypointDrag, syncMapPointerCount],
   );
 
   const userLocationCoord = useForegroundUserLocation(expanded && mapBodyVisible);
@@ -591,6 +1063,128 @@ export function TripReportMiniMapView({
     selectNextAddedSegmentRef.current = true;
     onAddSegment(coord);
   }, [onAddSegment, userLocationCoord]);
+
+  const headerTop = shell.insets.top + headerChrome.rowTopInset;
+
+  // Where the header row (with the ghost route dropdown) ends, and the views measured to find the
+  // middle of the visible map.
+  const headerHeightRef = useRef(0);
+  const chromeRef = useRef<View>(null);
+  const legendCardRef = useRef<View>(null);
+  const editPanelCardRef = useRef<View>(null);
+
+  /**
+   * Geographic position in the middle of the visible map: centered across it, and halfway between
+   * the bottom of the ghost route dropdown and the top of the legend or edit panel.
+   */
+  const positionAtVisibleMapMiddle = useCallback(async (): Promise<TripReportWaypoint | null> => {
+    const map = mapRef.current;
+    if (map == null) return null;
+    const [chrome, legendCard, editPanelCard] = await Promise.all([
+      measureInWindow(chromeRef.current),
+      measureInWindow(legendCardRef.current),
+      measureInWindow(editPanelCardRef.current),
+    ]);
+    if (chrome == null) return null;
+    const panelTops = [legendCard, editPanelCard]
+      .filter((card) => card != null)
+      .map((card) => card.y - chrome.y);
+    const panelsTop = panelTops.length > 0 ? Math.min(...panelTops) : chrome.height;
+    const dropdownBottom = headerTop + headerHeightRef.current;
+    const screenPoint: [number, number] = [chrome.width / 2, (dropdownBottom + panelsTop) / 2];
+    try {
+      const center = await map.getCenter();
+      return await mapPositionAt(map, screenPoint, [center[0], center[1]]);
+    } catch {
+      return null;
+    }
+  }, [headerTop]);
+
+  /**
+   * Adds a marker in the middle of the visible map.
+   */
+  const addMarkerAtMapMiddle = useCallback(async () => {
+    const position = await positionAtVisibleMapMiddle();
+    if (position == null) {
+      console.warn("[TripReportMiniMapView] couldn't place the new marker");
+      return;
+    }
+    selectNextAddedMarkerRef.current = true;
+    onAddMarker(position);
+  }, [onAddMarker, positionAtVisibleMapMiddle]);
+
+  /** ~15 m nudge when a new waypoint would land on the selected one. */
+  const NUDGE_DEG = 0.00015;
+
+  const insertWaypointNearVisibleMiddle = useCallback(
+    async (segmentId: string, index: number, avoid: TripReportWaypoint | null) => {
+      let position = await positionAtVisibleMapMiddle();
+      if (position == null) {
+        console.warn("[TripReportMiniMapView] couldn't place the new waypoint");
+        return;
+      }
+      if (
+        avoid != null &&
+        Math.abs(position[0] - avoid[0]) < NUDGE_DEG &&
+        Math.abs(position[1] - avoid[1]) < NUDGE_DEG
+      ) {
+        position = [avoid[0] + NUDGE_DEG, avoid[1] + NUDGE_DEG];
+      }
+      onInsertWaypoint(segmentId, index, position);
+      setSelectedWaypointIndex(index);
+    },
+    [onInsertWaypoint, positionAtVisibleMapMiddle],
+  );
+
+  const addMidWaypoint = useCallback(() => {
+    if (selectedSegment == null || selectedWaypointIndex == null) return;
+    const avoid = selectedSegment.waypoints[selectedWaypointIndex] ?? null;
+    void insertWaypointNearVisibleMiddle(
+      selectedSegment.id,
+      selectedWaypointIndex + 1,
+      avoid,
+    );
+  }, [insertWaypointNearVisibleMiddle, selectedSegment, selectedWaypointIndex]);
+
+  const addEndWaypoint = useCallback(() => {
+    if (selectedSegment == null) return;
+    const last = selectedSegment.lastWaypoint;
+    void insertWaypointNearVisibleMiddle(
+      selectedSegment.id,
+      selectedSegment.waypoints.length,
+      last,
+    );
+  }, [insertWaypointNearVisibleMiddle, selectedSegment]);
+
+  const removeSelectedWaypoint = useCallback(() => {
+    if (selectedSegment == null || selectedWaypointIndex == null) return;
+    const segmentId = selectedSegment.id;
+    const index = selectedWaypointIndex;
+    setSelectedWaypointIndex(null);
+    onRemoveWaypoint(segmentId, index);
+  }, [onRemoveWaypoint, selectedSegment, selectedWaypointIndex]);
+
+  /** After a split, select the new segment's first waypoint (the former split point). */
+  const pendingSplitSelectRef = useRef<string | null>(null);
+  useEffect(() => {
+    const afterId = pendingSplitSelectRef.current;
+    if (afterId == null) return;
+    const index = segments.findIndex((segment) => segment.id === afterId);
+    const next = index >= 0 ? segments[index + 1] : null;
+    if (next == null) return;
+    pendingSplitSelectRef.current = null;
+    focusedItemIdRef.current = next.id;
+    setSelectedItemId(next.id);
+    setSelectedWaypointIndex(0);
+  }, [segments]);
+
+  const splitAtSelectedWaypoint = useCallback(() => {
+    if (selectedSegment == null || selectedWaypointIndex == null || selectedWaypointIndex === 0) {
+      return;
+    }
+    pendingSplitSelectRef.current = selectedSegment.id;
+    onSplitSegment(selectedSegment.id, selectedWaypointIndex);
+  }, [onSplitSegment, selectedSegment, selectedWaypointIndex]);
 
   const resetCameraToUserPosition = useCallback(() => {
     if (userLocationCoord == null) return;
@@ -648,7 +1242,6 @@ export function TripReportMiniMapView({
     setMapContentReady(mountNativeMap && styleReady);
   }, [mountNativeMap, styleReady, setMapContentReady]);
 
-  const headerTop = shell.insets.top + headerChrome.rowTopInset;
   const buttonStackTop = expandedMiniMapHeaderRowStackTop(headerTop, headerChrome, mapChrome);
   const overlayEdgeGap = expandedMiniMapOverlayEdgeGap(uiScale, fontScale);
   // Portal hosts already clear the tab bar, so only the scaled gap applies there.
@@ -663,70 +1256,172 @@ export function TripReportMiniMapView({
   return (
     <>
       {shell.mapBodyVisible ? (
-        <MiniMapNativeGestureHost expanded={shell.expanded}>
-          <MapView
-            ref={mapRef}
-            styleURL={mapLayers.styleUrl}
-            style={[minimapStyles.map, !shell.mapChromeInteractive ? styles.hidden : null]}
-            projection="globe"
-            onLayout={onMapLayout}
-            {...miniMapInteractionProps(shell.expanded)}
-            scaleBarEnabled={false}
-            attributionEnabled={shell.expanded}
-            logoEnabled={shell.expanded}
-            logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
-            attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
-            onCameraChanged={(state) => {
-              onCameraChanged(state);
-              if (shell.expanded) {
-                setMapLiveCenter(state.properties.center as [number, number]);
-                setMapLiveZoom(state.properties.zoom);
-              }
-            }}
-            onPress={onMapPress}
-            onDidFinishLoadingMap={onStyleReady}
-            onDidFinishLoadingStyle={onStyleFinishedLoading}
-            onMapLoadingError={onStyleLoadError}
-          >
-            <LocationPuck
-              puckBearingEnabled
-              puckBearing="heading"
-              pulsing={{ isEnabled: true, radius: "accuracy" }}
+        <View
+          ref={mapTouchRootRef}
+          collapsable={false}
+          style={styles.mapTouchRoot}
+          onTouchStart={syncMapPointerCount}
+          onTouchMove={onMapTouchMove}
+          onTouchEnd={onMapTouchEnd}
+          onTouchCancel={onMapTouchCancel}
+        >
+          <View ref={mapFrameRef} collapsable={false} style={styles.mapFrame}>
+            <MiniMapNativeGestureHost expanded={shell.expanded}>
+              <MapView
+                ref={mapRef}
+                styleURL={mapLayers.styleUrl}
+                style={[minimapStyles.map, !shell.mapChromeInteractive ? styles.hidden : null]}
+                projection="globe"
+                onLayout={onMapLayout}
+                {...(() => {
+                  const interaction = miniMapInteractionProps(shell.expanded);
+                  return {
+                    ...interaction,
+                    gestureSettings: {
+                      ...interaction.gestureSettings,
+                      // Hold the map still while a feature follows the finger after long-press.
+                      panEnabled:
+                        interaction.gestureSettings.panEnabled &&
+                        draggedWaypointIndex == null &&
+                        draggedMarkerId == null,
+                    },
+                  };
+                })()}
+                scaleBarEnabled={false}
+                attributionEnabled={shell.expanded}
+                logoEnabled={shell.expanded}
+                logoPosition={Platform.OS === "android" ? { bottom: 40, left: 10 } : undefined}
+                attributionPosition={Platform.OS === "android" ? { bottom: 40, right: 10 } : undefined}
+                onCameraChanged={(state) => {
+                  onCameraChanged(state);
+                  if (selectedMarker != null || selectedWaypointIndex != null) {
+                    setCameraRevision((revision) => revision + 1);
+                  }
+                  if (shell.expanded) {
+                    setMapLiveCenter(state.properties.center as [number, number]);
+                    setMapLiveZoom(state.properties.zoom);
+                  }
+                }}
+                onPress={onMapPress}
+                onLongPress={onMapLongPress}
+                onDidFinishLoadingMap={onStyleReady}
+                onDidFinishLoadingStyle={onStyleFinishedLoading}
+                onMapLoadingError={onStyleLoadError}
+              >
+                <LocationPuck
+                  puckBearingEnabled
+                  puckBearing="heading"
+                  pulsing={{ isEnabled: true, radius: "accuracy" }}
+                />
+                <Camera
+                  ref={cameraRef}
+                  defaultSettings={
+                    featureBounds != null
+                      ? {
+                          bounds: {
+                            ne: [featureBounds.east, featureBounds.north],
+                            sw: [featureBounds.west, featureBounds.south],
+                            ...COLLAPSED_FIT_PADDING,
+                          },
+                        }
+                      : { centerCoordinate: homeCenter, zoomLevel: homeZoom }
+                  }
+                />
+                {styleReady ? (
+                  <>
+                    <MapStyleLayers
+                      lightPreset={mapLayers.mapLightPreset}
+                      showElevationContours={mapLayers.showContoursOnMap}
+                    />
+                    {ghostPage != null ? <GhostRouteLayer savedPage={ghostPage} /> : null}
+                    <ImportedAreasLayer features={features} legend={legend} />
+                    <RecordedSegmentsLayer
+                      segments={segments}
+                      waypointsSegmentId={
+                        shell.expanded ? (selectedSegment?.id ?? null) : null
+                      }
+                      selectedWaypointIndex={
+                        shell.expanded ? selectedWaypointIndex : null
+                      }
+                      hiddenWaypointIndex={
+                        shell.expanded ? draggedWaypointIndex : null
+                      }
+                    />
+                    <TripReportMarkersLayer
+                      markers={markers}
+                      selectedMarkerId={
+                        shell.expanded ? (selectedMarker?.id ?? null) : null
+                      }
+                      hiddenMarkerId={draggedMarkerId}
+                    />
+                  </>
+                ) : null}
+              </MapView>
+            </MiniMapNativeGestureHost>
+          </View>
+          {shell.expanded &&
+          styleReady &&
+          selectedSegment != null &&
+          selectedWaypointIndex != null &&
+          selectedSegment.waypoints[selectedWaypointIndex] != null ? (
+            <SelectedWaypointDragHandle
+              key={`${selectedSegment.id}-${selectedWaypointIndex}`}
+              mapRef={mapRef}
+              waypoint={selectedSegment.waypoints[selectedWaypointIndex]}
+              cameraRevision={cameraRevision}
+              pointerCount={mapPointerCount}
+              dragX={waypointDragX}
+              dragY={waypointDragY}
+              dragging={waypointDragging}
+              onDragStart={(screenPoint) => {
+                waypointDragTracksTouchRef.current = false;
+                void beginWaypointDrag(selectedSegment, selectedWaypointIndex, screenPoint);
+              }}
+              onDragEnd={(dropped) => {
+                void endWaypointDrag(dropped);
+              }}
             />
-            <Camera
-              ref={cameraRef}
-              defaultSettings={
-                featureBounds != null
-                  ? {
-                      bounds: {
-                        ne: [featureBounds.east, featureBounds.north],
-                        sw: [featureBounds.west, featureBounds.south],
-                        ...COLLAPSED_FIT_PADDING,
-                      },
-                    }
-                  : { centerCoordinate: homeCenter, zoomLevel: homeZoom }
-              }
+          ) : null}
+          {shell.expanded &&
+          styleReady &&
+          selectedSegment != null &&
+          waypointDragSession != null ? (
+            <WaypointDragPreview
+              segment={selectedSegment}
+              session={waypointDragSession}
+              dragX={waypointDragX}
+              dragY={waypointDragY}
+              dragging={waypointDragging}
             />
-            {styleReady ? (
-              <>
-                <MapStyleLayers
-                  lightPreset={mapLayers.mapLightPreset}
-                  showElevationContours={mapLayers.showContoursOnMap}
-                />
-                {ghostPage != null ? <GhostRouteLayer savedPage={ghostPage} /> : null}
-                <ImportedAreasLayer features={features} legend={legend} />
-                <RecordedSegmentsLayer
-                  segments={segments}
-                  waypointsSegmentId={shell.expanded ? (selectedSegment?.id ?? null) : null}
-                />
-                <TripReportMarkersLayer
-                  markers={markers}
-                  selectedMarkerId={shell.expanded ? (selectedMarker?.id ?? null) : null}
-                />
-              </>
-            ) : null}
-          </MapView>
-        </MiniMapNativeGestureHost>
+          ) : null}
+          {shell.expanded &&
+          styleReady &&
+          markerTouchDragActive &&
+          selectedMarker != null ? (
+            <MarkerDragPreview
+              marker={selectedMarker}
+              dragX={markerDragX}
+              dragY={markerDragY}
+              dragging={markerDragging}
+            />
+          ) : null}
+          {shell.expanded && styleReady && selectedMarker != null && !markerTouchDragActive ? (
+            <MarkerDragHandle
+              key={selectedMarker.id}
+              mapRef={mapRef}
+              marker={selectedMarker}
+              cameraRevision={cameraRevision}
+              pointerCount={mapPointerCount}
+              onDragStart={() => setDraggedMarkerId(selectedMarker.id)}
+              onDragEnd={(position) => {
+                setDraggedMarkerId(null);
+                if (position != null) {
+                  onMoveMarker(selectedMarker.id, position);
+                }
+              }}
+            />
+          ) : null}
+        </View>
       ) : null}
       {recording ? (
         <RecordingBorder
@@ -758,7 +1453,9 @@ export function TripReportMiniMapView({
         >
           <MiniMapHeader
             onBack={shell.requestCollapse}
+            showBack={false}
             top={headerTop}
+            onHeaderHeightChange={(height) => (headerHeightRef.current = height)}
             chromeInteractive={shell.mapChromeInteractive}
             titleSlot={
               <TripReportGhostDropdown
@@ -768,7 +1465,29 @@ export function TripReportMiniMapView({
               />
             }
           />
+          <ButtonStack top={headerTop} left={headerChrome.edgeInset}>
+            <ButtonStack.Slot id="back" visible animateLayout={false}>
+              <BackButton onPress={shell.requestCollapse} />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="add-mid-waypoint" visible={selectedWaypointIndex != null}>
+              <AddMidWaypointButton onPress={addMidWaypoint} />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot
+              id="split-segment"
+              visible={selectedWaypointIndex != null && selectedWaypointIndex > 0}
+            >
+              <SplitSegmentButton onPress={splitAtSelectedWaypoint} />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="remove-waypoint" visible={selectedWaypointIndex != null}>
+              <RemoveWaypointButton onPress={removeSelectedWaypoint} />
+            </ButtonStack.Slot>
+            <ButtonStack.Slot id="undo" visible={canUndo}>
+              <UndoButton onPress={onUndo} />
+            </ButtonStack.Slot>
+          </ButtonStack>
           <View
+            ref={chromeRef}
+            collapsable={false}
             style={[StyleSheet.absoluteFill, !shell.mapChromeInteractive ? styles.dimmed : null]}
             pointerEvents={shell.mapChromeInteractive ? "box-none" : "none"}
           >
@@ -777,6 +1496,7 @@ export function TripReportMiniMapView({
                 key={selectedSegment.id}
                 enterDelayMs={editPanelEnterDelayMs}
                 segment={selectedSegment}
+                cardRef={editPanelCardRef}
                 maxHeight={windowHeight / 3}
                 leftOffset={editPanelLeftOffset}
                 rightOffset={editPanelRightOffset}
@@ -786,9 +1506,10 @@ export function TripReportMiniMapView({
                 onToggleRecording={() => onToggleSegmentRecording(selectedSegment.id)}
                 recordDisabled={locationDisabled}
                 onOpenRecordSettings={() => setRecordSettingsOpen(true)}
+                onAddEndWaypoint={addEndWaypoint}
                 onUpdate={(update) => onUpdateSegment(selectedSegment.id, update)}
                 onDelete={() => {
-                  setSelectedItemId(null);
+                  selectItem(null);
                   onRemoveSegment(selectedSegment.id);
                 }}
               />
@@ -798,13 +1519,14 @@ export function TripReportMiniMapView({
                 key={selectedMarker.id}
                 enterDelayMs={editPanelEnterDelayMs}
                 marker={selectedMarker}
+                cardRef={editPanelCardRef}
                 maxHeight={windowHeight / 3}
                 leftOffset={editPanelLeftOffset}
                 rightOffset={editPanelRightOffset}
                 bottomOffset={legendBottomOffset}
                 onUpdate={(update) => onUpdateMarker(selectedMarker.id, update)}
                 onDelete={() => {
-                  setSelectedItemId(null);
+                  selectItem(null);
                   onRemoveMarker(selectedMarker.id);
                 }}
               />
@@ -819,7 +1541,7 @@ export function TripReportMiniMapView({
               rightInset={shell.insets.right + overlayEdgeGap}
               onToggleExpanded={toggleLegendExpanded}
               selectedItemId={selectedItemId}
-              onSelectItem={setSelectedItemId}
+              onSelectItem={selectItem}
               recording={recording}
               recordingPulse={recordingPulse}
               blockedByOtherRecording={blockedByOtherRecording}
@@ -827,6 +1549,8 @@ export function TripReportMiniMapView({
               recordingSegmentId={recordingSegmentId}
               onAddSegment={() => void addSegmentAtUserPosition()}
               addSegmentDisabled={locationDisabled}
+              onAddMarker={() => void addMarkerAtMapMiddle()}
+              cardRef={legendCardRef}
             />
             <ButtonStack top={buttonStackTop}>
               <ButtonStack.Slot id="map-layers" visible>
@@ -874,6 +1598,13 @@ export function TripReportMiniMapView({
 const styles = StyleSheet.create({
   hidden: {
     opacity: 0,
+  },
+  /** Wraps the map and drag handles so finger count includes both. */
+  mapTouchRoot: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapFrame: {
+    ...StyleSheet.absoluteFillObject,
   },
   expandedChrome: {
     ...StyleSheet.absoluteFillObject,

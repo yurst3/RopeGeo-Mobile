@@ -1,6 +1,7 @@
 import { TripReportColorSelector } from "@/components/lineSegments/TripReportColorSelector";
 import { MarkerStyleSelector } from "@/components/markers/MarkerStyleSelector";
-import { Alert } from "react-native";
+import type { Ref } from "react";
+import type { View } from "react-native";
 import type { TripReportMarker } from "ropegeo-common/models";
 import {
   TripReportEditPanel,
@@ -19,6 +20,8 @@ export type TripReportMarkerPanelProps = {
   bottomOffset: number;
   /** Wait before sliding in, e.g. for the previous panel to finish sliding out. */
   enterDelayMs?: number;
+  /** The panel's card, e.g. for measuring where its top is. */
+  cardRef?: Ref<View>;
   onUpdate: (update: (marker: TripReportMarker) => TripReportMarker) => void;
   onDelete: () => void;
 };
@@ -31,16 +34,10 @@ export function TripReportMarkerPanel({
   rightOffset,
   bottomOffset,
   enterDelayMs,
+  cardRef,
   onUpdate,
   onDelete,
 }: TripReportMarkerPanelProps) {
-  const confirmDelete = () => {
-    Alert.alert("Delete marker?", `"${marker.name}" will be removed.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: onDelete },
-    ]);
-  };
-
   return (
     <TripReportEditPanel
       title="Edit Marker"
@@ -50,6 +47,7 @@ export function TripReportMarkerPanel({
       rightOffset={rightOffset}
       bottomOffset={bottomOffset}
       enterDelayMs={enterDelayMs}
+      cardRef={cardRef}
     >
       {(contentWidth) => (
         <>
@@ -74,7 +72,7 @@ export function TripReportMarkerPanel({
               previewColor={marker.color}
             />
           </TripReportEditPanelSection>
-          <TripReportEditPanelDeleteButton label="Delete Marker" onPress={confirmDelete} />
+          <TripReportEditPanelDeleteButton label="Delete Marker" onPress={onDelete} />
         </>
       )}
     </TripReportEditPanel>

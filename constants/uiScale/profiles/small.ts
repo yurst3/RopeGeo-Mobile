@@ -215,6 +215,7 @@ export const smallUiScaleProfile: UiScaleProfile = {
       resetCameraOrientation: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       resetCameraToBounds: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       addLineSegment: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
+      addMarker: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       recordLineSegment: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       recordSettings: { background: { scale: 0.8 }, icon: { scale: 0.8 } },
       appleDirections: { background: { scale: 0.8 }, icon: { scale: 0.8 } },

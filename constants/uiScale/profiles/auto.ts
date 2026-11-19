@@ -316,6 +316,10 @@ export const autoUiScaleProfile: UiScaleProfile = {
         background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
         icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },
       },
+      addMarker: {
+        background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
+        icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },
+      },
       recordLineSegment: {
         background: { scale: 1.0, accessibilityScalingStrength: 0.4 },
         icon: { scale: 1.0, accessibilityScalingStrength: 0.2 },

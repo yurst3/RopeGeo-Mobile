@@ -1,4 +1,5 @@
 export const BACK_BUTTON_KEY = "back";
+export const UNDO_BUTTON_KEY = "undo";
 export const FILTER_BUTTON_KEY = "filter";
 export const MAP_LAYERS_BUTTON_KEY = "mapLayers";
 export const SETTINGS_BUTTON_KEY = "settings";
@@ -17,8 +18,18 @@ export const REMOVE_DOWNLOAD_BUTTON_KEY = "removeDownload";
 export const ADD_TRIP_REPORT_BUTTON_KEY = "addTripReport";
 export const VIEW_EDIT_BUTTON_KEY = "viewEdit";
 export const ADD_LINE_SEGMENT_BUTTON_KEY = "addLineSegment";
+export const ADD_MARKER_BUTTON_KEY = "addMarker";
 export const RECORD_LINE_SEGMENT_BUTTON_KEY = "recordLineSegment";
 export const RECORD_SETTINGS_BUTTON_KEY = "recordSettings";
+export const ADD_MID_WAYPOINT_BUTTON_KEY = "addMidWaypoint";
+export const ADD_END_WAYPOINT_BUTTON_KEY = "addEndWaypoint";
+export const REMOVE_WAYPOINT_BUTTON_KEY = "removeWaypoint";
+export const SPLIT_SEGMENT_BUTTON_KEY = "splitSegment";
+
+/** Green "+" / split accent tint on layered icons (same in every theme). */
+export const LAYERED_ICON_ACCENT_ADD = "#22c55e";
+/** Red "X" tint on layered remove icons (same in every theme). */
+export const LAYERED_ICON_ACCENT_REMOVE = "#ef4444";
 
 export const DOWNLOAD_BUTTON_KEY = "download";
 export const MINI_DOWNLOAD_BUTTON_KEY = "miniDownload";

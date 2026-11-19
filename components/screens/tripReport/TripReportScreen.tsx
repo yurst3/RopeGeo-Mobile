@@ -18,6 +18,7 @@ import { ScalingText } from "@/components/text/ScalingText";
 import { DateInput } from "@/components/widgets/DateInput";
 import { TextInput } from "@/components/widgets/TextInput";
 import { PROFILE_SCREEN_IMAGE_LAYOUT } from "@/constants/profile/profileImageLayout";
+import { MAP_BLOCK_UNDO_STACK_SIZE } from "@/constants/tripReport/mapBlockUndo";
 import { useColorTheme } from "@/context/theme/ColorThemeContext";
 import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
@@ -447,7 +448,9 @@ export function TripReportScreen({
                 <AddMapBlockButton
                   onPress={() =>
                     setReport((current) =>
-                      current.withBlockAdded(TripReportMapBlock.createEmpty()),
+                      current.withBlockAdded(
+                        TripReportMapBlock.createEmpty(MAP_BLOCK_UNDO_STACK_SIZE),
+                      ),
                     )
                   }
                   maxMaps={MAX_TRIP_REPORT_MAP_BLOCKS}

@@ -5,6 +5,7 @@ import {
   Pressable,
   type StyleProp,
   StyleSheet,
+  View,
   type ViewStyle,
 } from "react-native";
 import { STANDARD_BUTTON_SHADOW } from "@/utils/theme/standardButtonShadow";
@@ -25,6 +26,13 @@ export type ButtonProps = {
   iconColor?: string;
   /** Applied as Image tint when `highlighted` is true. Omit for no tint. */
   iconColorHighlight?: string;
+  /**
+   * Optional second silhouette stacked on `icon` (e.g. "+" / "X" from
+   * `assets/images/icons/buttons/layered/.../accent.png`).
+   */
+  iconAccent?: ImageSourcePropType;
+  /** Tint for {@link iconAccent} (e.g. green "+" / red "X"). */
+  iconAccentColor?: string;
   highlighted?: boolean;
   /** Multiplier for icon dimensions relative to `size`. Default 1. */
   iconScale?: number;
@@ -44,6 +52,8 @@ export function Button({
   icon,
   iconColor,
   iconColorHighlight,
+  iconAccent,
+  iconAccentColor,
   highlighted = false,
   iconScale = 1,
   size = STANDARD_BUTTON_SIZE,
@@ -57,6 +67,37 @@ export function Button({
     highlighted && iconColorHighlight != null
       ? iconColorHighlight
       : iconColor;
+
+  let iconContent: ReactNode = null;
+  if (children != null) {
+    iconContent = children;
+  } else if (icon != null && iconAccent != null) {
+    iconContent = (
+      <View style={{ width: iconSize, height: iconSize }}>
+        <Image
+          source={icon}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          tintColor={tintColor}
+        />
+        <Image
+          source={iconAccent}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          tintColor={iconAccentColor}
+        />
+      </View>
+    );
+  } else if (icon != null) {
+    iconContent = (
+      <Image
+        source={icon}
+        style={{ width: iconSize, height: iconSize }}
+        contentFit="contain"
+        tintColor={tintColor}
+      />
+    );
+  }
 
   return (
     <Pressable
@@ -81,15 +122,7 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
     >
-      {children ??
-        (icon != null ? (
-          <Image
-            source={icon}
-            style={{ width: iconSize, height: iconSize }}
-            contentFit="contain"
-            tintColor={tintColor}
-          />
-        ) : null)}
+      {iconContent}
     </Pressable>
   );
 }

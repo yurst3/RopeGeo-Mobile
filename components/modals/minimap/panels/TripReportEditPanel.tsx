@@ -6,7 +6,7 @@ import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -203,6 +203,8 @@ export type TripReportEditPanelProps = {
   bottomOffset: number;
   /** Wait before sliding in, e.g. for the previous panel to finish sliding out. */
   enterDelayMs?: number;
+  /** The card below anything floating above it, e.g. for measuring where its top is. */
+  cardRef?: Ref<View>;
   /** The body's controls, given the width available to them. */
   children: (contentWidth: number) => ReactNode;
 };
@@ -224,6 +226,7 @@ export function TripReportEditPanel({
   rightOffset,
   bottomOffset,
   enterDelayMs = 0,
+  cardRef,
   children,
 }: TripReportEditPanelProps) {
   const entering = useMemo(() => slideUpFromBottom(enterDelayMs), [enterDelayMs]);
@@ -289,7 +292,7 @@ export function TripReportEditPanel({
       pointerEvents="box-none"
     >
       {aboveCard}
-      <View style={[styles.card, { shadowColor: shadow }]}>
+      <View ref={cardRef} collapsable={false} style={[styles.card, { shadowColor: shadow }]}>
         <Pressable
           onPress={toggleBodyExpanded}
           style={({ pressed }) => [

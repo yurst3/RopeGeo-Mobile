@@ -1,3 +1,4 @@
+import { AddEndWaypointButton } from "@/components/buttons/standard/AddEndWaypointButton";
 import {
   RecordLineSegmentButton,
   useRecordLineSegmentButtonSize,
@@ -11,7 +12,8 @@ import {
   lineSegmentColorValue,
 } from "@/constants/tripReport/lineSegmentAppearance";
 import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
-import { Alert, StyleSheet, View } from "react-native";
+import type { Ref } from "react";
+import { StyleSheet, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { TripReportLineSegment } from "ropegeo-common/models";
 import { DESIGN_RECORDING_DOT_SIZE, RecordingDot } from "../shared/RecordingDot";
@@ -35,6 +37,8 @@ export type TripReportSegmentPanelProps = {
   bottomOffset: number;
   /** Wait before sliding in, e.g. for the previous panel to finish sliding out. */
   enterDelayMs?: number;
+  /** The panel's card, e.g. for measuring where its top is. */
+  cardRef?: Ref<View>;
   /** This segment is the one being recorded: the record button shows pause. */
   recording: boolean;
   /** Shared pulse driving the title's recording dot, so it stays in step with the map's border. */
@@ -45,6 +49,8 @@ export type TripReportSegmentPanelProps = {
   recordDisabled: boolean;
   /** Opens the waypoint recording settings. */
   onOpenRecordSettings: () => void;
+  /** Appends a waypoint at the end of this segment. */
+  onAddEndWaypoint: () => void;
   onUpdate: (update: (segment: TripReportLineSegment) => TripReportLineSegment) => void;
   onDelete: () => void;
 };
@@ -61,11 +67,13 @@ export function TripReportSegmentPanel({
   rightOffset,
   bottomOffset,
   enterDelayMs,
+  cardRef,
   recording,
   recordingPulse,
   onToggleRecording,
   recordDisabled,
   onOpenRecordSettings,
+  onAddEndWaypoint,
   onUpdate,
   onDelete,
 }: TripReportSegmentPanelProps) {
@@ -73,18 +81,6 @@ export function TripReportSegmentPanel({
   // The record button floats above the card, so it counts toward the panel's maximum height.
   const recordButtonSize = useRecordLineSegmentButtonSize();
   const segmentColor = lineSegmentColorValue(segment.color);
-
-  const confirmDelete = () => {
-    const count = segment.waypoints.length;
-    Alert.alert(
-      "Delete segment?",
-      `"${segment.name}" and its ${count} ${count === 1 ? "waypoint" : "waypoints"} will be removed.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: onDelete },
-      ],
-    );
-  };
 
   return (
     <TripReportEditPanel
@@ -101,6 +97,7 @@ export function TripReportSegmentPanel({
             disabled={recordDisabled}
           />
           <RecordSettingsButton onPress={onOpenRecordSettings} />
+          <AddEndWaypointButton onPress={onAddEndWaypoint} />
         </View>
       }
       aboveCardHeight={recordButtonSize + RECORD_BUTTON_GAP}
@@ -109,6 +106,7 @@ export function TripReportSegmentPanel({
       rightOffset={rightOffset}
       bottomOffset={bottomOffset}
       enterDelayMs={enterDelayMs}
+      cardRef={cardRef}
     >
       {(contentWidth) => (
         <>
@@ -142,7 +140,7 @@ export function TripReportSegmentPanel({
               previewStyle={segment.style}
             />
           </TripReportEditPanelSection>
-          <TripReportEditPanelDeleteButton label="Delete Segment" onPress={confirmDelete} />
+          <TripReportEditPanelDeleteButton label="Delete Segment" onPress={onDelete} />
         </>
       )}
     </TripReportEditPanel>

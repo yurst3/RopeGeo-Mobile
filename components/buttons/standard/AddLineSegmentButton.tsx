@@ -6,7 +6,8 @@ import { MAP_BUTTON_SIZE } from "@/utils/minimap/fullScreenMapLayout";
 import { useResolvedButtonDimensions } from "@/utils/theme/resolvers";
 import { View } from "react-native";
 
-const ADD_LINE_SEGMENT_ICON = require("@/assets/images/icons/buttons/addLineSegment.png");
+const ADD_LINE_SEGMENT_BASE = require("@/assets/images/icons/buttons/layered/addLineSegment/base.png");
+const ADD_LINE_SEGMENT_ACCENT = require("@/assets/images/icons/buttons/layered/addLineSegment/accent.png");
 const ICON_SIZE = 26;
 const ICON_DESIGN_SCALE = ICON_SIZE / (MAP_BUTTON_SIZE * 0.5);
 const DISABLED_OPACITY = 0.45;
@@ -47,8 +48,10 @@ export function AddLineSegmentButton({
         disabled={disabled}
         backgroundColor={buttonColors.background}
         shadowColor={themeColors.button.shadowColor}
-        icon={ADD_LINE_SEGMENT_ICON}
+        icon={ADD_LINE_SEGMENT_BASE}
         iconColor={buttonColors.icon}
+        iconAccent={ADD_LINE_SEGMENT_ACCENT}
+        iconAccentColor={buttonColors.iconAccent}
         iconScale={iconScale}
         size={size}
         accessibilityLabel={accessibilityLabel}

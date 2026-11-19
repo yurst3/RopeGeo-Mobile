@@ -2,6 +2,7 @@ import {
   AddLineSegmentButton,
   useAddLineSegmentButtonSize,
 } from "@/components/buttons/standard/AddLineSegmentButton";
+import { AddMarkerButton } from "@/components/buttons/standard/AddMarkerButton";
 import { LineSegmentPreview } from "@/components/lineSegments/LineSegmentPreview";
 import { TripReportMarkerIcon } from "@/components/markers/TripReportMarkerIcon";
 import { ConstantText } from "@/components/text/ConstantText";
@@ -16,7 +17,7 @@ import { useTextStyle } from "@/context/typography/TextContext";
 import { useUiScale } from "@/context/typography/UIScaleContext";
 import { useResolvedIconSizeScale } from "@/utils/theme/resolvers";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -70,6 +71,10 @@ export type TripReportLegendProps = {
   onAddSegment: () => void;
   /** Disables the add line segment button, e.g. without location access. */
   addSegmentDisabled: boolean;
+  /** Adds a new marker in the middle of the visible map. */
+  onAddMarker: () => void;
+  /** The legend's card (below the add buttons), e.g. for measuring where its top is. */
+  cardRef?: Ref<View>;
   /** When false, panel stays visible but does not accept presses. */
   interactive?: boolean;
 };
@@ -115,8 +120,8 @@ function MarkerSwatch({ marker, iconScale }: { marker: TripReportMarker; iconSca
 /**
  * Trip report variant of the expanded minimap legend. Lists the map block's line segments, then
  * its markers; with neither, shows a dashed "Record new line segment" prompt that behaves like the record button.
- * An add line segment button floats above its right edge and rides along as it expands and
- * collapses.
+ * Add marker and add line segment buttons float above its right edge and ride along as it expands
+ * and collapses.
  */
 export function TripReportLegend({
   segments,
@@ -136,6 +141,8 @@ export function TripReportLegend({
   onToggleRecording,
   onAddSegment,
   addSegmentDisabled,
+  onAddMarker,
+  cardRef,
   interactive = true,
 }: TripReportLegendProps) {
   const themeColors = useColorTheme();
@@ -210,9 +217,10 @@ export function TripReportLegend({
       pointerEvents={interactive ? "box-none" : "none"}
     >
       <View style={styles.addButtonRow} pointerEvents="box-none">
+        <AddMarkerButton onPress={onAddMarker} />
         <AddLineSegmentButton onPress={onAddSegment} disabled={addSegmentDisabled} />
       </View>
-      <View style={[styles.card, { shadowColor: shadow }]}>
+      <View ref={cardRef} collapsable={false} style={[styles.card, { shadowColor: shadow }]}>
         <Pressable
           onPress={onToggleExpanded}
           style={({ pressed }) => [
@@ -368,7 +376,9 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   addButtonRow: {
-    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: ADD_BUTTON_GAP,
     marginBottom: ADD_BUTTON_GAP,
   },
   dimmed: {

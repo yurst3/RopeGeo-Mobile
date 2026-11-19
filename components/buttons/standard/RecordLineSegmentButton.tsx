@@ -20,7 +20,7 @@ const DESIGN_SQUARE_SIZE = 16;
 const DESIGN_LINE_SEGMENT_ICON_SIZE = 26;
 const DESIGN_PAUSE_ICON_SIZE = 16;
 /**
- * Red square in the line segment icon's top-right corner, where addLineSegment.png has its "+":
+ * Red square in the line segment icon's top-right corner, where the add-line "+" sat:
  * centered 75% across and 25% down, sized relative to the icon.
  */
 const CORNER_SQUARE_CENTER_X = 0.75;

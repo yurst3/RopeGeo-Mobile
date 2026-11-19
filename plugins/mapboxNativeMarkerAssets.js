@@ -22,6 +22,8 @@ const MAPBOX_NATIVE_MARKER_ASSETS = [
   { name: "marker_swim", filename: "sdf/markerSwimSdf.png" },
   { name: "marker_up", filename: "sdf/markerUpSdf.png" },
   { name: "marker_waterfall", filename: "sdf/markerWaterfallSdf.png" },
+  // Drawn around the selected trip report marker.
+  { name: "marker_move_arrow", filename: "sdf/markerMoveArrowSdf.png" },
 ];
 
 const MARKERS_SOURCE_DIR = "assets/images/icons/markers";

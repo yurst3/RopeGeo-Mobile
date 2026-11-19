@@ -12,6 +12,7 @@ import type {
 
 export type StandardButtonKeys =
   | "back"
+  | "undo"
   | "filter"
   | "mapLayers"
   | "settings"
@@ -30,8 +31,13 @@ export type StandardButtonKeys =
   | "addTripReport"
   | "viewEdit"
   | "addLineSegment"
+  | "addMarker"
   | "recordLineSegment"
-  | "recordSettings";
+  | "recordSettings"
+  | "addMidWaypoint"
+  | "addEndWaypoint"
+  | "removeWaypoint"
+  | "splitSegment";
 
 export type NonstandardButtonKeys =
   | "download"
@@ -47,6 +53,11 @@ export type StandardButtonColors = {
   background: string;
   icon: string;
   iconHighlight?: string;
+  /**
+   * Tint for a second icon layer (e.g. green "+" / red "X" on layered button icons).
+   * Used with {@link Button}'s `iconAccent`.
+   */
+  iconAccent?: string;
   border?: string;
 };
 

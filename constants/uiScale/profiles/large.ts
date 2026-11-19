@@ -221,6 +221,7 @@ export const largeUiScaleProfile: UiScaleProfile = {
       resetCameraOrientation: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
       resetCameraToBounds: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
       addLineSegment: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
+      addMarker: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
       recordLineSegment: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
       recordSettings: { background: { scale: 1.2 }, icon: { scale: 1.2 } },
       appleDirections: { background: { scale: 1.2 }, icon: { scale: 1.2 } },

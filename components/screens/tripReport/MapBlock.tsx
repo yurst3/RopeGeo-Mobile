@@ -203,6 +203,54 @@ export function MapBlock({
   const removeMarker = (markerId: string) =>
     onChange((current) => current.withMarkerRemoved(markerId));
 
+  // New markers contrast with the map's time of day, like new segments.
+  const addMarker = (position: TripReportWaypoint) =>
+    onChange((current) => current.withNewMarker(position, newSegmentColorRef.current));
+
+  /** Geometric moves push undo inside the model (unlike property updates above). */
+  const moveWaypoint = (
+    segmentId: string,
+    waypointIndex: number,
+    position: TripReportWaypoint,
+  ) =>
+    onChange((current) =>
+      current.withSegmentWaypointMoved(segmentId, waypointIndex, position),
+    );
+
+  const insertWaypoint = (
+    segmentId: string,
+    index: number,
+    position: TripReportWaypoint,
+  ) =>
+    onChange((current) =>
+      current.withSegmentWaypointInserted(segmentId, index, position),
+    );
+
+  const removeWaypoint = (segmentId: string, waypointIndex: number) =>
+    onChange((current) => current.withSegmentWaypointRemoved(segmentId, waypointIndex));
+
+  const splitSegment = (segmentId: string, waypointIndex: number) =>
+    onChange((current) => current.withSegmentSplitAt(segmentId, waypointIndex));
+
+  const moveMarker = (markerId: string, position: TripReportWaypoint) =>
+    onChange((current) => current.withMarkerMoved(markerId, position));
+
+  /**
+   * Pops the latest geometric undo. If that removes the segment being recorded, discard its
+   * buffered waypoints and stop recording (same as deleting that segment).
+   */
+  const undoMapChange = () => {
+    if (block.undoStack.length === 0) return;
+    const recordingId = recordedSegmentId;
+    const preview = block.undoChange();
+    if (recordingId != null && !preview.segments.some((segment) => segment.id === recordingId)) {
+      waypointRecordingStore.drain(blockId);
+      pauseRecording();
+    }
+    onChange((current) =>
+      current.undoStack.length === 0 ? current : current.undoChange(),
+    );
+  };
   const setExpandedAndNotify = useCallback(
     (next: boolean) => {
       setExpanded(next);
@@ -253,6 +301,14 @@ export function MapBlock({
             onRemoveSegment={removeSegment}
             onUpdateMarker={updateMarker}
             onRemoveMarker={removeMarker}
+            onAddMarker={addMarker}
+            onMoveWaypoint={moveWaypoint}
+            onInsertWaypoint={insertWaypoint}
+            onRemoveWaypoint={removeWaypoint}
+            onSplitSegment={splitSegment}
+            onMoveMarker={moveMarker}
+            canUndo={block.undoStack.length > 0}
+            onUndo={undoMapChange}
           />
         </View>
         <View style={styles.divider}>

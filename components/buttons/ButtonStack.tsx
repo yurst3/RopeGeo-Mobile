@@ -118,8 +118,16 @@ function ButtonStackSlotRow({
 type ButtonStackBaseProps = {
   /** Distance from the top of the screen to the top of the first slot. */
   top: number;
-  /** Distance from the right edge of the screen. Defaults to scaled header edge inset. */
+  /**
+   * Distance from the right edge of the screen. Defaults to the scaled header edge inset when
+   * `left` is omitted (top-right map chrome). Ignored when `left` is set.
+   */
   right?: number;
+  /**
+   * Distance from the left edge of the screen. When set, the stack sits on the left (e.g. back +
+   * undo) and aligns slots to the start instead of the end.
+   */
+  left?: number;
   /** Vertical gap between slots. */
   gap?: number;
   children?: ReactNode;
@@ -128,20 +136,29 @@ type ButtonStackBaseProps = {
 function ButtonStackBase({
   top,
   right,
+  left,
   gap: gapProp,
   children,
 }: ButtonStackBaseProps) {
   const mapChrome = useMapButtonChromeLayout();
   const headerChrome = useHeaderChromeLayout();
   const gap = gapProp ?? mapChrome.gap;
-  const resolvedRight = right ?? headerChrome.edgeInset;
+  const alignStart = left != null;
+  const edge = alignStart ? left : (right ?? headerChrome.edgeInset);
   const slots = Children.toArray(children).filter(isButtonStackSlot);
 
   return (
     <View
       style={[
         styles.host,
-        { top, right: resolvedRight, gap, minWidth: mapChrome.stackMinWidth },
+        {
+          top,
+          gap,
+          minWidth: mapChrome.stackMinWidth,
+          ...(alignStart
+            ? { left: edge, alignItems: "flex-start" as const }
+            : { right: edge, alignItems: "flex-end" as const }),
+        },
       ]}
       pointerEvents="box-none"
     >
@@ -163,9 +180,9 @@ export type ButtonStackComponent = typeof ButtonStackBase & {
 };
 
 /**
- * Vertical stack of map chrome buttons (top-right). Use only `ButtonStack.Slot` children;
- * each slot fades in/out independently; when a slot hides, remaining slots slide to their new
- * positions (layout transition) after the hidden row unmounts.
+ * Vertical stack of map chrome buttons (top-right by default, or top-left when `left` is set).
+ * Use only `ButtonStack.Slot` children; each slot fades in/out independently; when a slot hides,
+ * remaining slots slide to their new positions (layout transition) after the hidden row unmounts.
  */
 export const ButtonStack: ButtonStackComponent = Object.assign(ButtonStackBase, {
   Slot: ButtonStackSlot,

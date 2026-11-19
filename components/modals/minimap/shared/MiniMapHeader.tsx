@@ -46,6 +46,11 @@ export function MiniMapHeader({
   onHeaderHeightChange,
   /** When false, title (and right slot) look inert; back stays enabled. */
   chromeInteractive = true,
+  /**
+   * When false, the left side keeps its spacer width but does not render {@link BackButton}
+   * (e.g. when back lives in a left {@link ButtonStack} with undo).
+   */
+  showBack = true,
 }: {
   /** Omit to show only the back button (and right slot), with no title pill. */
   title?: string;
@@ -60,6 +65,7 @@ export function MiniMapHeader({
   /** Reports the header row height (row bottom = `top` + height) for camera framing. */
   onHeaderHeightChange?: (height: number) => void;
   chromeInteractive?: boolean;
+  showBack?: boolean;
 }) {
   const themeColors = useColorTheme();
   const uiScale = useUiScale();
@@ -113,6 +119,7 @@ export function MiniMapHeader({
       }
     >
       <View
+        pointerEvents={showBack ? "auto" : "none"}
         style={[
           styles.headerButtonWrap,
           {
@@ -121,7 +128,7 @@ export function MiniMapHeader({
           },
         ]}
       >
-        <BackButton onPress={onBack} />
+        {showBack ? <BackButton onPress={onBack} /> : null}
       </View>
       {titleSlot != null ? (
         titleSlot

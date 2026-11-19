@@ -33,7 +33,11 @@ export const TRIP_REPORT_MARKER_IMAGES: Record<TripReportMarkerStyle, string> = 
   [TripReportMarkerStyle.Waterfall]: "marker_waterfall",
 };
 
+/** Arrow (pointing down) drawn on each side of the selected trip report marker. */
+export const MARKER_MOVE_ARROW_IMAGE = "marker_move_arrow" as const;
+
 /** Passed to `<Images nativeAssetImages={...} />` on maps showing trip report markers. */
-export const TRIP_REPORT_MARKER_NATIVE_ASSET_IMAGES = Object.values(TRIP_REPORT_MARKER_IMAGES).map(
-  (name) => ({ name, sdf: true }),
-);
+export const TRIP_REPORT_MARKER_NATIVE_ASSET_IMAGES = [
+  ...Object.values(TRIP_REPORT_MARKER_IMAGES),
+  MARKER_MOVE_ARROW_IMAGE,
+].map((name) => ({ name, sdf: true }));

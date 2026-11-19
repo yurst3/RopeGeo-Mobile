@@ -1,5 +1,6 @@
 import {
   BACK_BUTTON_KEY,
+  UNDO_BUTTON_KEY,
   APPLE_DIRECTIONS_BUTTON_KEY,
   EXPAND_MINI_MAP_BUTTON_KEY,
   EXTERNAL_LINK_BUTTON_KEY,
@@ -18,8 +19,15 @@ import {
   ADD_TRIP_REPORT_BUTTON_KEY,
   VIEW_EDIT_BUTTON_KEY,
   ADD_LINE_SEGMENT_BUTTON_KEY,
+  ADD_MARKER_BUTTON_KEY,
   RECORD_LINE_SEGMENT_BUTTON_KEY,
   RECORD_SETTINGS_BUTTON_KEY,
+  ADD_MID_WAYPOINT_BUTTON_KEY,
+  ADD_END_WAYPOINT_BUTTON_KEY,
+  REMOVE_WAYPOINT_BUTTON_KEY,
+  SPLIT_SEGMENT_BUTTON_KEY,
+  LAYERED_ICON_ACCENT_ADD,
+  LAYERED_ICON_ACCENT_REMOVE,
 } from "@/constants/buttons";
 
 import type { StandardButtonColors, StandardButtonKeys } from "../../types";
@@ -27,7 +35,6 @@ import type { StandardButtonColors, StandardButtonKeys } from "../../types";
 const buttonBackground = "#3B0764";
 const defaultIcon = "#FF6EC7";
 const iconHighlight = "#FACC15";
-
 const defaultStandard: StandardButtonColors = {
   background: buttonBackground,
   icon: defaultIcon,
@@ -39,8 +46,21 @@ const highlightedStandard: StandardButtonColors = {
   iconHighlight,
 };
 
+const layeredAddStandard: StandardButtonColors = {
+  background: buttonBackground,
+  icon: defaultIcon,
+  iconAccent: LAYERED_ICON_ACCENT_ADD,
+};
+
+const layeredRemoveStandard: StandardButtonColors = {
+  background: buttonBackground,
+  icon: defaultIcon,
+  iconAccent: LAYERED_ICON_ACCENT_REMOVE,
+};
+
 export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> = {
   [BACK_BUTTON_KEY]: defaultStandard,
+  [UNDO_BUTTON_KEY]: defaultStandard,
   [FILTER_BUTTON_KEY]: highlightedStandard,
   [MAP_LAYERS_BUTTON_KEY]: highlightedStandard,
   [SETTINGS_BUTTON_KEY]: defaultStandard,
@@ -61,7 +81,12 @@ export const standardButtons: Record<StandardButtonKeys, StandardButtonColors> =
   [REMOVE_DOWNLOAD_BUTTON_KEY]: defaultStandard,
   [ADD_TRIP_REPORT_BUTTON_KEY]: defaultStandard,
   [VIEW_EDIT_BUTTON_KEY]: defaultStandard,
-  [ADD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
+  [ADD_LINE_SEGMENT_BUTTON_KEY]: layeredAddStandard,
+  [ADD_MARKER_BUTTON_KEY]: layeredAddStandard,
   [RECORD_LINE_SEGMENT_BUTTON_KEY]: defaultStandard,
   [RECORD_SETTINGS_BUTTON_KEY]: defaultStandard,
+  [ADD_MID_WAYPOINT_BUTTON_KEY]: layeredAddStandard,
+  [ADD_END_WAYPOINT_BUTTON_KEY]: layeredAddStandard,
+  [REMOVE_WAYPOINT_BUTTON_KEY]: layeredRemoveStandard,
+  [SPLIT_SEGMENT_BUTTON_KEY]: layeredAddStandard,
 };

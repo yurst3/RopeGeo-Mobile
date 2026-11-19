@@ -34,6 +34,14 @@ export function TripReportMiniMap({
   onRemoveSegment,
   onUpdateMarker,
   onRemoveMarker,
+  onAddMarker,
+  onMoveWaypoint,
+  onInsertWaypoint,
+  onRemoveWaypoint,
+  onSplitSegment,
+  onMoveMarker,
+  canUndo,
+  onUndo,
   ...cardProps
 }: TripReportMiniMapProps) {
   return (
@@ -54,6 +62,14 @@ export function TripReportMiniMap({
         onRemoveSegment={onRemoveSegment}
         onUpdateMarker={onUpdateMarker}
         onRemoveMarker={onRemoveMarker}
+        onAddMarker={onAddMarker}
+        onMoveWaypoint={onMoveWaypoint}
+        onInsertWaypoint={onInsertWaypoint}
+        onRemoveWaypoint={onRemoveWaypoint}
+        onSplitSegment={onSplitSegment}
+        onMoveMarker={onMoveMarker}
+        canUndo={canUndo}
+        onUndo={onUndo}
       />
     </MiniMapAnimatedCard>
   );
