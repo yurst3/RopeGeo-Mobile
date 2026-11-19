@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# local one-off / asset-generation scripts (not shipped)
+scripts/
+
 # Mapbox
 .mapbox
 
